@@ -1,0 +1,233 @@
+﻿@model IEnumerable<MRIV.Models.Tbrequisition>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<h1>Index</h1>
+
+<p>
+    <a asp-action="Create">Create New</a>
+</p>
+<table class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.Addedby)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IssuedByApproval)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ReqOfficerApproval)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ReceivingOfficerApproval)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Fwdapprove)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ReqOfficer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RecOfficer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Code1)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Item1)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Issued1)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Issuepoint)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Usepoint)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Issuedate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Sysdate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ReqUsername)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.External)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SupComments)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RecComments)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Externalmail)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Remarks1)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RejectedSup)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.RejectedRec)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Applicant)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Recdate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.SupDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Admin)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.AdminOfficer)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.FwdDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Adminapprove)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.AdminDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.AdminapproveDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Receivedby)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Collectorid)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Collectorname)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.Addedby)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IssuedByApproval)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ReqOfficerApproval)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ReceivingOfficerApproval)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Fwdapprove)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ReqOfficer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RecOfficer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Code1)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Item1)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Issued1)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Issuepoint)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Usepoint)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Issuedate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Sysdate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ReqUsername)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.External)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.SupComments)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RecComments)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Externalmail)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Remarks1)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RejectedSup)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.RejectedRec)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Applicant)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Recdate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.SupDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Admin)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AdminOfficer)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.FwdDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Adminapprove)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AdminDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.AdminapproveDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Receivedby)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Collectorid)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Collectorname)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>

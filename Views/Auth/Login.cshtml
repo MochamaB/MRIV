@@ -19,13 +19,14 @@
                             <img src="~/images/Login.gif" alt="logo">
                         </div>
 
-                        <div class="text-center">
+                        <div class="text-center mb-2">
                             <h4 class="text-with-line">Material Requisition & Issue System</h4>
                         </div>
 
                         @if (!string.IsNullOrEmpty(errorMessage))
                         {
-                            <div class="alert alert-danger">
+                            <div class="alert alert-danger" style="margin-bottom:0px;margin-top:2rem">
+                                <i class="menu-icon mdi mdi mdi-alert-circle mdi-24px"></i>
                                 @errorMessage
                             </div>
                         }
@@ -68,7 +69,7 @@
                                 </div>
                                 <a href="#" class="auth-link text-black">Forgot password?</a>
                             </div>
-                            <div class="my-3 d-grid gap-2">
+                            <div class="my-1 d-grid gap-2">
                                 <button type="submit" class="btn btn-block btn-primary btn-lg fw-medium auth-form-btn">LOGIN</button>
                             </div>
 

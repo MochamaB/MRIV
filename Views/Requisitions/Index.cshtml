@@ -1,0 +1,165 @@
+﻿@model IEnumerable<MRIV.Models.Requisition>
+
+@{
+    ViewData["Title"] = "Index";
+}
+<a asp-controller="MaterialRequisition" asp-action="Ticket" class="btn btn-primary text-white mb-3 me-0  float-end">
+    <div style="display: flex; align-items: center;">
+        <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
+        <span>  Add Requisition</span>
+    </div>
+</a>
+<div style="clear: both;"></div>
+<div class=" contwrapper">
+<div class=" table-responsive" id="dataTable">
+    <table id="table"
+           data-toggle="table"
+           data-icon-size="sm"
+           data-buttons-class="primary"
+           data-toolbar-align="right"
+           data-buttons-align="left"
+           data-search-align="left"
+           data-sort-order="asc"
+           data-search="true"
+           data-mobile-responsive="true"
+           data-sticky-header="true"
+           data-pagination="true"
+           data-page-list="[100, 200, 250, 500, ALL]"
+           data-page-size="100"
+           data-show-footer="false"
+           data-side-pagination="client"
+           data-show-export="true"
+           class="table">
+    <thead>
+        <tr>
+            <th>
+                @Html.DisplayNameFor(model => model.TicketId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DepartmentId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.PayrollNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IssueStationCategory)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IssueStation)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DeliveryStationCategory)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DeliveryStation)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Remarks)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DispatchType)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DispatchPayrollNo)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.DispatchVendor)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollectorName)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CollectorId)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.Status)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CompleteDate)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.CreatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.UpdatedAt)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.IsExternal)
+            </th>
+            <th>
+                @Html.DisplayNameFor(model => model.ForwardToAdmin)
+            </th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+@foreach (var item in Model) {
+        <tr>
+            <td>
+                @Html.DisplayFor(modelItem => item.TicketId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DepartmentId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.PayrollNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IssueStationCategory)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IssueStation)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DeliveryStationCategory)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DeliveryStation)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Remarks)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DispatchType)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DispatchPayrollNo)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.DispatchVendor)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CollectorName)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CollectorId)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.Status)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CompleteDate)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.CreatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.UpdatedAt)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.IsExternal)
+            </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.ForwardToAdmin)
+            </td>
+            <td>
+                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
+                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
+            </td>
+        </tr>
+}
+    </tbody>
+</table>
+</div>
+</div>

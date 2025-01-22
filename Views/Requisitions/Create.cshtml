@@ -1,0 +1,120 @@
+﻿@model MRIV.Models.Requisition
+
+@{
+    ViewData["Title"] = "Create";
+}
+
+<h1>Create</h1>
+
+<h4>Requisition</h4>
+<hr />
+<div class="row">
+    <div class="col-md-4">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label asp-for="TicketId" class="control-label"></label>
+                <input asp-for="TicketId" class="form-control" />
+                <span asp-validation-for="TicketId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DepartmentId" class="control-label"></label>
+                <input asp-for="DepartmentId" class="form-control" />
+                <span asp-validation-for="DepartmentId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="PayrollNo" class="control-label"></label>
+                <input asp-for="PayrollNo" class="form-control" />
+                <span asp-validation-for="PayrollNo" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="IssueStationCategory" class="control-label"></label>
+                <input asp-for="IssueStationCategory" class="form-control" />
+                <span asp-validation-for="IssueStationCategory" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="IssueStation" class="control-label"></label>
+                <input asp-for="IssueStation" class="form-control" />
+                <span asp-validation-for="IssueStation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DeliveryStationCategory" class="control-label"></label>
+                <input asp-for="DeliveryStationCategory" class="form-control" />
+                <span asp-validation-for="DeliveryStationCategory" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DeliveryStation" class="control-label"></label>
+                <input asp-for="DeliveryStation" class="form-control" />
+                <span asp-validation-for="DeliveryStation" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Remarks" class="control-label"></label>
+                <input asp-for="Remarks" class="form-control" />
+                <span asp-validation-for="Remarks" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DispatchType" class="control-label"></label>
+                <input asp-for="DispatchType" class="form-control" />
+                <span asp-validation-for="DispatchType" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DispatchPayrollNo" class="control-label"></label>
+                <input asp-for="DispatchPayrollNo" class="form-control" />
+                <span asp-validation-for="DispatchPayrollNo" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="DispatchVendor" class="control-label"></label>
+                <input asp-for="DispatchVendor" class="form-control" />
+                <span asp-validation-for="DispatchVendor" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollectorName" class="control-label"></label>
+                <input asp-for="CollectorName" class="form-control" />
+                <span asp-validation-for="CollectorName" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CollectorId" class="control-label"></label>
+                <input asp-for="CollectorId" class="form-control" />
+                <span asp-validation-for="CollectorId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="Status" class="control-label"></label>
+                <select asp-for="Status" class="form-control"></select>
+                <span asp-validation-for="Status" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CompleteDate" class="control-label"></label>
+                <input asp-for="CompleteDate" class="form-control" />
+                <span asp-validation-for="CompleteDate" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="CreatedAt" class="control-label"></label>
+                <input asp-for="CreatedAt" class="form-control" />
+                <span asp-validation-for="CreatedAt" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label asp-for="UpdatedAt" class="control-label"></label>
+                <input asp-for="UpdatedAt" class="form-control" />
+                <span asp-validation-for="UpdatedAt" class="text-danger"></span>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="IsExternal" /> @Html.DisplayNameFor(model => model.IsExternal)
+                </label>
+            </div>
+            <div class="form-group form-check">
+                <label class="form-check-label">
+                    <input class="form-check-input" asp-for="ForwardToAdmin" /> @Html.DisplayNameFor(model => model.ForwardToAdmin)
+                </label>
+            </div>
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-primary" />
+            </div>
+        </form>
+    </div>
+</div>
+
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
+

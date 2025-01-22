@@ -326,6 +326,16 @@ select[readonly] {
     -webkit-flex-grow: 1;
     flex-grow: 1;
 }
+.navbar .navbar-menu-wrapper .navbar-nav .nav-item .welcome-text {
+    font-family: "Manrope", sans-serif;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 24px;
+    line-height: 38px;
+    color: #8D8D8D;
+    margin-bottom: 10px;
+    text-transform: capitalize;
+}
 
 /* === SIDEBAR === */
 .sidebar {
@@ -353,7 +363,7 @@ select[readonly] {
 /* Adjust padding for main content */
 .main-panel {
     margin-left: 250px;
-    padding-right: 0px; /* Initial padding */
+    padding-right: 1rem; /* Initial padding */
 }
 .sidebar-icon-only .main-panel {
     width: calc(100% - 70px);
@@ -441,9 +451,9 @@ select[readonly] {
 
 .contwrapper {
     border: 1px solid #dee2e6;
-    padding: 30px;
+    padding: 1rem;
+    background-color: #ffffff;
 }
-
 .requiredlabel {
     font-size: 20px;
     padding-left: 5px;
