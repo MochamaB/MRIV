@@ -451,7 +451,7 @@ select[readonly] {
 
 .contwrapper {
     border: 1px solid #dee2e6;
-    padding: 1rem;
+    padding: 1rem 1rem 1rem 1.5rem;
     background-color: #ffffff;
 }
 .requiredlabel {
@@ -613,6 +613,20 @@ a .badge:hover {
     font-weight:700;
     text-transform:uppercase;
 }
+
+a.table:link {
+    color: #ffaf00 !important;
+    font-weight: 500;
+    text-decoration: none;
+    text-transform: capitalize;
+}
+/* Apply to the Description column */
+td.wrapcell {
+    max-width: 300px; /* Set the maximum width */
+    word-wrap: break-word; /* Enable word wrapping */
+    word-break: break-word; /* Ensure long words break correctly */
+    white-space: normal; /* Allow text to wrap to the next line */
+}s
 
 /* === FOOTER === */
 .footer {
