@@ -27,10 +27,11 @@
                     content: '';
                     position: absolute;
                     top: 25px;
-                    left: 0;
-                    width: 100%;
+                    left: 10px;
+                    width: 95%;
                     height: 4px;
                     background: #ddd;
+                    background: linear-gradient(to right, #324721 0%, #324721 var(--progress, 0%), #ddd var(--progress, 0%), #ddd 100%);
                     z-index: 1;
                 }
 
@@ -58,6 +59,7 @@
                         font-size:17px;
                     }
 
+
                     .numberwizard.progresschart ul li::after {
                         content: attr(data-title);
                         display: block;
@@ -73,6 +75,18 @@
                     }
 
                     .numberwizard.progresschart ul li.active::after {
+                        font-size: 17px;
+                        font-weight: 600;
+                        color: #324721;
+                    }
+
+                    .numberwizard.progresschart ul li.completed::before {
+                        border-color: #324721;
+                        background: #324721;
+                        color: white;
+                    }
+
+                    .numberwizard.progresschart ul li.completed::after {
                         font-size: 17px;
                         font-weight: 600;
                         color: #324721;
@@ -98,6 +112,24 @@
         @await Html.PartialAsync($"{Model.PartialBasePath}_{Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName.Replace(" ", "")}.cshtml")
     </div>
 </div>
+@section Scripts {
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const steps = document.querySelectorAll('.numberwizard.progresschart ul li');
+        const progressLine = document.querySelector('.numberwizard.progresschart ul');
+
+        let completedSteps = 0;
+        steps.forEach(step => {
+            if (step.classList.contains('completed')) {
+                completedSteps++;
+            }
+        });
+
+        const progressPercentage = (completedSteps / (steps.length - 1)) * 100;
+        progressLine.style.setProperty('--progress', progressPercentage + '%');
+    });
+</script>
+}
 
            
 

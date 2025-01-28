@@ -1,4 +1,106 @@
-﻿
-@*
-    For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@{
+    ViewData["Title"] = "Select Ticket";
+    var currentStep = ViewBag.CurrentStep as string;
+    @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
+}
+<div class="row">
+    <!-- Personal Details Section -->
+    <div class="col-md-10">
+        <h4 class="ml-1"><b>Enter Requisition Details</b></h4>
+        <hr style="border:2px solid black" />
+    </div>
+</div>
+
+<form asp-controller="MaterialRequisition" asp-action="CreateRequisition">
+    <div class="row">
+        <div class="col-md-6">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="form-group">
+                <label class="control-label"> Ticket ID</label>  <span class="requiredlabel">*</span>
+                <input type="text" class="form-control form-control-sm " name="" placeholder="" value="@ViewBag.TicketId" hidden/>
+                <select class="formcontrol2" readonly>
+                    <option value=""> @ViewBag.TicketId</option>
+                </select>
+                <span asp-validation-for="Requisition.TicketId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label  class="control-label"> Department</label>  <span class="requiredlabel">*</span>
+                <select asp-for="Requisition.DepartmentId" class="formcontrol2"  readonly>
+                    <option value="@Model.Department.DepartmentId"> @Model.Department.DepartmentName</option>
+                </select>
+                <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " name="" placeholder="" value="@Model.Employee.PayrollNo" hidden />
+            </div>
+           
+
+            <div class="form-group">
+                <label class="control-label"> Issue Station Category</label>  <span class="requiredlabel">*</span>
+                <select asp-for="Requisition.DepartmentId" class="formcontrol2" readonly>
+                    <option value="@Model.Department.DepartmentId"> @Model.Department.DepartmentName</option>
+                </select>
+                <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
+            </div>
+           
+
+          
+     
+        </div>
+        <div class="col-md-10">
+            
+        </div>
+        <!-- Issue Category and Station -->
+        <div class="col-md-5">
+            <h5 class="ml-1" style="color:#324721"><b>Issue Details</b></h5>
+            <hr style="height:5px;border-width:0;background-color:#324721;opacity:1 !important">
+            <div class="form-group mb-3">
+                <label class="control-label">Issue Station Category</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.IssueStationCategory" id="issueStationCategory" class="formcontrol2">
+                    <option value="">Select Category</option>
+                    <option value="headoffice">Head Office</option>
+                    <option value="factory">Factory</option>
+                    <option value="region">Region</option>
+                </select>
+            </div>
+            <div class="form-group mb-3">
+                <label class="control-label">Issue Station</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.IssueStation" id="issueStation" class="formcontrol2">
+                    <option value="">Select Station</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Arrow -->
+        <div class="col-md-1 text-center">
+           
+        </div>
+
+        <!-- Delivery Category and Station -->
+        <div class="col-md-5">
+            <h5 class="ml-1" style="color:#fcb900 "><b>Delivery Details</b></h5>
+            <hr style="height:5px;border-width:0;background-color:#fcb900 ;opacity:1 !important">
+            <div class="form-group mb-3">
+                <label class="control-label">Delivery Station Category</label>
+                <select asp-for="Requisition.DeliveryStationCategory" id="deliveryStationCategory" class="formcontrol2">
+                    <option value="">Select Category</option>
+                    <option value="factory">Factory</option>
+                    <option value="region">Region</option>
+                    <option value="vendor">Vendor</option>
+                    <option value="headoffice">Head Office</option>
+                  
+                </select>
+            </div>
+            <div class="form-group mb-3">
+                <label class="control-label">Delivery Station</label>
+                <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="formcontrol2">
+                    <option value="">Select Station</option>
+                </select>
+            </div>
+        </div>
+        <!-- Add the wizard buttons-->
+        <partial name="_WizardNavigation" />
+        </div>
+</form>

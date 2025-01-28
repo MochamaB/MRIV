@@ -1,16 +1,25 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using MRIV.Attributes;
 using MRIV.Extensions;
 using MRIV.Models;
+using MRIV.Services;
 using MRIV.ViewModels;
 using System.Net.Sockets;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class MaterialRequisitionController : Controller
     {
         private const string WizardViewPath = "~/Views/Wizard/NumberWizard.cshtml";
         private readonly string _connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
+        private readonly IEmployeeService _employeeService;
+        public MaterialRequisitionController(IEmployeeService employeeService)
+        {
+            _employeeService = employeeService;
+        }
+
 
         private List<string> GetSteps()
         {
@@ -138,10 +147,10 @@ namespace MRIV.Controllers
         public async Task<IActionResult> SelectTicket(int RequisitionID, string Description)
         {
             // Create a requisition object (or use your existing model)
-            var requisition = new
+            var requisition = new Requisition
             {
-                RequestID = RequisitionID,
-                Remark = Description
+                TicketId = RequisitionID,
+                Remarks = Description
             };
 
             // Store the requisition object in the session
@@ -154,20 +163,23 @@ namespace MRIV.Controllers
             return RedirectToAction("Requisition");
         }
 
-        public IActionResult Requisition()
+        public async Task<IActionResult> RequisitionAsync()
         {
             // Retrieve the requisition object from the session
-            var requisition = HttpContext.Session.GetObject<dynamic>("WizardRequisition");
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            // Get employee and department info
+            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
             if (requisition != null)
             {
                 // Use the requisition data as needed
-                int requestID = requisition.RequestID;
-                string remark = requisition.Remark;
+                int TicketId = requisition.TicketId;
+                string remarks = requisition.Remarks;
 
                 // Pass the data to the view or use it in your logic
-                ViewBag.RequestID = requestID;
-                ViewBag.Remark = remark;
+                ViewBag.TicketId = TicketId;
+                ViewBag.Remark = remarks;
             }
 
             // Prepare wizard steps and view model
@@ -177,7 +189,11 @@ namespace MRIV.Controllers
                 Steps = steps,
                 CurrentStep = 2,
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
-               // Tickets = tickets // Add tickets to view model
+                Requisition = requisition,
+                Employee = employee,
+                Department = department,
+                Station = station
+                // Tickets = tickets // Add tickets to view model
             };
 
          

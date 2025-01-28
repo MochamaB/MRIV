@@ -24,7 +24,7 @@
                 if (element.parents('.submenu-item').length) {
                     element.addClass('active');
                 }
-            } else if (currentPath.startsWith("RequisitionWizard") && linkPath === "Requisitions") {
+            } else if (currentPath.startsWith("MaterialRequisition") && linkPath === "Requisitions") {
                 // Special case for RequisitionWizard
                 element.parents('.nav-item').last().addClass('active');
                 if (element.parents('.sub-menu').length) {

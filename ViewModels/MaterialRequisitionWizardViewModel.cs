@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using MRIV.Models;
+using System.Net.Sockets;
 
 namespace MRIV.ViewModels
 {
@@ -9,6 +10,10 @@ namespace MRIV.ViewModels
         public string PartialBasePath { get; set; } // Example: "~/Views/Shared/CreateRequisition/"
         public List<Ticket> Tickets { get; set; } // Add this to hold the ticket data
         public int TotalCount { get; set; }
+        public Requisition Requisition { get; set; }
+        public EmployeeBkp Employee { get; set; }
+        public Department Department { get; set; }
+        public Station Station { get; set; }
     }
     public class Ticket
     {

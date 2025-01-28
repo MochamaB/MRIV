@@ -15,6 +15,8 @@ builder.Services.AddDbContext<RequisitionContext>(options =>
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
+builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+
 builder.Services.AddHttpContextAccessor();
 
 

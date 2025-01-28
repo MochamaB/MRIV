@@ -21,6 +21,8 @@ public partial class KtdaleaveContext : DbContext
 
     public virtual DbSet<Role> Roles { get; set; }
 
+    public virtual DbSet<Station> Stations { get; set; }
+
     public DbSet<PasswordCheckResults> PasswordCheckResults { get; set; }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
