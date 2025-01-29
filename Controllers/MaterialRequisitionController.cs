@@ -1,10 +1,12 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 using MRIV.Attributes;
 using MRIV.Extensions;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
+using System.Diagnostics;
 using System.Net.Sockets;
 
 namespace MRIV.Controllers
@@ -37,10 +39,13 @@ namespace MRIV.Controllers
         }
 
         [HttpGet]
-        public IActionResult Ticket(string search = "")
+        public async Task<IActionResult> TicketAsync(string search = "")
         { // Query tickets from the database
             var tickets = new List<Ticket>();
             var connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            // Get employee and department info
+            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
@@ -170,6 +175,8 @@ namespace MRIV.Controllers
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             // Get employee and department info
             var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            System.Diagnostics.Debug.WriteLine($"Station: {station?.StationName ?? "null"}");
+            using var ktdaContext = new KtdaleaveContext();
 
             if (requisition != null)
             {
@@ -192,7 +199,10 @@ namespace MRIV.Controllers
                 Requisition = requisition,
                 Employee = employee,
                 Department = department,
-                Station = station
+                Station = station,
+                Departments = ktdaContext.Departments.ToList(), // Fetch all departments
+                Stations = ktdaContext.Stations.ToList(), // Fetch all stations
+               
                 // Tickets = tickets // Add tickets to view model
             };
 
@@ -201,6 +211,9 @@ namespace MRIV.Controllers
 
             return View(WizardViewPath, viewModel);
         }
+
+       
+       
 
     }
 }

@@ -129,6 +129,133 @@
         progressLine.style.setProperty('--progress', progressPercentage + '%');
     });
 </script>
+    <script>
+        // Serialize data
+        const allStations = @Html.Raw(Json.Serialize(Model.Stations));
+        const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
+        console.log("Stations:", allStations);
+        console.log("Departments:", allDepartments);
+
+        // Wait for DOM
+        document.addEventListener("DOMContentLoaded", function () {
+            console.log("DOM loaded. Initializing event listeners...");
+
+            // Delivery Station Elements
+            const deliveryCategory = document.getElementById('deliveryStationCategory');
+            const deliveryStation = document.getElementById('deliveryStation');
+
+            // Issue Station Elements
+            const issueCategory = document.getElementById('issueStationCategory');
+            const issueStation = document.getElementById('issueStation');
+
+            // Check if elements exist
+            if (!deliveryCategory || !deliveryStation || !issueCategory || !issueStation) {
+                console.error("Dropdown elements missing!");
+                return;
+            }
+
+            // Generic function to populate dropdowns
+            function populateDropdown(dropdown, items, valueField, textField) {
+                dropdown.innerHTML = '<option value="">Select Station</option>';
+                items.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item[valueField];
+                    option.textContent = item[textField];
+                    dropdown.appendChild(option);
+                });
+            }
+
+            // ========== Delivery Station Logic ==========
+            deliveryCategory.addEventListener('change', function () {
+                console.log("[Delivery] Category changed to:", this.value);
+                switch (this.value.toLowerCase()) {
+                    case 'region':
+                        const regionStations = allStations.filter(s =>
+                            s.stationName.toLowerCase().includes('region')
+                        );
+                        populateDropdown(deliveryStation, regionStations, 'stationName', 'stationName');
+                        break;
+
+                    case 'factory':
+                        const factoryStations = allStations.filter(s =>
+                            !s.stationName.toLowerCase().includes('region') &&
+                            !s.stationName.toLowerCase().includes('zonal')
+                        );
+                        populateDropdown(deliveryStation, factoryStations, 'stationName', 'stationName');
+                        break;
+
+                    case 'headoffice':
+                        populateDropdown(deliveryStation, allDepartments, 'departmentId', 'departmentName');
+                        break;
+
+                    case 'vendor':
+                        const externalVendors = [
+                            { stationId: 'external', stationName: 'External Vendor' }
+                        ];
+                        populateDropdown(deliveryStation, externalVendors, 'stationId', 'stationName');
+                        break;
+
+                    default:
+                        console.warn("[Delivery] Unhandled category:", this.value);
+                }
+            });
+
+            // ========== Issue Station Logic ==========
+            issueCategory.addEventListener('change', function () {
+                console.log("[Issue] Category changed to:", this.value);
+                switch (this.value.toLowerCase()) {
+                    case 'region':
+                        const regionStations = allStations.filter(s =>
+                            s.stationName.toLowerCase().includes('region')
+                        );
+                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
+                        break;
+
+                    case 'factory':
+                        const factoryStations = allStations.filter(s =>
+                            !s.stationName.toLowerCase().includes('region') &&
+                            !s.stationName.toLowerCase().includes('zonal')
+                        );
+                        populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
+                        break;
+
+                    case 'headoffice':
+                        populateDropdown(issueStation, allDepartments, 'departmentId', 'departmentName');
+                        break;
+
+                    default:
+                        console.warn("[Issue] Unhandled category:", this.value);
+                }
+            });
+
+            // ========== Initialize Issue Station Based on Logged-In User ==========
+            // Replace these with your server-side logic
+            const userStation = "@(Model.Station?.StationName ?? "")"; // Example: "HQ" or "Factory 1"
+          //  alert(userStation);
+            if (userStation.toLowerCase() === "hq") {
+                // Set to "headoffice" and populate departments
+                issueCategory.value = "headoffice";
+                populateDropdown(issueStation, allDepartments, 'departmentId', 'departmentName');
+            } else {
+                // Determine if the user's station is a region/factory
+                if (userStation.toLowerCase().includes("region")) {
+                    issueCategory.value = "region";
+                    const regionStations = allStations.filter(s =>
+                        s.stationName.toLowerCase().includes('region')
+                    );
+                    populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
+                } else {
+                    issueCategory.value = "factory";
+                    const factoryStations = allStations.filter(s =>
+                        !s.stationName.toLowerCase().includes('region') &&
+                        !s.stationName.toLowerCase().includes('zonal')
+                    );
+                    populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
+                }
+            }
+        });
+    </script>
+
 }
 
            

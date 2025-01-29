@@ -35,18 +35,6 @@
             <div class="form-group">
                 <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " name="" placeholder="" value="@Model.Employee.PayrollNo" hidden />
             </div>
-           
-
-            <div class="form-group">
-                <label class="control-label"> Issue Station Category</label>  <span class="requiredlabel">*</span>
-                <select asp-for="Requisition.DepartmentId" class="formcontrol2" readonly>
-                    <option value="@Model.Department.DepartmentId"> @Model.Department.DepartmentName</option>
-                </select>
-                <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
-            </div>
-           
-
-          
      
         </div>
         <div class="col-md-10">
@@ -58,7 +46,7 @@
             <hr style="height:5px;border-width:0;background-color:#324721;opacity:1 !important">
             <div class="form-group mb-3">
                 <label class="control-label">Issue Station Category</label><span class="requiredlabel">*</span>
-                <select asp-for="Requisition.IssueStationCategory" id="issueStationCategory" class="formcontrol2">
+                <select asp-for="Requisition.IssueStationCategory" id="issueStationCategory" class="station-category formcontrol2">
                     <option value="">Select Category</option>
                     <option value="headoffice">Head Office</option>
                     <option value="factory">Factory</option>
@@ -67,7 +55,7 @@
             </div>
             <div class="form-group mb-3">
                 <label class="control-label">Issue Station</label><span class="requiredlabel">*</span>
-                <select asp-for="Requisition.IssueStation" id="issueStation" class="formcontrol2">
+                <select asp-for="Requisition.IssueStation" id="issueStation" class="station-dropdown formcontrol2">
                     <option value="">Select Station</option>
                 </select>
             </div>
@@ -84,7 +72,7 @@
             <hr style="height:5px;border-width:0;background-color:#fcb900 ;opacity:1 !important">
             <div class="form-group mb-3">
                 <label class="control-label">Delivery Station Category</label>
-                <select asp-for="Requisition.DeliveryStationCategory" id="deliveryStationCategory" class="formcontrol2">
+                <select asp-for="Requisition.DeliveryStationCategory" id="deliveryStationCategory" class="station-category formcontrol2">
                     <option value="">Select Category</option>
                     <option value="factory">Factory</option>
                     <option value="region">Region</option>
@@ -95,7 +83,7 @@
             </div>
             <div class="form-group mb-3">
                 <label class="control-label">Delivery Station</label>
-                <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="formcontrol2">
+                <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="station-dropdown formcontrol2">
                     <option value="">Select Station</option>
                 </select>
             </div>
@@ -104,3 +92,4 @@
         <partial name="_WizardNavigation" />
         </div>
 </form>
+

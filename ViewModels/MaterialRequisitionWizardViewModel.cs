@@ -9,6 +9,9 @@ namespace MRIV.ViewModels
         public int CurrentStep { get; set; }
         public string PartialBasePath { get; set; } // Example: "~/Views/Shared/CreateRequisition/"
         public List<Ticket> Tickets { get; set; } // Add this to hold the ticket data
+        public List<Station> Stations { get; set; }
+        public List<Department> Departments { get; set; }
+        public List<EmployeeBkp> EmployeeBkps { get; set; }
         public int TotalCount { get; set; }
         public Requisition Requisition { get; set; }
         public EmployeeBkp Employee { get; set; }

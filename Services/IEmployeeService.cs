@@ -28,11 +28,26 @@ namespace MRIV.Services
             var department = await _context.Departments
                 .FirstOrDefaultAsync(d => d.DepartmentId == employee.Department);  // Added Async
 
-            var stationId = int.Parse(employee.Station);
-            var station = await _context.Stations
-               .FirstOrDefaultAsync(d => d.StationId == stationId);  // Added Async
+            Station station;
+            if (employee.Station.Equals("HQ", StringComparison.OrdinalIgnoreCase))
+            {
+                // Explicitly create an HQ station
+                station = new Station { StationId = 0, StationName = "HQ" };
+            }
+            else if (int.TryParse(employee.Station, out int stationId))
+            {
+                station = await _context.Stations
+                    .FirstOrDefaultAsync(d => d.StationId == stationId);
+            }
+            else
+            {
+                // Handle invalid station data gracefully
+                station = new Station { StationId = -1, StationName = "Unknown" };
+            }
 
             return (employee, department, station);
         }
+
+
     }
 }
