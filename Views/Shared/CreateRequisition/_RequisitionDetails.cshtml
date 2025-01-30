@@ -4,6 +4,15 @@
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
 
 }
+
+<style>
+    .auto-resize-textarea {
+        resize: none;9
+        overflow-y: hidden;
+        min-height: 40px;
+        white-space: pre-wrap;
+    }
+</style>
 <div class="row">
     <!-- Personal Details Section -->
     <div class="col-md-10">
@@ -42,7 +51,7 @@
         </div>
         <!-- Issue Category and Station -->
         <div class="col-md-5">
-            <h5 class="ml-1" style="color:#324721"><b>Issue Details</b></h5>
+            <h5 class="ml-1" style="color:#324721"><b>FROM: Issue Point</b></h5>
             <hr style="height:5px;border-width:0;background-color:#324721;opacity:1 !important">
             <div class="form-group mb-3">
                 <label class="control-label">Issue Station Category</label><span class="requiredlabel">*</span>
@@ -63,15 +72,15 @@
 
         <!-- Arrow -->
         <div class="col-md-1 text-center">
-           
+           <p></p>
         </div>
 
         <!-- Delivery Category and Station -->
         <div class="col-md-5">
-            <h5 class="ml-1" style="color:#fcb900 "><b>Delivery Details</b></h5>
+            <h5 class="ml-1" style="color:#fcb900 "><b>TO: Delivery / Use Point</b></h5>
             <hr style="height:5px;border-width:0;background-color:#fcb900 ;opacity:1 !important">
             <div class="form-group mb-3">
-                <label class="control-label">Delivery Station Category</label>
+                <label class="control-label">Delivery Station Category</label><span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DeliveryStationCategory" id="deliveryStationCategory" class="station-category formcontrol2">
                     <option value="">Select Category</option>
                     <option value="factory">Factory</option>
@@ -82,9 +91,53 @@
                 </select>
             </div>
             <div class="form-group mb-3">
-                <label class="control-label">Delivery Station</label>
+                <label class="control-label">Delivery Station</label><span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="station-dropdown formcontrol2">
                     <option value="">Select Station</option>
+                </select>
+            </div>
+           
+        </div>
+        <div class="col-md-8">
+            <div class="form-group">
+                <label class="control-label"> Remarks</label><span class="requiredlabel">*</span>
+                <textarea asp-for="Requisition.Remarks"
+                          class="auto-resize-textarea form-control"
+                          rows="1"
+                          placeholder="Enter remarks..."></textarea>
+                <span asp-validation-for="Requisition.Remarks" class="text-danger"></span>
+            </div>
+        </div>
+        <div class="col-md-6" id="dispatch" style="display: none;">
+            <div class="form-group mb-3">
+                <label class="control-label">Dispatch done by</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.DispatchType" id="dispatchType" class="formcontrol2">
+                    <option value="">Select Dispatch Method</option>
+                    <option value="admin"> Administration Department</option>
+                    <option value="vendor">Vendor</option>
+                </select>
+            </div>
+            <!-- Conditional Fields -->
+            <!-- Admin Staff (initially hidden) -->
+            <div class="form-group mb-3 admin-field" style="display: none;">
+                <label class="control-label">Admin Staff</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.DispatchPayrollNo" id="dispatchPayrollNo" class="formcontrol2">
+                    <option value="">Select Staff</option>
+                    @foreach (var employee in Model.EmployeeBkps)
+                    {
+                        <option value="@employee.PayrollNo">@employee.Fullname - @employee.Designation</option>
+                    }
+                </select>
+            </div>
+            <!-- Vendor (initially hidden) -->
+            <div class="form-group mb-3 vendor-field" style="display: none;">
+                <label class="control-label">Vendor</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.DispatchVendor" id="dispatchVendor" class="formcontrol2">
+                    <option value="">Select Vendor</option>
+                    @foreach (var vendor in Model.Vendors)
+                    {
+                        <option value="@vendor.VendorID">@vendor.Name</option>
+                    }
                 </select>
             </div>
         </div>

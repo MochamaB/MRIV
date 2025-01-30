@@ -113,6 +113,7 @@
     </div>
 </div>
 @section Scripts {
+    <!-- Wizard Navigation Script -->
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         const steps = document.querySelectorAll('.numberwizard.progresschart ul li');
@@ -129,10 +130,16 @@
         progressLine.style.setProperty('--progress', progressPercentage + '%');
     });
 </script>
+    <!-- Load The requistion Locations Script -->
     <script>
         // Serialize data
         const allStations = @Html.Raw(Json.Serialize(Model.Stations));
         const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
+
+        // User-specific data to be default loaded to the issueStation input
+        const userDepartment = @Html.Raw(Json.Serialize(Model.Department)); // For HQ case
+        const userStation = @Html.Raw(Json.Serialize(Model.Station)); // For non-HQ cases
+
         console.log("Stations:", allStations);
         console.log("Departments:", allDepartments);
 
@@ -185,7 +192,7 @@
                         break;
 
                     case 'headoffice':
-                        populateDropdown(deliveryStation, allDepartments, 'departmentId', 'departmentName');
+                        populateDropdown(deliveryStation, allDepartments, 'departmentName', 'departmentName');
                         break;
 
                     case 'vendor':
@@ -220,7 +227,7 @@
                         break;
 
                     case 'headoffice':
-                        populateDropdown(issueStation, allDepartments, 'departmentId', 'departmentName');
+                        populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
                         break;
 
                     default:
@@ -231,11 +238,18 @@
             // ========== Initialize Issue Station Based on Logged-In User ==========
             // Replace these with your server-side logic
             const userStation = "@(Model.Station?.StationName ?? "")"; // Example: "HQ" or "Factory 1"
+        //    const userDepartmentName = "@(Model.Department?.DepartmentName ?? "")";
           //  alert(userStation);
             if (userStation.toLowerCase() === "hq") {
                 // Set to "headoffice" and populate departments
                 issueCategory.value = "headoffice";
-                populateDropdown(issueStation, allDepartments, 'departmentId', 'departmentName');
+
+                populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
+                // Set the selected value to the user's department ID
+                if (userDepartment) {
+                    issueStation.value = userDepartment.departmentName;
+                }
+
             } else {
                 // Determine if the user's station is a region/factory
                 if (userStation.toLowerCase().includes("region")) {
@@ -252,7 +266,95 @@
                     );
                     populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
                 }
+
+                // Set the selected value to the user's station name
+                if (userStation) {
+                    issueStationDropdown.value = userStation.stationName;
+                }
             }
+        });
+    </script>
+
+    <!-- Dynamic Resize text Areas script -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function autoResize(textarea) {
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+            }
+
+            const textarea = document.querySelector('.auto-resize-textarea');
+            if (textarea) {
+                textarea.addEventListener('input', function () {
+                    autoResize(this);
+                });
+                autoResize(textarea); // Initialize on page load
+            }
+        });
+    </script>
+    <!-- Dispatch Visibility Scripts -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const issueCategory = document.getElementById('issueStationCategory');
+            const deliveryCategory = document.getElementById('deliveryStationCategory');
+            const dispatchSection = document.getElementById('dispatch');
+            const dispatchType = document.getElementById('dispatchType');
+
+            function shouldShowDispatch() {
+                const issueVal = issueCategory.value.toLowerCase();
+                const deliveryVal = deliveryCategory.value.toLowerCase();
+
+                // Your logic matrix implementation
+                if (issueVal === 'headoffice' &&
+                    (deliveryVal === 'factory' ||
+                        deliveryVal === 'region' ||
+                        deliveryVal === 'vendor')) {
+                    return true;
+                }
+                return false;
+            }
+
+            function toggleDispatchSection() {
+                if (shouldShowDispatch()) {
+                    dispatchSection.style.display = 'block';
+                } else {
+                    dispatchSection.style.display = 'none';
+                    // Reset dispatch fields when hidden
+                    dispatchType.value = '';
+                    document.getElementById('dispatchPayrollNo').value = '';
+                    document.getElementById('dispatchVendor').value = '';
+                }
+            }
+
+            // Initial check on page load
+            toggleDispatchSection();
+
+            // Add event listeners to both dropdowns
+            issueCategory.addEventListener('change', toggleDispatchSection);
+            deliveryCategory.addEventListener('change', toggleDispatchSection);
+
+            // Existing dispatch type visibility logic (modified to work with parent visibility)
+            function toggleDispatchSubFields() {
+                const adminField = document.querySelector('.admin-field');
+                const vendorField = document.querySelector('.vendor-field');
+
+                if (dispatchType.value === 'admin') {
+                    adminField.style.display = 'block';
+                    vendorField.style.display = 'none';
+                } else if (dispatchType.value === 'vendor') {
+                    vendorField.style.display = 'block';
+                    adminField.style.display = 'none';
+                } else {
+                    adminField.style.display = 'none';
+                    vendorField.style.display = 'none';
+                }
+            }
+
+            dispatchType.addEventListener('change', function () {
+                if (dispatchSection.style.display === 'block') {
+                    toggleDispatchSubFields();
+                }
+            });
         });
     </script>
 

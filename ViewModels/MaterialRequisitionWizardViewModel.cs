@@ -17,11 +17,24 @@ namespace MRIV.ViewModels
         public EmployeeBkp Employee { get; set; }
         public Department Department { get; set; }
         public Station Station { get; set; }
+        // Existing properties
+        public List<Vendor> Vendors { get; set; }
     }
     public class Ticket
     {
         public int RequestID { get; set; }
         public string Title { get; set; }
         public string Description { get; set; }
+    }
+
+    public class Vendor
+    {
+        public int VendorID { get; set; }
+        public string Name { get; set; }
+        public string Phone { get; set; }
+        public string Email { get; set; }
+        public string Location { get; set; }
+        public bool IsNullRecord { get; set; }
+        public DateTime LastModified { get; set; }
     }
 }

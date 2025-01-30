@@ -17,9 +17,11 @@ namespace MRIV.Controllers
         private const string WizardViewPath = "~/Views/Wizard/NumberWizard.cshtml";
         private readonly string _connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
         private readonly IEmployeeService _employeeService;
-        public MaterialRequisitionController(IEmployeeService employeeService)
+        private readonly VendorService _vendorService;
+        public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService)
         {
             _employeeService = employeeService;
+            _vendorService = vendorService;
         }
 
 
@@ -173,10 +175,18 @@ namespace MRIV.Controllers
             // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-            // Get employee and department info
+
+            // Getlogged in user their employee and department info
             var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
             System.Diagnostics.Debug.WriteLine($"Station: {station?.StationName ?? "null"}");
             using var ktdaContext = new KtdaleaveContext();
+
+            //Get List of Admin Employees for Dispatch
+            List<EmployeeBkp> employees = new List<EmployeeBkp>(); // Initialize employees to an empty list
+            int AdminDepartmentCode = 104;
+            string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
+            employees = await ktdaContext.EmployeeBkps.Where(e => e.Department == AdmindepartmentCodeString &&
+                   e.EmpisCurrActive == 0).OrderBy(e => e.Fullname).ToListAsync();
 
             if (requisition != null)
             {
@@ -198,11 +208,13 @@ namespace MRIV.Controllers
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
                 Requisition = requisition,
                 Employee = employee,
+                EmployeeBkps = employees,
                 Department = department,
                 Station = station,
                 Departments = ktdaContext.Departments.ToList(), // Fetch all departments
                 Stations = ktdaContext.Stations.ToList(), // Fetch all stations
-               
+                Vendors = await _vendorService.GetVendorsAsync(),
+
                 // Tickets = tickets // Add tickets to view model
             };
 
