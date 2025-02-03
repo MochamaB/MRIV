@@ -1,13 +1,17 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Mono.TextTemplating;
 using MRIV.Attributes;
+using MRIV.Enums;
 using MRIV.Extensions;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
 using System.Diagnostics;
 using System.Net.Sockets;
+using System.Text.Json;
+using static System.Collections.Specialized.BitVector32;
 
 namespace MRIV.Controllers
 {
@@ -39,6 +43,8 @@ namespace MRIV.Controllers
                 IsCompleted = index + 1 < currentStep
             }).ToList();
         }
+
+        //1. SELECT TICKET ////////////////////
 
         [HttpGet]
         public async Task<IActionResult> TicketAsync(string search = "")
@@ -170,6 +176,8 @@ namespace MRIV.Controllers
             return RedirectToAction("Requisition");
         }
 
+    //2. ENTER AND SAVE THE REQUISITION DETAILS ////////////////////
+
         public async Task<IActionResult> RequisitionAsync()
         {
             // Retrieve the requisition object from the session
@@ -224,8 +232,132 @@ namespace MRIV.Controllers
             return View(WizardViewPath, viewModel);
         }
 
-       
-       
+        [HttpPost]
+        public async Task<IActionResult> CreateRequisitionAsync(MaterialRequisitionWizardViewModel model, string? direction = null)
+        {
+            Console.WriteLine($"🔹 Received direction: {direction}");
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
+            var steps = GetWizardSteps(currentStep: 2);
+            // Always check model state first
+            if (!ModelState.IsValid)
+            {
+                // Handle validation errors
+                // Instead of redirecting, fetch needed data and return the same view
+                var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+
+                // Get logged-in user details
+                var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+
+                using var ktdaContext = new KtdaleaveContext();
+
+                // Get Admin Employees for Dispatch
+                int AdminDepartmentCode = 104;
+                string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
+                List<EmployeeBkp> employees = await ktdaContext.EmployeeBkps
+                    .Where(e => e.Department == AdmindepartmentCodeString && e.EmpisCurrActive == 0)
+                    .OrderBy(e => e.Fullname)
+                    .ToListAsync();
+
+                // Reload wizard steps
+
+                // Populate the model again to pass back to the view
+                model.Steps = steps;
+                model.CurrentStep = 2;
+                model.PartialBasePath = "~/Views/Shared/CreateRequisition/";
+                model.Requisition = requisition;
+                model.Employee = employee;
+                model.EmployeeBkps = employees;
+                model.Department = department;
+                model.Station = station;
+                model.Departments = ktdaContext.Departments.ToList();
+                model.Stations = ktdaContext.Stations.ToList();
+                model.Vendors = await _vendorService.GetVendorsAsync();
+                var modelJson = JsonSerializer.Serialize(model.Requisition, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
+
+                // 🚀 Log all validation errors for debugging
+                var errors = ModelState.Where(m => m.Value.Errors.Any())
+                                       .Select(m => new { Field = m.Key, Errors = m.Value.Errors.Select(e => e.ErrorMessage) })
+                                       .ToList();
+
+                var errorsJson = JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine($"Validation Errors:\n{errorsJson}");
+                TempData["ErrorMessage"] = "Check Validation Errors Below!";
+
+                // Return view directly (NO REDIRECTION)
+                return View(WizardViewPath, model);
+             
+            }
+         
+
+           
+
+            // Map properties
+            requisition.DepartmentId = model.Requisition.DepartmentId;
+            requisition.PayrollNo = model.Requisition.PayrollNo;
+            requisition.IssueStationCategory = model.Requisition.IssueStationCategory;
+            requisition.IssueStation = model.Requisition.IssueStation;
+            requisition.DeliveryStationCategory = model.Requisition.DeliveryStationCategory;
+            requisition.DeliveryStation = model.Requisition.DeliveryStation;
+
+            // Conditional mapping
+            requisition.DispatchType = model.Requisition.DispatchType;
+            requisition.DispatchPayrollNo = model.Requisition.DispatchType == "admin"
+                ? model.Requisition.DispatchPayrollNo
+                : null;
+
+            requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
+                ? model.Requisition.DispatchVendor
+            : null;
+
+            // 🚀 Handle Previous Step Logic
+            // 🚀 Handle Previous Step Logic
+            if (!string.IsNullOrEmpty(direction) && direction.ToLower() == "previous")
+            {
+                model.CurrentStep = Math.Max(1, model.CurrentStep - 1);
+                Console.WriteLine("⬅ Moving to Previous Step");
+
+                // Save progress in session
+                HttpContext.Session.SetObject("WizardRequisition", requisition);
+
+                // 🚀 Return the same view instead of redirecting
+                return View(WizardViewPath, model);
+            }
+            // Save updated requisition back to session
+            HttpContext.Session.SetObject("WizardRequisition", requisition);
+
+            // Set a success message in TempData
+            TempData["SuccessMessage"] = "Requisition Added successfully!";
+
+            // Redirect to next step
+            return RedirectToAction("RequisitionItem");
+
+        }
+
+        public IActionResult RequisitionItem()
+        {
+            // Retrieve the requisition object from the session
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            // Prepare wizard steps and view model
+            var steps = GetWizardSteps(currentStep: 3); // Pass the current step
+            var viewModel = new MaterialRequisitionWizardViewModel
+            {
+                Steps = steps,
+                CurrentStep = 3,
+                PartialBasePath = "~/Views/Shared/CreateRequisition/",
+                Requisition = requisition,
+                RequisitionItem = new RequisitionItem
+                {
+                    Status = RequisitionItemStatus.PendingApproval,
+                    Condition = RequisitionItemCondition.GoodCondition
+                }
+
+            };
+
+            return View(WizardViewPath, viewModel);
+
+        }
+
 
     }
-}
+    }

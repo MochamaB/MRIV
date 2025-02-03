@@ -25,7 +25,7 @@ namespace MRIV.Models
         public string ApprovalStatus { get; set; }
 
         [StringLength(500)]
-        public string Comments { get; set; }
+        public string? Comments { get; set; }
 
         [Required]
         public DateTime CreatedAt { get; set; }
@@ -34,11 +34,11 @@ namespace MRIV.Models
 
         // Add navigation property to Department
         [ForeignKey("DepartmentId")]
-        public virtual Department Department { get; set; }
+        public virtual Department? Department { get; set; }
 
         // Navigation property
         // Explicitly map the foreign key for Requisition
         [ForeignKey("RequisitionId")]
-        public virtual Requisition Requisition { get; set; }
+        public virtual Requisition? Requisition { get; set; }
     }
 }

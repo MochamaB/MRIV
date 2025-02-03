@@ -12,28 +12,28 @@ namespace MRIV.Models
         [Required]
         public int MaterialCategoryId { get; set; }
 
-        [Required]
+       
         [StringLength(50)]
-        public string Code { get; set; }
+        public string? Code { get; set; }
 
-        [Required]
+       
         [StringLength(100)]
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         [StringLength(500)]
         public string? Description { get; set; }
 
-        [Required]
+       
         public string? CurrentLocationId { get; set; }
 
         [StringLength(50)]
         public string? VendorId { get; set; }
 
-        public string Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 
+        public string? Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 
 
         // Navigation properties
         [ForeignKey("MaterialCategoryId")]
-        public virtual MaterialCategory MaterialCategory { get; set; }
+        public virtual MaterialCategory? MaterialCategory { get; set; }
 
         public virtual ICollection<RequisitionItem>? RequisitionItems { get; set; }
     }

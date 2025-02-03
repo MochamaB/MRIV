@@ -114,73 +114,128 @@
 </div>
 @section Scripts {
     <!-- Wizard Navigation Script -->
-<script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const steps = document.querySelectorAll('.numberwizard.progresschart ul li');
-        const progressLine = document.querySelector('.numberwizard.progresschart ul');
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const progressLine = document.querySelector('.numberwizard.progresschart ul');
+            const steps = @Html.Raw(Json.Serialize(Model.Steps));
+            const currentStepName = '@Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName'.trim();
+            let currentStepIndex = steps.findIndex(step => step.stepName.trim().toLowerCase() === currentStepName.toLowerCase());
 
-        let completedSteps = 0;
-        steps.forEach(step => {
-            if (step.classList.contains('completed')) {
-                completedSteps++;
+            // 🚀 Function to Update Progress Bar
+            function updateProgressBar() {
+                let completedSteps = currentStepIndex;
+                const progressPercentage = (completedSteps / (steps.length - 1)) * 100;
+                progressLine.style.setProperty('--progress', progressPercentage + '%');
+                console.log("Progress Updated:", progressPercentage + "%");
             }
-        });
 
-        const progressPercentage = (completedSteps / (steps.length - 1)) * 100;
-        progressLine.style.setProperty('--progress', progressPercentage + '%');
-    });
-</script>
+            // 🚀 Initial Progress Bar Update
+            updateProgressBar();
+
+            // 🚀 Handle "Previous Step" button click
+            $(".wizardpreviousBtn").click(function (event) {
+                event.preventDefault(); // Prevent form submission
+
+                if (currentStepIndex > 0) {
+                    currentStepIndex--; // Move to previous step
+                    const previousStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, ''); // Safely access stepName
+                    if (!previousStep) {
+                        console.error("Invalid step detected while moving to the previous step.");
+                        return;
+                    }
+                    console.log("⬅ Moving to Previous Step:", previousStep);
+
+                    // Update URL without refreshing the page
+                    history.pushState({}, '', `/MaterialRequisition/${previousStep}`);
+
+                    // Reload only the step content via AJAX
+                    $("#stepContent").load(`/MaterialRequisition/${previousStep} #stepContent`, function () {
+                        updateProgressBar(); // Update progress after loading
+                        updateNavButtons(); // Update button visibility
+                    });
+                } else {
+                    console.warn("Already at the first step. Cannot move further back.");
+                }
+            });
+
+            // 🚀 Handle "Next Step" button click (form submission)
+            $(".nextbutton").click(function () {
+                if (currentStepIndex < steps.length - 1) {
+                    currentStepIndex++; // Move to next step
+                    const nextStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, ''); // Safely access stepName
+                    if (!nextStep) {
+                        console.error("Invalid step detected while moving to the next step.");
+                        return;
+                    }
+                    console.log("➡ Moving to Next Step:", nextStep);
+
+                    // Submit the form for server-side validation and navigation
+                    $(this).closest("form").submit();
+                } else {
+                    console.warn("Already at the last step. Completing requisition.");
+                }
+            });
+
+            // 🚀 Function to Update Navigation Buttons
+            function updateNavButtons() {
+                if (currentStepIndex === 0) {
+                    $(".wizardpreviousBtn").hide(); // Hide "Previous" button on the first step
+                } else {
+                    $(".wizardpreviousBtn").show(); // Show "Previous" button otherwise
+                }
+
+                if (currentStepIndex === steps.length - 1) {
+                    $(".nextbutton").html('<i class="mdi mdi-arrow-right-bold-circle mdi-24"> Complete Requisition </i>');
+                } else {
+                    $(".nextbutton").html('<i class="mdi mdi-arrow-right-bold-circle mdi-24"> Next Step </i>');
+                }
+            }
+
+            // 🚀 Initial Navigation Button Update
+            updateNavButtons();
+        });
+    </script>
+
     <!-- Load The requistion Locations Script -->
     <script>
         // Serialize data
         const allStations = @Html.Raw(Json.Serialize(Model.Stations));
         const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
+        const userDepartment = @Html.Raw(Json.Serialize(Model.Department));
+        const userStation = @Html.Raw(Json.Serialize(Model.Station));
 
-        // User-specific data to be default loaded to the issueStation input
-        const userDepartment = @Html.Raw(Json.Serialize(Model.Department)); // For HQ case
-        const userStation = @Html.Raw(Json.Serialize(Model.Station)); // For non-HQ cases
-
-        console.log("Stations:", allStations);
-        console.log("Departments:", allDepartments);
-
-        // Wait for DOM
         document.addEventListener("DOMContentLoaded", function () {
-            console.log("DOM loaded. Initializing event listeners...");
-
-            // Delivery Station Elements
+            // Initialize elements
             const deliveryCategory = document.getElementById('deliveryStationCategory');
             const deliveryStation = document.getElementById('deliveryStation');
-
-            // Issue Station Elements
             const issueCategory = document.getElementById('issueStationCategory');
             const issueStation = document.getElementById('issueStation');
 
-            // Check if elements exist
-            if (!deliveryCategory || !deliveryStation || !issueCategory || !issueStation) {
-                console.error("Dropdown elements missing!");
-                return;
-            }
-
-            // Generic function to populate dropdowns
-            function populateDropdown(dropdown, items, valueField, textField) {
+            // Generic population function with selection preservation
+            function populateDropdown(dropdown, items, valueField, textField, selectedValue) {
                 dropdown.innerHTML = '<option value="">Select Station</option>';
                 items.forEach(item => {
                     const option = document.createElement('option');
                     option.value = item[valueField];
                     option.textContent = item[textField];
+                    if (item[valueField] === selectedValue) {
+                        option.selected = true;
+                    }
                     dropdown.appendChild(option);
                 });
             }
 
-            // ========== Delivery Station Logic ==========
-            deliveryCategory.addEventListener('change', function () {
-                console.log("[Delivery] Category changed to:", this.value);
-                switch (this.value.toLowerCase()) {
+            // ======== Delivery Station Logic ========
+            function handleDeliveryCategoryChange() {
+                const category = deliveryCategory.value.toLowerCase();
+                const selectedValue = "@(Model.Requisition?.DeliveryStation ?? "")";
+
+                switch (category) {
                     case 'region':
                         const regionStations = allStations.filter(s =>
                             s.stationName.toLowerCase().includes('region')
                         );
-                        populateDropdown(deliveryStation, regionStations, 'stationName', 'stationName');
+                        populateDropdown(deliveryStation, regionStations, 'stationName', 'stationName', selectedValue);
                         break;
 
                     case 'factory':
@@ -188,13 +243,11 @@
                             !s.stationName.toLowerCase().includes('region') &&
                             !s.stationName.toLowerCase().includes('zonal')
                         );
-                        populateDropdown(deliveryStation, factoryStations, 'stationName', 'stationName');
+                        populateDropdown(deliveryStation, factoryStations, 'stationName', 'stationName', selectedValue);
                         break;
-
                     case 'headoffice':
                         populateDropdown(deliveryStation, allDepartments, 'departmentName', 'departmentName');
                         break;
-
                     case 'vendor':
                         const externalVendors = [
                             { stationId: 'external', stationName: 'External Vendor' }
@@ -204,20 +257,31 @@
 
                     default:
                         console.warn("[Delivery] Unhandled category:", this.value);
-                }
-            });
 
-            // ========== Issue Station Logic ==========
-            issueCategory.addEventListener('change', function () {
-                console.log("[Issue] Category changed to:", this.value);
-                switch (this.value.toLowerCase()) {
+                    // ... other cases ...
+                }
+            }
+
+            // Initialize and set up listener
+            deliveryCategory.addEventListener('change', handleDeliveryCategoryChange);
+            handleDeliveryCategoryChange(); // Trigger on page load
+
+            // ======== Issue Station Logic ========
+            function handleIssueCategoryChange() {
+                const category = issueCategory.value.toLowerCase();
+                const selectedValue = issueStation.value;
+
+                switch (category) {
+                    case 'headoffice':
+                        populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName', selectedValue);
+                        break;
+
                     case 'region':
                         const regionStations = allStations.filter(s =>
                             s.stationName.toLowerCase().includes('region')
                         );
-                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
+                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName', selectedValue);
                         break;
-
                     case 'factory':
                         const factoryStations = allStations.filter(s =>
                             !s.stationName.toLowerCase().includes('region') &&
@@ -225,53 +289,48 @@
                         );
                         populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
                         break;
-
-                    case 'headoffice':
-                        populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
-                        break;
-
-                    default:
-                        console.warn("[Issue] Unhandled category:", this.value);
-                }
-            });
-
-            // ========== Initialize Issue Station Based on Logged-In User ==========
-            // Replace these with your server-side logic
-            const userStation = "@(Model.Station?.StationName ?? "")"; // Example: "HQ" or "Factory 1"
-        //    const userDepartmentName = "@(Model.Department?.DepartmentName ?? "")";
-          //  alert(userStation);
-            if (userStation.toLowerCase() === "hq") {
-                // Set to "headoffice" and populate departments
-                issueCategory.value = "headoffice";
-
-                populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
-                // Set the selected value to the user's department ID
-                if (userDepartment) {
-                    issueStation.value = userDepartment.departmentName;
-                }
-
-            } else {
-                // Determine if the user's station is a region/factory
-                if (userStation.toLowerCase().includes("region")) {
-                    issueCategory.value = "region";
-                    const regionStations = allStations.filter(s =>
-                        s.stationName.toLowerCase().includes('region')
-                    );
-                    populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
-                } else {
-                    issueCategory.value = "factory";
-                    const factoryStations = allStations.filter(s =>
-                        !s.stationName.toLowerCase().includes('region') &&
-                        !s.stationName.toLowerCase().includes('zonal')
-                    );
-                    populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
-                }
-
-                // Set the selected value to the user's station name
-                if (userStation) {
-                    issueStationDropdown.value = userStation.stationName;
+                    // ... other cases ...
                 }
             }
+
+            // Initialize and set up listener
+            issueCategory.addEventListener('change', handleIssueCategoryChange);
+            handleIssueCategoryChange(); // Trigger on page load
+
+            // ======== Initial User Setup ========
+            function initializeUserSettings() {
+                const userStationName = userStation?.stationName?.toLowerCase() || '';
+
+                if (userStationName === 'hq') {
+                    issueCategory.value = 'headoffice';
+                    populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
+                    if (userDepartment) {
+                        issueStation.value = userDepartment.departmentName;
+                    }
+                } else {
+                    // ... existing user station logic ...
+                    // Determine if the user's station is a region/factory
+                    if (userStation.toLowerCase().includes("region")) {
+                        issueCategory.value = "region";
+                        const regionStations = allStations.filter(s =>
+                            s.stationName.toLowerCase().includes('region')
+                        );
+                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
+                    } else {
+                        issueCategory.value = "factory";
+                        const factoryStations = allStations.filter(s =>
+                            !s.stationName.toLowerCase().includes('region') &&
+                            !s.stationName.toLowerCase().includes('zonal')
+                        );
+                        populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
+                    }
+                    if (userStation) {
+                        issueStationDropdown.value = userStation.stationName;
+                    }
+                }
+            }
+
+            initializeUserSettings();
         });
     </script>
 
@@ -299,41 +358,34 @@
             const deliveryCategory = document.getElementById('deliveryStationCategory');
             const dispatchSection = document.getElementById('dispatch');
             const dispatchType = document.getElementById('dispatchType');
+            const dispatchPayrollNo = document.getElementById('dispatchPayrollNo');
+            const dispatchVendor = document.getElementById('dispatchVendor');
 
             function shouldShowDispatch() {
                 const issueVal = issueCategory.value.toLowerCase();
                 const deliveryVal = deliveryCategory.value.toLowerCase();
 
-                // Your logic matrix implementation
-                if (issueVal === 'headoffice' &&
-                    (deliveryVal === 'factory' ||
-                        deliveryVal === 'region' ||
-                        deliveryVal === 'vendor')) {
-                    return true;
-                }
-                return false;
+                return issueVal === 'headoffice' &&
+                    (deliveryVal === 'factory' || deliveryVal === 'region' || deliveryVal === 'vendor');
             }
 
             function toggleDispatchSection() {
-                if (shouldShowDispatch()) {
+                const shouldShow = shouldShowDispatch();
+
+                if (shouldShow) {
                     dispatchSection.style.display = 'block';
+                    dispatchType.removeAttribute("disabled");
+                    dispatchType.setAttribute("required", "true"); // Add required attribute
                 } else {
                     dispatchSection.style.display = 'none';
-                    // Reset dispatch fields when hidden
-                    dispatchType.value = '';
-                    document.getElementById('dispatchPayrollNo').value = '';
-                    document.getElementById('dispatchVendor').value = '';
+                    dispatchType.removeAttribute("required"); // Remove required attribute
+                    dispatchType.value = "";
+                    dispatchType.setAttribute("disabled", "true");
+                    // ... rest of your code
                 }
             }
 
-            // Initial check on page load
-            toggleDispatchSection();
-
-            // Add event listeners to both dropdowns
-            issueCategory.addEventListener('change', toggleDispatchSection);
-            deliveryCategory.addEventListener('change', toggleDispatchSection);
-
-            // Existing dispatch type visibility logic (modified to work with parent visibility)
+            // Toggle subfields based on dispatch type
             function toggleDispatchSubFields() {
                 const adminField = document.querySelector('.admin-field');
                 const vendorField = document.querySelector('.vendor-field');
@@ -341,22 +393,33 @@
                 if (dispatchType.value === 'admin') {
                     adminField.style.display = 'block';
                     vendorField.style.display = 'none';
+                    dispatchPayrollNo.removeAttribute("disabled");
+                    dispatchVendor.setAttribute("disabled", "true");
                 } else if (dispatchType.value === 'vendor') {
                     vendorField.style.display = 'block';
                     adminField.style.display = 'none';
+                    dispatchVendor.removeAttribute("disabled");
+                    dispatchPayrollNo.setAttribute("disabled", "true");
                 } else {
                     adminField.style.display = 'none';
                     vendorField.style.display = 'none';
+                    dispatchPayrollNo.setAttribute("disabled", "true");
+                    dispatchVendor.setAttribute("disabled", "true");
                 }
             }
 
-            dispatchType.addEventListener('change', function () {
-                if (dispatchSection.style.display === 'block') {
-                    toggleDispatchSubFields();
-                }
-            });
+            // Initial check on page load
+            toggleDispatchSection();
+            toggleDispatchSubFields();
+
+            // Add event listeners
+            issueCategory.addEventListener('change', toggleDispatchSection);
+            deliveryCategory.addEventListener('change', toggleDispatchSection);
+            dispatchType.addEventListener('change', toggleDispatchSubFields);
         });
+
     </script>
+      
 
 }
 

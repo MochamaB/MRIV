@@ -40,17 +40,17 @@ namespace MRIV.Migrations
                     DeliveryStationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     DeliveryStation = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    DispatchType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    DispatchPayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    DispatchVendor = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CollectorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
-                    CollectorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Status = table.Column<int>(type: "int", nullable: false),
+                    DispatchType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    DispatchPayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    DispatchVendor = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CollectorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CollectorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: true),
                     CompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsExternal = table.Column<bool>(type: "bit", nullable: false),
-                    ForwardToAdmin = table.Column<bool>(type: "bit", nullable: false)
+                    IsExternal = table.Column<bool>(type: "bit", nullable: true),
+                    ForwardToAdmin = table.Column<bool>(type: "bit", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -64,12 +64,12 @@ namespace MRIV.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MaterialCategoryId = table.Column<int>(type: "int", nullable: false),
-                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    CurrentLocationId = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    CurrentLocationId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     VendorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Status = table.Column<string>(type: "nvarchar(max)", nullable: false)
+                    Status = table.Column<string>(type: "nvarchar(max)", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -93,7 +93,7 @@ namespace MRIV.Migrations
                     ApprovalStep = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
                     PayrollNo = table.Column<int>(type: "int", nullable: false),
                     ApprovalStatus = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    Comments = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Comments = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -115,9 +115,11 @@ namespace MRIV.Migrations
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     RequisitionId = table.Column<int>(type: "int", nullable: false),
-                    MaterialId = table.Column<int>(type: "int", nullable: false),
+                    MaterialId = table.Column<int>(type: "int", nullable: true),
                     Quantity = table.Column<int>(type: "int", nullable: false),
-                    Condition = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    Name = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Description = table.Column<string>(type: "nvarchar(70)", maxLength: 70, nullable: true),
+                    Condition = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     Status = table.Column<int>(type: "int", maxLength: 20, nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -129,8 +131,7 @@ namespace MRIV.Migrations
                         name: "FK_RequisitionItems_Materials_MaterialId",
                         column: x => x.MaterialId,
                         principalTable: "Materials",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                     table.ForeignKey(
                         name: "FK_RequisitionItems_Requisitions_RequisitionId",
                         column: x => x.RequisitionId,

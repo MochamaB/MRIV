@@ -13,28 +13,32 @@ namespace MRIV.Models
         public int RequisitionId { get; set; }
 
 
-        public int MaterialId { get; set; }
+        public int? MaterialId { get; set; }
 
         [Required]
         [Range(1, int.MaxValue)]
         public int Quantity { get; set; }
 
-        [Required]
         [StringLength(20)]
-        public string Condition { get; set; } // OK, Broken, etc.
+        public string? Name { get; set; }
 
-        [Required]
-        [StringLength(20)]
+        [StringLength(70)]
+        public string? Description { get; set; }
+
+
+        public RequisitionItemCondition Condition { get; set; } // OK, Broken, etc.
+
+        
         public RequisitionItemStatus Status { get; set; } //Pending Approval,Dispatched, Received, Returned
 
-        [Required]
+
         public DateTime CreatedAt { get; set; }
 
         public DateTime? UpdatedAt { get; set; }
 
         // Navigation properties
         [ForeignKey("RequisitionId")]
-        public virtual Requisition Requisition { get; set; }
+        public virtual Requisition? Requisition { get; set; }
 
         
     }

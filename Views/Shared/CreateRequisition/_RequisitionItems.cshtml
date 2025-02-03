@@ -1,4 +1,83 @@
-﻿
-@*
-    For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@using MRIV.Enums
+@{
+    ViewData["Title"] = "Select Ticket";
+    var currentStep = ViewBag.CurrentStep as string;
+    @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
+}
+<div class="row">
+    <!-- Personal Details Section -->
+    <div class="col-md-10">
+        <h4 class="ml-1"><b>Enter Requisition Items</b></h4>
+        <hr style="border:2px solid black" />
+    </div>
+</div>
+<div class="col-md-10 mb-5 mt-2">
+    <form method="get" action="">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-7">
+                <input type="text" class="form-control form-control-sm" name="search" placeholder="Search by material code or name... ..." value="" />
+            </div>
+            <div class="col-md-3 d-flex justify-content-end ms-auto">
+                <button type="button" class="btn btn-primary text-white" style="padding:7px 9px;">
+                    <i class="mdi mdi-plus-circle-outline mr-1" style="vertical-align: middle; font-size: 1.4rem;"></i> Add New Item
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
+
+
+<form id="wizardForm" asp-controller="MaterialRequisition" asp-action="CreateRequisitionItem">
+    <div class="row" style="border-left:5px solid #fcb900; margin:0.1rem">
+        <div class="col-md-6">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+            <div class="form-group">
+                <label class="control-label"> Name</label>  <span class="requiredlabel">*</span>
+                <input type="text" asp-for="RequisitionItem.Name" class="form-control " placeholder="Brand or Title" value="" />
+                <span asp-validation-for="RequisitionItem.Name" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label"> Description (optional)</label>
+                <textarea asp-for="RequisitionItem.Description"
+                          class="auto-resize-textarea form-control"
+                          rows="1"
+                          placeholder="Enter Description..."></textarea>
+                <span asp-validation-for="RequisitionItem.Description" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label"> Quantity</label>  <span class="requiredlabel">*</span>
+                <input type="number" asp-for="RequisitionItem.Quantity" class="form-control " placeholder="" value="1" />
+                <span asp-validation-for="RequisitionItem.Quantity" class="text-danger"></span>
+            </div>
+           
+           
+
+        </div>
+      
+        <div class="col-md-6">
+            <div class="form-group">
+                <label class="control-label"> Item Condition </label>
+                <select asp-for="RequisitionItem.Condition"
+                        asp-items="Html.GetEnumSelectList<RequisitionItemCondition>()"
+                        class="formcontrol2">
+                    <option value="">Select Condition</option>
+                </select>
+                <span asp-validation-for="RequisitionItem.Condition" class="text-danger"></span>
+            </div>
+            <div class="form-group">
+                <label class="control-label"> Status </label>
+                <select asp-for="RequisitionItem.Status"
+                        asp-items="Html.GetEnumSelectList<RequisitionItemStatus>()"
+                        class="formcontrol2">
+                    <option value="">Select Status</option>
+                </select>
+                <span asp-validation-for="RequisitionItem.Status" class="text-danger"></span>
+            </div>
+            
+        </div>
+    </div>
+        <!-- Add the wizard buttons-->
+        <partial name="_WizardNavigation" />
+   
+</form>

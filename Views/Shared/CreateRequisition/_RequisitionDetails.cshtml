@@ -21,16 +21,16 @@
     </div>
 </div>
 
-<form asp-controller="MaterialRequisition" asp-action="CreateRequisition">
+<form id="wizardForm" asp-controller="MaterialRequisition" asp-action="CreateRequisition">
     <div class="row">
         <div class="col-md-6">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
             <div class="form-group">
                 <label class="control-label"> Ticket ID</label>  <span class="requiredlabel">*</span>
-                <input type="text" class="form-control form-control-sm " name="" placeholder="" value="@ViewBag.TicketId" hidden/>
+                <input type="text" class="form-control form-control-sm " placeholder="" value="@Model.Requisition.TicketId" hidden />
                 <select class="formcontrol2" readonly>
-                    <option value=""> @ViewBag.TicketId</option>
+                    <option value=""> @Model.Requisition.TicketId</option>
                 </select>
                 <span asp-validation-for="Requisition.TicketId" class="text-danger"></span>
             </div>
@@ -42,7 +42,7 @@
                 <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " name="" placeholder="" value="@Model.Employee.PayrollNo" hidden />
+                <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " placeholder="" value="@Model.Employee.PayrollNo" hidden  />
             </div>
      
         </div>
@@ -61,12 +61,14 @@
                     <option value="factory">Factory</option>
                     <option value="region">Region</option>
                 </select>
+                <span asp-validation-for="Requisition.IssueStationCategory" class="text-danger"></span>
             </div>
             <div class="form-group mb-3">
                 <label class="control-label">Issue Station</label><span class="requiredlabel">*</span>
                 <select asp-for="Requisition.IssueStation" id="issueStation" class="station-dropdown formcontrol2">
                     <option value="">Select Station</option>
                 </select>
+                <span asp-validation-for="Requisition.IssueStation" class="text-danger"></span>
             </div>
         </div>
 
@@ -89,12 +91,14 @@
                     <option value="headoffice">Head Office</option>
                   
                 </select>
+                <span asp-validation-for="Requisition.DeliveryStationCategory" class="text-danger"></span>
             </div>
             <div class="form-group mb-3">
                 <label class="control-label">Delivery Station</label><span class="requiredlabel">*</span>
-                <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="station-dropdown formcontrol2">
+                <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="formcontrol2">
                     <option value="">Select Station</option>
                 </select>
+                <span asp-validation-for="Requisition.DeliveryStation" class="text-danger"></span>
             </div>
            
         </div>
@@ -116,6 +120,7 @@
                     <option value="admin"> Administration Department</option>
                     <option value="vendor">Vendor</option>
                 </select>
+                <span asp-validation-for="Requisition.DispatchType" class="text-danger"></span>
             </div>
             <!-- Conditional Fields -->
             <!-- Admin Staff (initially hidden) -->
@@ -128,6 +133,7 @@
                         <option value="@employee.PayrollNo">@employee.Fullname - @employee.Designation</option>
                     }
                 </select>
+                <span asp-validation-for="Requisition.DispatchPayrollNo" class="text-danger"></span>
             </div>
             <!-- Vendor (initially hidden) -->
             <div class="form-group mb-3 vendor-field" style="display: none;">
@@ -139,6 +145,7 @@
                         <option value="@vendor.VendorID">@vendor.Name</option>
                     }
                 </select>
+                <span asp-validation-for="Requisition.DispatchVendor" class="text-danger"></span>
             </div>
         </div>
         <!-- Add the wizard buttons-->
