@@ -196,20 +196,66 @@
         });
     </script>
 
+    <!--  Script for the Ticket Search -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const searchInput = document.getElementById('searchInput');
+            const dataTable = document.getElementById('dataTable');
+            let timeoutId;
+
+            // Debounce function to limit AJAX calls
+            function debounce(func, delay) {
+                return function (...args) {
+                    clearTimeout(timeoutId);
+                    timeoutId = setTimeout(() => func.apply(this, args), delay);
+                };
+            }
+
+            // Handle search input
+            const handleSearch = debounce(function (searchTerm) {
+                fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(response => response.text())
+                    .then(html => {
+                        dataTable.innerHTML = html;
+                    })
+                    .catch(error => console.error('Error:', error));
+            }, 300);
+
+            searchInput.addEventListener('input', function (e) {
+                const searchTerm = e.target.value.trim();
+                if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                    handleSearch(searchTerm);
+                }
+            });
+
+            // Prevent form submission
+            document.getElementById('searchForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                handleSearch(searchInput.value.trim());
+            });
+        });
+    </script>
+
     <!-- Load The requistion Locations Script -->
     <script>
+
+        document.addEventListener("DOMContentLoaded", function () {
         // Serialize data
         const allStations = @Html.Raw(Json.Serialize(Model.Stations));
         const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
         const userDepartment = @Html.Raw(Json.Serialize(Model.Department));
         const userStation = @Html.Raw(Json.Serialize(Model.Station));
 
-        document.addEventListener("DOMContentLoaded", function () {
             // Initialize elements
             const deliveryCategory = document.getElementById('deliveryStationCategory');
             const deliveryStation = document.getElementById('deliveryStation');
             const issueCategory = document.getElementById('issueStationCategory');
             const issueStation = document.getElementById('issueStation');
+
 
             // Generic population function with selection preservation
             function populateDropdown(dropdown, items, valueField, textField, selectedValue) {
@@ -420,6 +466,58 @@
 
     </script>
       
+    <!--  REquisition Item Material Modal-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const inventoryModal = document.getElementById('inventoryModal');
+            const saveInventoryBtn = document.getElementById('saveInventoryDetails');
+            const saveToInventoryCheckbox = document.getElementById('saveToInventory');
+
+            // Handle modal validation
+            inventoryModal.addEventListener('shown.bs.modal', function () {
+                // Reset validation on show
+                Array.from(inventoryModal.querySelectorAll('.form-control')).forEach(input => {
+                    input.classList.remove('is-invalid');
+                });
+            });
+
+            // Save inventory details
+            saveInventoryBtn.addEventListener('click', function () {
+                let isValid = true;
+
+                // Validate required fields
+                const requiredFields = inventoryModal.querySelectorAll('[required]');
+                requiredFields.forEach(field => {
+                    if (!field.value.trim()) {
+                        field.classList.add('is-invalid');
+                        isValid = false;
+                    } else {
+                        field.classList.remove('is-invalid');
+                    }
+                });
+
+                if (isValid) {
+                    // Enable and check the checkbox
+                    saveToInventoryCheckbox.disabled = false;
+                    saveToInventoryCheckbox.checked = true;
+
+                    // Close modal
+                    bootstrap.Modal.getInstance(inventoryModal).hide();
+                }
+            });
+
+            // Handle checkbox state
+            saveToInventoryCheckbox.addEventListener('change', function () {
+                if (!this.checked) {
+                    // Clear inventory data if unchecked
+                    inventoryModal.querySelectorAll('.form-control').forEach(input => {
+                        input.value = '';
+                    });
+                    this.disabled = true;
+                }
+            });
+        });
+    </script>
 
 }
 

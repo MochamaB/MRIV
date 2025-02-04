@@ -22,10 +22,12 @@ namespace MRIV.Controllers
         private readonly string _connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
         private readonly IEmployeeService _employeeService;
         private readonly VendorService _vendorService;
-        public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService)
+        private readonly RequisitionContext _context;
+        public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
+            _context = context;
         }
 
 
@@ -47,31 +49,45 @@ namespace MRIV.Controllers
         //1. SELECT TICKET ////////////////////
 
         [HttpGet]
+        [HttpGet]
         public async Task<IActionResult> TicketAsync(string search = "")
-        { // Query tickets from the database
+        {
             var tickets = new List<Ticket>();
             var connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-            // Get employee and department info
             var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
             using (SqlConnection conn = new SqlConnection(connectionString))
             {
                 conn.Open();
-                string query = string.IsNullOrEmpty(search)
-                    ? @"SELECT TOP 15 [RequestID], [Title], [Description] 
-                FROM [Lansupport_5_4].[dbo].[Requests] 
-                ORDER BY RequestID DESC"
-                    : @"SELECT [RequestID], [Title], [Description] 
-                FROM [Lansupport_5_4].[dbo].[Requests] 
-                WHERE [Title] LIKE @search OR [Description] LIKE @search 
-                ORDER BY RequestID DESC";
+                string query;
+                bool isNumeric = false;
+
+                if (string.IsNullOrEmpty(search))
+                {
+                    query = @"SELECT TOP 15 [RequestID], [Title], [Description] 
+                      FROM [Lansupport_5_4].[dbo].[Requests] 
+                      ORDER BY RequestID DESC";
+                }
+                else
+                {
+                    isNumeric = int.TryParse(search, out int _);
+                    query = isNumeric
+                        ? @"SELECT [RequestID], [Title], [Description] 
+                   FROM [Lansupport_5_4].[dbo].[Requests] 
+                   WHERE CAST([RequestID] AS VARCHAR) LIKE @search + '%' 
+                   ORDER BY RequestID DESC"
+                        : @"SELECT [RequestID], [Title], [Description] 
+                   FROM [Lansupport_5_4].[dbo].[Requests] 
+                   WHERE [Title] LIKE @search OR [Description] LIKE @search 
+                   ORDER BY RequestID DESC";
+                }
 
                 using (SqlCommand cmd = new SqlCommand(query, conn))
                 {
                     if (!string.IsNullOrEmpty(search))
                     {
-                        cmd.Parameters.AddWithValue("@search", $"%{search}%");
+                        cmd.Parameters.AddWithValue("@search", isNumeric ? search : $"%{search}%");
                     }
 
                     using (SqlDataReader reader = cmd.ExecuteReader())
@@ -89,20 +105,21 @@ namespace MRIV.Controllers
                 }
             }
 
-            // Prepare wizard steps and view model
-            var steps = GetWizardSteps(currentStep: 1); // Pass the current step
+            var steps = GetWizardSteps(currentStep: 1);
             var viewModel = new MaterialRequisitionWizardViewModel
             {
                 Steps = steps,
                 CurrentStep = 1,
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
-                Tickets = tickets // Add tickets to view model
+                Tickets = tickets
             };
-            ViewBag.Search = search; // Pass the search term
-            ViewBag.Steps = GetSteps();
-            ViewBag.CurrentStep = "Ticket";
-            ViewBag.CurrentStepIndex = 0;
 
+            ViewBag.Search = search;
+
+            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+            {
+                return PartialView("CreateRequisition/_TicketTable", viewModel);
+            }
             return View(WizardViewPath, viewModel);
         }
 
@@ -173,12 +190,12 @@ namespace MRIV.Controllers
             TempData["SuccessMessage"] = "Ticket selected successfully!";
 
             // Redirect to the Requisition action
-            return RedirectToAction("Requisition");
+            return RedirectToAction("RequisitionDetails");
         }
 
     //2. ENTER AND SAVE THE REQUISITION DETAILS ////////////////////
 
-        public async Task<IActionResult> RequisitionAsync()
+        public async Task<IActionResult> RequisitionDetailsAsync()
         {
             // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
@@ -330,16 +347,18 @@ namespace MRIV.Controllers
             TempData["SuccessMessage"] = "Requisition Added successfully!";
 
             // Redirect to next step
-            return RedirectToAction("RequisitionItem");
+            return RedirectToAction("RequisitionItems");
 
         }
 
-        public IActionResult RequisitionItem()
+        public async Task<IActionResult> RequisitionItemsAsync()
         {
             // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
             // Prepare wizard steps and view model
             var steps = GetWizardSteps(currentStep: 3); // Pass the current step
+            List<MaterialCategory> materialCategories = await _context.MaterialCategories
+                   .ToListAsync();
             var viewModel = new MaterialRequisitionWizardViewModel
             {
                 Steps = steps,
@@ -350,7 +369,9 @@ namespace MRIV.Controllers
                 {
                     Status = RequisitionItemStatus.PendingApproval,
                     Condition = RequisitionItemCondition.GoodCondition
-                }
+                },
+                MaterialCategories = materialCategories
+
 
             };
 

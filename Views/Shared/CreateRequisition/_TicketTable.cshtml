@@ -1,0 +1,52 @@
+﻿@{
+   
+    @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
+}
+<table id="table"
+       data-toggle="table"
+       data-icon-size="sm"
+       data-buttons-class="primary"
+       data-toolbar-align="right"
+       data-buttons-align="left"
+       data-sort-order="asc"
+       data-mobile-responsive="true"
+       data-sticky-header="true"
+       data-pagination="true"
+       data-page-list="[100, 200, 250, 500, ALL]"
+       data-page-size="100"
+       data-show-footer="false"
+       data-side-pagination="client"
+       data-show-export="true"
+       class="table">
+    <thead>
+        <tr>
+            <th>Ticket Number</th>
+            <th>Title</th>
+            <th data-field="Description" data-class="description-cell">Description</th>
+            <th>Action</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var ticket in Model.Tickets)
+        {
+            <tr>
+                <td>@ticket.RequestID</td>
+                <td class="wrapcell">@ticket.Title</td>
+                <td class="wrapcell">@ticket.Description</td>
+                <td>
+                    <a asp-controller="MaterialRequisition"
+                       asp-action="SelectTicket"
+                       asp-route-RequisitionID="@ticket.RequestID"
+                       asp-route-Description="@ticket.Description"
+                       class="table"
+                       data-id="@ticket.RequestID"
+                       data-description="@ticket.Description">
+                        <i class="mdi mdi-plus-circle-outline mr-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+                        Select Ticket
+                    </a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

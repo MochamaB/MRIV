@@ -620,6 +620,15 @@ a.table:link {
     text-decoration: none;
     text-transform: capitalize;
 }
+a.actionlink {
+    text-decoration: none; /* Remove underline */
+    color: #326408; /* Keep the default color */
+    font-weight:600;
+}
+
+    .a actionlink:hover {
+        color: #fcb900; /* Change color on hover */
+    }
 /* Apply to the Description column */
 td.wrapcell {
     max-width: 300px; /* Set the maximum width */

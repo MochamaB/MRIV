@@ -19,6 +19,9 @@ namespace MRIV.ViewModels
         public Station? Station { get; set; }
         public List<Vendor> Vendors { get; set; } = new();
         public RequisitionItem? RequisitionItem { get; set; }
+        public List<MaterialCategory> MaterialCategories { get; set; } = new();
+        public MaterialCategory? MaterialCategory { get; set; }
+        public Material? Material { get; set; }
     }
     public class Ticket
     {
