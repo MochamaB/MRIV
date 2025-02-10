@@ -3,3 +3,53 @@
 *@
 @{
 }
+<style>
+    .position-relative {
+        position: relative;
+    }
+
+    .search-result-item {
+        transition: background-color 0.2s;
+    }
+
+        .search-result-item:hover {
+            background-color: #f8f9fa;
+        }
+
+    .dropdown-menu.show {
+        display: block;
+        width: 100%;
+        margin-top: 0;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+<div class="col-md-10 mb-2 mt-2">
+    <div class="form-group position-relative">
+        <label class="control-label">Select LAN Support Ticket</label><span class="requiredlabel">*</span>
+        <div class="input-group">
+            <input type="text" class="form-control form-control-sm" id="searchbar"
+                   placeholder="Search tickets..." autocomplete="off" />
+            <div class="input-group-append">
+                <button type="submit" class="btn btn-primary text-white" style="padding: 0.5rem 1.5rem;background:#326408">
+                    <i class="mdi mdi-magnify mr-1" style="vertical-align: middle; font-size: 1.4rem;"></i> Search
+                </button>
+            </div>
+        </div>
+        <div id="searchResults" class="dropdown-menu show w-100" style="max-height: 300px; overflow-y: auto;">
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item">
+                <a href="#" class="text-decoration-none text-dark">Inter Factory Borrowing</a>
+                <button class="btn btn-outline-secondary btn-sm">Select</button>
+            </div>
+            <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item">
+                <div class="d-flex flex-column">
+                    <a href="#" class="text-decoration-none text-dark">Ticket No - Title</a>
+                    <small class="text-muted">Additional description text here</small>
+                </div>
+                <button class="btn btn-outline-secondary btn-sm">Select</button>
+            </div>
+            
+        </div>
+    </div>
+</div>

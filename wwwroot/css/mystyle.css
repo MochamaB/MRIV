@@ -224,7 +224,7 @@ a.text-primary:hover {
     font-weight: 400;
     font-size: 0.875rem;
     border-radius: 0px;
-    height: 2.7rem;
+    height: 3.2rem;
 }
 
 /*------------------------ Style the search input field */
@@ -613,22 +613,28 @@ a .badge:hover {
     font-weight:700;
     text-transform:uppercase;
 }
-
-a.table:link {
-    color: #ffaf00 !important;
-    font-weight: 500;
+/* General .table class (lower priority) */
+.table {
+    /* Keep this as a fallback for other elements with the .table class */
     text-decoration: none;
+    color: inherit; /* Inherits the parent's color */
+}
+
+/* Specific styles for <a> elements with the .table class */
+a.table {
+    text-decoration: none; /* Remove underline */
+    color: #326408 !important; /* Use the specified color */
+    font-weight: 500;
     text-transform: capitalize;
 }
-a.actionlink {
-    text-decoration: none; /* Remove underline */
-    color: #326408; /* Keep the default color */
-    font-weight:600;
-}
 
-    .a actionlink:hover {
-        color: #fcb900; /* Change color on hover */
+    /* Hover effect for <a> elements with the .table class */
+    a.table:hover {
+        color: #fcb900 !important; /* Change color on hover */
+        text-decoration: underline; /* Optional: Add underline on hover */
     }
+
+
 /* Apply to the Description column */
 td.wrapcell {
     max-width: 300px; /* Set the maximum width */

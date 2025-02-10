@@ -51,6 +51,27 @@ namespace MRIV.Controllers
             return View();
         }
 
+        [HttpGet]
+        public IActionResult GetNextCode(int categoryId, string rowIndex)
+        {
+            // Handle rowIndex conversion
+            int index = 0;
+            if (!string.IsNullOrEmpty(rowIndex) && int.TryParse(rowIndex, out int parsedIndex))
+            {
+                index = parsedIndex;
+            }
+
+            int nextId = _context.Materials.Count() + 1;
+            string baseCode = $"MAT-{nextId:D3}-{categoryId:D3}";
+
+            if (index > 0)
+            {
+                baseCode += $"-{index}";
+            }
+
+            return Json(baseCode);
+        }
+
         // POST: Materials/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.

@@ -37,7 +37,14 @@
             <div class="form-group">
                 <label  class="control-label"> Department</label>  <span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DepartmentId" class="formcontrol2"  readonly>
-                    <option value="@Model.Department.DepartmentId"> @Model.Department.DepartmentName</option>
+                    @if (Model.Department != null)
+                    {
+                        <option value="@Model.Department.DepartmentId">@Model.Department.DepartmentName</option>
+                    }
+                    else
+                    {
+                        <option value="">Department Not Found</option>
+                    }
                 </select>
                 <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
             </div>

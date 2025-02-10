@@ -23,17 +23,20 @@ namespace MRIV.Controllers
         private readonly IEmployeeService _employeeService;
         private readonly VendorService _vendorService;
         private readonly RequisitionContext _context;
-        public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context)
+        private readonly IApprovalService _approvalService;
+        public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context, 
+            IApprovalService approvalService)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
             _context = context;
+            _approvalService = approvalService;
         }
 
 
         private List<string> GetSteps()
         {
-            return new List<string> { "Ticket", "Requisition Details", "Requisition Items", "Approvers & Recievers", "Summary" };
+            return new List<string> { "Ticket", "Requisition Details", "Requisition Items", "Approvers & Receivers", "Summary" };
         }
         private List<WizardStepViewModel> GetWizardSteps(int currentStep)
         {
@@ -46,9 +49,45 @@ namespace MRIV.Controllers
             }).ToList();
         }
 
+        private async Task<MaterialRequisitionWizardViewModel> InitializeWizardModelAsync(MaterialRequisitionWizardViewModel model,HttpContext httpContext,int currentStep)
+        {
+            var payrollNo = httpContext.Session.GetString("EmployeePayrollNo");
+            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+
+            // Initialize null properties
+            model.Employee = employee ?? new EmployeeBkp();
+            model.Department = department ?? new Department();
+            model.Station = station ?? new Station();
+            model.Requisition ??= new Requisition();
+            // ✅ Preserve existing RequisitionItems (DO NOT overwrite)
+            var existingRequisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
+
+            using var ktdaContext = new KtdaleaveContext();
+
+            // Get Admin Employees for Dispatch
+            model.EmployeeBkps = await ktdaContext.EmployeeBkps
+                .Where(e => e.Department == "106" && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Fullname)
+                .ToListAsync();
+
+            // Populate Departments and Stations
+            model.Departments = await ktdaContext.Departments.ToListAsync();
+            model.Stations = await ktdaContext.Stations.ToListAsync();
+
+            // Populate Vendors
+            model.Vendors = await _vendorService.GetVendorsAsync();
+            // ✅ Restore `RequisitionItems`
+            model.RequisitionItems = existingRequisitionItems;
+
+            // Set common paths
+            model.PartialBasePath = "~/Views/Shared/CreateRequisition/";
+
+            return model;
+        }
+
         //1. SELECT TICKET ////////////////////
 
-        [HttpGet]
+
         [HttpGet]
         public async Task<IActionResult> TicketAsync(string search = "")
         {
@@ -255,15 +294,38 @@ namespace MRIV.Controllers
             Console.WriteLine($"🔹 Received direction: {direction}");
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
             var steps = GetWizardSteps(currentStep: 2);
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+
+            // Get logged-in user details
+            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+
+            if (model.Requisition != null)
+            {
+
+                // Map properties
+                requisition.DepartmentId = model.Requisition.DepartmentId;
+                requisition.PayrollNo = model.Requisition.PayrollNo;
+                requisition.IssueStationCategory = model.Requisition.IssueStationCategory;
+                requisition.IssueStation = model.Requisition.IssueStation;
+                requisition.DeliveryStationCategory = model.Requisition.DeliveryStationCategory;
+                requisition.DeliveryStation = model.Requisition.DeliveryStation;
+
+                // Conditional mapping
+                requisition.DispatchType = model.Requisition.DispatchType;
+                requisition.DispatchPayrollNo = model.Requisition.DispatchType == "admin"
+                    ? model.Requisition.DispatchPayrollNo
+                    : null;
+
+                requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
+                    ? model.Requisition.DispatchVendor
+                : null;
+            }
             // Always check model state first
             if (!ModelState.IsValid)
             {
                 // Handle validation errors
                 // Instead of redirecting, fetch needed data and return the same view
-                var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-
-                // Get logged-in user details
-                var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                
 
                 using var ktdaContext = new KtdaleaveContext();
 
@@ -305,33 +367,16 @@ namespace MRIV.Controllers
                 return View(WizardViewPath, model);
              
             }
-         
 
-           
 
-            // Map properties
-            requisition.DepartmentId = model.Requisition.DepartmentId;
-            requisition.PayrollNo = model.Requisition.PayrollNo;
-            requisition.IssueStationCategory = model.Requisition.IssueStationCategory;
-            requisition.IssueStation = model.Requisition.IssueStation;
-            requisition.DeliveryStationCategory = model.Requisition.DeliveryStationCategory;
-            requisition.DeliveryStation = model.Requisition.DeliveryStation;
-
-            // Conditional mapping
-            requisition.DispatchType = model.Requisition.DispatchType;
-            requisition.DispatchPayrollNo = model.Requisition.DispatchType == "admin"
-                ? model.Requisition.DispatchPayrollNo
-                : null;
-
-            requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
-                ? model.Requisition.DispatchVendor
-            : null;
+            
 
             // 🚀 Handle Previous Step Logic
             // 🚀 Handle Previous Step Logic
             if (!string.IsNullOrEmpty(direction) && direction.ToLower() == "previous")
             {
                 model.CurrentStep = Math.Max(1, model.CurrentStep - 1);
+                model.PartialBasePath = "~/Views/Shared/CreateRequisition/";
                 Console.WriteLine("⬅ Moving to Previous Step");
 
                 // Save progress in session
@@ -342,6 +387,14 @@ namespace MRIV.Controllers
             }
             // Save updated requisition back to session
             HttpContext.Session.SetObject("WizardRequisition", requisition);
+
+            // Add Approval steps
+            var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, employee);
+            // Print to console
+            Console.WriteLine("Approval Steps:");
+            Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(approvalSteps, Newtonsoft.Json.Formatting.Indented));
+            HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);
+
 
             // Set a success message in TempData
             TempData["SuccessMessage"] = "Requisition Added successfully!";
@@ -365,19 +418,102 @@ namespace MRIV.Controllers
                 CurrentStep = 3,
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
                 Requisition = requisition,
-                RequisitionItem = new RequisitionItem
+                RequisitionItems = new List<RequisitionItem>
                 {
-                    Status = RequisitionItemStatus.PendingApproval,
-                    Condition = RequisitionItemCondition.GoodCondition
+                    new RequisitionItem
+                    {
+                        Material = new Material(),
+                        Status = RequisitionItemStatus.PendingApproval,
+                        Condition = RequisitionItemCondition.GoodCondition
+                    }
                 },
-                MaterialCategories = materialCategories
+                MaterialCategories = materialCategories,
+                Vendors = await _vendorService.GetVendorsAsync()
 
 
+        };
+
+            return View(WizardViewPath, viewModel);
+
+        }
+
+        public async Task<IActionResult> CreateRequisitionItemsAsync(MaterialRequisitionWizardViewModel model, string? direction = null)
+        {
+           
+            var steps = GetWizardSteps(currentStep: 3);
+            List<MaterialCategory> materialCategories = await _context.MaterialCategories
+                   .ToListAsync();
+            var vendors = await _vendorService.GetVendorsAsync();
+
+            // 1. Preserve the posted RequisitionItems (cloned rows data)
+            var requisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
+            // 2. Ensure Material objects are initialized
+            foreach (var item in requisitionItems)
+            {
+                item.Material ??= new Material();
+            }
+
+            if (!ModelState.IsValid)
+            {
+               
+                // 2. Initialize the model (this resets RequisitionItems to default)
+                model = await InitializeWizardModelAsync(model, HttpContext, currentStep: 3);
+
+                // 5. Repopulate other critical view data
+                model.RequisitionItems = requisitionItems;
+                model.MaterialCategories = await _context.MaterialCategories.ToListAsync();
+                model.Vendors = await _vendorService.GetVendorsAsync();
+                model.Steps = steps;
+                model.CurrentStep = 3;
+
+
+                var modelJson = JsonSerializer.Serialize(model.RequisitionItems, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
+
+                // 🚀 Log all validation errors for debugging
+                var errors = ModelState.Where(m => m.Value.Errors.Any())
+                                       .Select(m => new { Field = m.Key, Errors = m.Value.Errors.Select(e => e.ErrorMessage) })
+                                       .ToList();
+
+                var errorsJson = JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine($"Validation Errors:\n{errorsJson}");
+                TempData["ErrorMessage"] = "Check Validation Errors Below!";
+
+                // Return view directly (NO REDIRECTION)
+                return View(WizardViewPath, model);
+            }
+            HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
+
+
+            // Set a success message in TempData
+            TempData["SuccessMessage"] = "Requisition Items Added successfully!";
+
+            // Redirect to next step
+            return RedirectToAction("ApproversReceivers");
+
+        }
+
+        public async Task<IActionResult> ApproversReceiversAsync()
+        {
+            // Retrieve the requisition object from the session
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            // Prepare wizard steps and view model
+            var steps = GetWizardSteps(currentStep: 4); // Pass the current step
+    
+            var viewModel = new MaterialRequisitionWizardViewModel
+            {
+                Steps = steps,
+                CurrentStep = 4,
+                PartialBasePath = "~/Views/Shared/CreateRequisition/",
+                Requisition = requisition,
+               
             };
 
             return View(WizardViewPath, viewModel);
 
         }
+
+
 
 
     }

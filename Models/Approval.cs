@@ -18,7 +18,7 @@ namespace MRIV.Models
         public string ApprovalStep { get; set; }
 
         [Required]
-        public int PayrollNo { get; set; }
+        public string PayrollNo { get; set; }
 
         [Required]
         [StringLength(20)]

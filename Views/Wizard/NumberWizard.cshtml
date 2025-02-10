@@ -109,7 +109,7 @@
     <div id="stepContent">
         
         <!-- Content for the current step will go here -->
-        @await Html.PartialAsync($"{Model.PartialBasePath}_{Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName.Replace(" ", "")}.cshtml")
+        @await Html.PartialAsync($"{Model.PartialBasePath}_{Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName.Replace(" ", "").Replace("&", "")}.cshtml")
     </div>
 </div>
 @section Scripts {
@@ -138,7 +138,7 @@
 
                 if (currentStepIndex > 0) {
                     currentStepIndex--; // Move to previous step
-                    const previousStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, ''); // Safely access stepName
+                    const previousStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, '').replace(/&/g, ''); // Safely access stepName
                     if (!previousStep) {
                         console.error("Invalid step detected while moving to the previous step.");
                         return;
@@ -158,23 +158,7 @@
                 }
             });
 
-            // 🚀 Handle "Next Step" button click (form submission)
-            $(".nextbutton").click(function () {
-                if (currentStepIndex < steps.length - 1) {
-                    currentStepIndex++; // Move to next step
-                    const nextStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, ''); // Safely access stepName
-                    if (!nextStep) {
-                        console.error("Invalid step detected while moving to the next step.");
-                        return;
-                    }
-                    console.log("➡ Moving to Next Step:", nextStep);
-
-                    // Submit the form for server-side validation and navigation
-                    $(this).closest("form").submit();
-                } else {
-                    console.warn("Already at the last step. Completing requisition.");
-                }
-            });
+           
 
             // 🚀 Function to Update Navigation Buttons
             function updateNavButtons() {
@@ -199,8 +183,9 @@
     <!--  Script for the Ticket Search -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            const searchInput = document.getElementById('searchInput');
-            const dataTable = document.getElementById('dataTable');
+            const searchInput = document.getElementById('searchbar');
+            const clearButton = document.getElementById('clearSearch');
+            const dataTable = document.getElementById('searchResults');
             let timeoutId;
 
             // Debounce function to limit AJAX calls
@@ -214,9 +199,7 @@
             // Handle search input
             const handleSearch = debounce(function (searchTerm) {
                 fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
                 })
                     .then(response => response.text())
                     .then(html => {
@@ -225,19 +208,40 @@
                     .catch(error => console.error('Error:', error));
             }, 300);
 
+            // Show/Hide clear button & handle search
             searchInput.addEventListener('input', function (e) {
                 const searchTerm = e.target.value.trim();
+
+                // Show "X" button if there's input, otherwise hide it
+                if (searchTerm.length > 0) {
+                    clearButton.classList.remove('d-none');
+                } else {
+                    clearButton.classList.add('d-none');
+                }
+
+                // Trigger search when input length is 2 or more
                 if (searchTerm.length >= 2 || searchTerm.length === 0) {
                     handleSearch(searchTerm);
                 }
             });
 
-            // Prevent form submission
-            document.getElementById('searchForm').addEventListener('submit', function (e) {
-                e.preventDefault();
-                handleSearch(searchInput.value.trim());
+            // Clear input on "X" button click
+            clearButton.addEventListener('click', function () {
+                searchInput.value = '';
+                clearButton.classList.add('d-none'); // Hide the "X" button
+                handleSearch(''); // Perform empty search to reset results
             });
+
+            // Prevent form submission (if inside a form)
+            const searchForm = document.getElementById('searchForm');
+            if (searchForm) {
+                searchForm.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    handleSearch(searchInput.value.trim());
+                });
+            }
         });
+
     </script>
 
     <!-- Load The requistion Locations Script -->
@@ -466,58 +470,8 @@
 
     </script>
       
-    <!--  REquisition Item Material Modal-->
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const inventoryModal = document.getElementById('inventoryModal');
-            const saveInventoryBtn = document.getElementById('saveInventoryDetails');
-            const saveToInventoryCheckbox = document.getElementById('saveToInventory');
-
-            // Handle modal validation
-            inventoryModal.addEventListener('shown.bs.modal', function () {
-                // Reset validation on show
-                Array.from(inventoryModal.querySelectorAll('.form-control')).forEach(input => {
-                    input.classList.remove('is-invalid');
-                });
-            });
-
-            // Save inventory details
-            saveInventoryBtn.addEventListener('click', function () {
-                let isValid = true;
-
-                // Validate required fields
-                const requiredFields = inventoryModal.querySelectorAll('[required]');
-                requiredFields.forEach(field => {
-                    if (!field.value.trim()) {
-                        field.classList.add('is-invalid');
-                        isValid = false;
-                    } else {
-                        field.classList.remove('is-invalid');
-                    }
-                });
-
-                if (isValid) {
-                    // Enable and check the checkbox
-                    saveToInventoryCheckbox.disabled = false;
-                    saveToInventoryCheckbox.checked = true;
-
-                    // Close modal
-                    bootstrap.Modal.getInstance(inventoryModal).hide();
-                }
-            });
-
-            // Handle checkbox state
-            saveToInventoryCheckbox.addEventListener('change', function () {
-                if (!this.checked) {
-                    // Clear inventory data if unchecked
-                    inventoryModal.querySelectorAll('.form-control').forEach(input => {
-                        input.value = '';
-                    });
-                    this.disabled = true;
-                }
-            });
-        });
-    </script>
+  
+   
 
 }
 

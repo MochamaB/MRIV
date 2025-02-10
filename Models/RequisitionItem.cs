@@ -19,16 +19,17 @@ namespace MRIV.Models
         [Range(1, int.MaxValue)]
         public int Quantity { get; set; }
 
+        [Required(ErrorMessage = "Name is required")]
         [StringLength(20)]
         public string? Name { get; set; }
 
         [StringLength(70)]
         public string? Description { get; set; }
 
-
+        [Required]
         public RequisitionItemCondition Condition { get; set; } // OK, Broken, etc.
 
-        
+        [Required]
         public RequisitionItemStatus Status { get; set; } //Pending Approval,Dispatched, Received, Returned
 
 
@@ -40,6 +41,8 @@ namespace MRIV.Models
         [ForeignKey("RequisitionId")]
         public virtual Requisition? Requisition { get; set; }
 
-        
+        public Material? Material { get; set; } // Add this
+
+
     }
 }

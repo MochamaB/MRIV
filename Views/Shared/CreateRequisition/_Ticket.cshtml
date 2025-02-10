@@ -12,6 +12,11 @@
         word-break: break-word; /* Ensure long words break correctly */
         white-space: normal; /* Allow text to wrap to the next line */
     }
+
+    .search-result-item:hover {
+        background-color: #e9ecef; /* Slightly darker shade */
+    }
+
 </style>
 <div class="row">
     <!-- Personal Details Section -->
@@ -19,26 +24,52 @@
         <h4 class="ml-1"><b>Choose Ticket</b></h4>
         <hr style="border:2px solid black" />
     </div>
-    <div class="col-md-7 mb-2 mt-2">
-        <form id="searchForm" method="get" action="@Url.Action("Ticket", "MaterialRequisition")">
-            <div class="form-group">
-                <label  class="control-label">Select Lan Support Ticket</label><span class="requiredlabel">*</span>
+    <!-- Modified View -->
+    <div class="col-md-10 mb-2 mt-2" style="min-height:500px">
+        <div class="form-group position-relative">
+            <label class="control-label">Select LAN Support Ticket</label><span class="requiredlabel">*</span>
             <div class="input-group">
-                    <input type="number" class="form-control form-control-sm" name="search" id="searchInput"
-                           placeholder="Search tickets..." value="@ViewBag.Search" />
-                <div class="input-group-append">
-                        <button type="submit" class="btn btn-primary text-white" style="padding: 0.5rem 1.5rem;background:#326408">
-                            <i class="mdi mdi-magnify mr-1" style="vertical-align: middle; font-size: 1.4rem;"></i> Search
-                    </button>
-                </div>
-            </div>
-            </div>
-        </form>
-    </div>
+                <!-- Prepend search icon -->
+                <span class="input-group-text" style="background: white; border-right: none;">
+                    <i class="mdi mdi-magnify" style="font-size: 1.6rem; color: #326408;"></i>
+                </span>
+                <!-- Search Input -->
+                <input type="number" class="form-control" id="searchbar"
+                       placeholder="Search tickets by Ticket Number..." autocomplete="off"
+                       style="border-left: none;border-right:none; padding-right: 2rem;" />
 
+                <!-- Clear button (hidden by default) -->
+                <span class="input-group-text "  style="cursor: pointer; background: white; border-left: none;">
+                    <i class="mdi mdi-close-circle d-none" id="clearSearch" style="font-size: 1.4rem; color: #dc3545;"></i>
+                </span>
+            </div>
+            <div id="searchResults" class="dropdown-menu show w-100" style="max-height: 400px; overflow-y: auto;">
+                <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item" style="border-bottom: 1px solid #dee2e6;">
+                    <div class="d-flex flex-column" style="width: 550px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+                        <a href="#" class="text-decoration-none text-dark">
+                            <i class="mdi mdi-factory me-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+                            Inter Factory Borrowing</a>
+
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <a asp-controller="MaterialRequisition"
+                           asp-action="SelectTicket"
+                           asp-route-RequisitionID="0"
+                           asp-route-Description="Inter factory borrowing"
+                           class="table"
+                           data-id=""
+                           data-description="">
+                            Select
+                            <i class="mdi mdi-arrow-right-bold-circle ms-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+
+                        </a>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
   
 </div>
-<div class="table-responsive" id="dataTable">
-    <!-- Table will be loaded here via AJAX -->
-</div>
+
 

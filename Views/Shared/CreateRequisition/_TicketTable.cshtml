@@ -1,52 +1,78 @@
 ﻿@{
    
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+    <style>
+        .flex-basis-70 {
+            flex: 0 0 80%;
+            max-width: 80%;
+            min-width: 0; /* Allows text truncation to work */
+        }
 
+        .flex-basis-30 {
+            flex: 0 0 20%;
+            max-width: 20%;
+            text-align: right;
+        }
+
+        .text-truncate {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .search-result-item {
+            width: 100%;
+        }
+
+            .search-result-item:hover {
+                background-color: #e9ecef; /* Slightly darker shade */
+            }
+
+    </style>
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item" style="border-bottom: 1px solid #dee2e6;">
+        <div class="d-flex flex-column" style="width: 550px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
+            <a href="#" class="text-decoration-none text-dark">
+                <i class="mdi mdi-factory me-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+            Inter Factory Borrowing</a>
+            
+        </div>
+        <div class="d-flex justify-content-end">
+            <a asp-controller="MaterialRequisition"
+               asp-action="SelectTicket"
+               asp-route-RequisitionID="0"
+               asp-route-Description="Inter factory borrowing"
+               class="table"
+               data-id=""
+               data-description="">
+                Select
+                <i class="mdi mdi-arrow-right-bold-circle ms-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+               
+            </a>
+        </div>
+    </div>
 }
-<table id="table"
-       data-toggle="table"
-       data-icon-size="sm"
-       data-buttons-class="primary"
-       data-toolbar-align="right"
-       data-buttons-align="left"
-       data-sort-order="asc"
-       data-mobile-responsive="true"
-       data-sticky-header="true"
-       data-pagination="true"
-       data-page-list="[100, 200, 250, 500, ALL]"
-       data-page-size="100"
-       data-show-footer="false"
-       data-side-pagination="client"
-       data-show-export="true"
-       class="table">
-    <thead>
-        <tr>
-            <th>Ticket Number</th>
-            <th>Title</th>
-            <th data-field="Description" data-class="description-cell">Description</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
         @foreach (var ticket in Model.Tickets)
         {
-            <tr>
-                <td>@ticket.RequestID</td>
-                <td class="wrapcell">@ticket.Title</td>
-                <td class="wrapcell">@ticket.Description</td>
-                <td>
-                    <a asp-controller="MaterialRequisition"
-                       asp-action="SelectTicket"
-                       asp-route-RequisitionID="@ticket.RequestID"
-                       asp-route-Description="@ticket.Description"
-                       class="table"
-                       data-id="@ticket.RequestID"
-                       data-description="@ticket.Description">
-                        <i class="mdi mdi-plus-circle-outline mr-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
-                        Select Ticket
-                    </a>
-                </td>
-            </tr>
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item" style="border-bottom: 1px solid #dee2e6;">
+        <div class="d-flex flex-column flex-basis-70">
+            <a href="#" class="text-decoration-none text-dark">@ticket.RequestID - @ticket.Title</a>
+            <small class="text-muted">@ticket.Description</small>
+        </div>
+        <div class="d-flex justify-content-end flex-basis-30">
+            <a asp-controller="MaterialRequisition"
+               asp-action="SelectTicket"
+               asp-route-RequisitionID="@ticket.RequestID"
+               asp-route-Description="@ticket.Description"
+               class="table"
+               data-id="@ticket.RequestID"
+               data-description="@ticket.Description">
+                Select Ticket
+                <i class="mdi  mdi-arrow-right-bold-circle ms-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+               
+            </a>
+        </div>
+    </div>
+
+      
         }
-    </tbody>
-</table>
+    

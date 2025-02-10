@@ -14,14 +14,14 @@ namespace MRIV.ViewModels
         public List<EmployeeBkp> EmployeeBkps { get; set; } = new();
         public int? TotalCount { get; set; }
         public Requisition? Requisition { get; set; }
-        public EmployeeBkp? Employee { get; set; }
+        public EmployeeBkp? Employee { get; set; } 
         public Department? Department { get; set; }
         public Station? Station { get; set; }
         public List<Vendor> Vendors { get; set; } = new();
-        public RequisitionItem? RequisitionItem { get; set; }
+        public List<RequisitionItem> RequisitionItems { get; set; } = new();
         public List<MaterialCategory> MaterialCategories { get; set; } = new();
         public MaterialCategory? MaterialCategory { get; set; }
-        public Material? Material { get; set; }
+        public List<Material> Materials { get; set; } = new List<Material>();
     }
     public class Ticket
     {
@@ -40,6 +40,8 @@ namespace MRIV.ViewModels
         public bool? IsNullRecord { get; set; }
         public DateTime? LastModified { get; set; }
     }
+
+ 
 }
 
 
