@@ -1,11 +1,12 @@
 ﻿@using MRIV.Enums
 @using MRIV.Helpers
 @{
-    ViewData["Title"] = "Select Ticket";
+    ViewData["Title"] = "Select Approvers";
     var currentStep = ViewBag.CurrentStep as string;
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
 
 }
+
 <div class="row">
     <!-- Personal Details Section -->
     <div class="col-md-10">
@@ -14,3 +15,38 @@
     </div>
 </div>
 
+<div class="row">
+    <div class="col-md-12">
+        <ul class="bullet-line-list">
+            @foreach (var step in Model.ApprovalSteps)
+            {
+                <li>
+                    <div class="col-md-8 d-flex justify-content-between">
+                        <div class="col-md-10">
+                            <h5 class="text-information">
+                                <b>@step.StepNumber. @step.ApprovalStep</b>
+                            </h5>
+                            <hr />
+                            <p class="text-muted mb-2 fw-bold">
+                                <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            </p>
+                            <p class="text-muted">
+                                <b>APPROVAL BY:</b> @step.EmployeeName (@step.PayrollNo)
+                            </p>
+                            <p class="text-muted">
+                                <b>DEPARTMENT:</b> @step.DepartmentName
+                            </p>
+                            
+                           
+                            <p class="text-muted">
+                                <b>STATUS:</b> <span class="badge bg-primary">@step.ApprovalStatus</span>
+                            </p>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>
+
+<partial name="_WizardNavigation" />

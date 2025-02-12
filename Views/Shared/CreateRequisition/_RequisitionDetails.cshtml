@@ -37,9 +37,9 @@
             <div class="form-group">
                 <label  class="control-label"> Department</label>  <span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DepartmentId" class="formcontrol2"  readonly>
-                    @if (Model.Department != null)
+                    @if (Model.LoggedInUserDepartment != null)
                     {
-                        <option value="@Model.Department.DepartmentId">@Model.Department.DepartmentName</option>
+                        <option value="@Model.LoggedInUserDepartment.DepartmentId">@Model.LoggedInUserDepartment.DepartmentName</option>
                     }
                     else
                     {
@@ -49,7 +49,7 @@
                 <span asp-validation-for="Requisition.DepartmentId" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " placeholder="" value="@Model.Employee.PayrollNo" hidden  />
+                <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " placeholder="" value="@Model.LoggedInUserEmployee.PayrollNo" hidden  />
             </div>
      
         </div>

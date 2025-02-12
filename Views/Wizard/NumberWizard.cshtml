@@ -251,8 +251,8 @@
         // Serialize data
         const allStations = @Html.Raw(Json.Serialize(Model.Stations));
         const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
-        const userDepartment = @Html.Raw(Json.Serialize(Model.Department));
-        const userStation = @Html.Raw(Json.Serialize(Model.Station));
+        const userDepartment = @Html.Raw(Json.Serialize(Model.LoggedInUserDepartment));
+        const userStation = @Html.Raw(Json.Serialize(Model.LoggedInUserStation));
 
             // Initialize elements
             const deliveryCategory = document.getElementById('deliveryStationCategory');

@@ -46,7 +46,7 @@
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
             <div class="form-group">
                 <label class="control-label"> Name</label>  <span class="requiredlabel">*</span>
-                    <input type="text" asp-for="RequisitionItems[i].Name" class="form-control " placeholder="Brand or Title" value="" />
+                        <input type="text" asp-for="RequisitionItems[i].Name" class="form-control " placeholder="Brand or Title" value="@Model.RequisitionItems[i].Name" />
                     <span asp-validation-for="RequisitionItems[i].Name" class="text-danger"></span>
             </div>
             <div class="form-group">
@@ -101,11 +101,27 @@
                     Add Inventory Details
                 </a>
             </div>
-            <div id="badgeContainer" class="d-none">
+            <div id="badgeContainer" class="">
+
             <!-- Badges to display the selected values -->
-                <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory">Category: None</div>
-                <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode">SNo.: None</div>
-                <div class="badge badge-active rounded mb-1" id="selectedMaterialVendor">Vendor: None</div>
+                        <!-- Category Badge -->
+                        @if (Model.RequisitionItems[i].Material.MaterialCategoryId != null)
+                        {
+                            var category = Model.MaterialCategories.FirstOrDefault(c => c.Id == Model.RequisitionItems[i].Material.MaterialCategoryId);
+                            <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory"> Category: @(category?.Name ?? "None")</div>
+                        }
+                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode">
+                            SNo.: @(Model.RequisitionItems[i].Material.Code ?? "None")
+                        </div>
+
+                        @if (Model.RequisitionItems[i].Material.VendorId != null)
+                        {
+                            var vendorId = Convert.ToInt32(Model.RequisitionItems[i].Material.VendorId);
+                            var vendor = Model.Vendors.FirstOrDefault(v => v.VendorID == vendorId);
+                            <div class="badge badge-active rounded mb-1">
+                                Vendor: @(vendor?.Name ?? "None")
+                            </div>
+                        }
             </div>
             
             

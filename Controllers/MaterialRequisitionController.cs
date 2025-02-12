@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Mono.TextTemplating;
@@ -19,18 +20,22 @@ namespace MRIV.Controllers
     public class MaterialRequisitionController : Controller
     {
         private const string WizardViewPath = "~/Views/Wizard/NumberWizard.cshtml";
-        private readonly string _connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
+      //  private readonly string _connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
         private readonly IEmployeeService _employeeService;
         private readonly VendorService _vendorService;
+        private readonly IDepartmentService _departmentService;
         private readonly RequisitionContext _context;
         private readonly IApprovalService _approvalService;
+        private readonly string _connectionString;
         public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context, 
-            IApprovalService approvalService)
+            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
             _context = context;
             _approvalService = approvalService;
+            _connectionString = configuration.GetConnectionString("RequisitionContext");
+            _departmentService = departmentService;
         }
 
 
@@ -52,12 +57,12 @@ namespace MRIV.Controllers
         private async Task<MaterialRequisitionWizardViewModel> InitializeWizardModelAsync(MaterialRequisitionWizardViewModel model,HttpContext httpContext,int currentStep)
         {
             var payrollNo = httpContext.Session.GetString("EmployeePayrollNo");
-            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
             // Initialize null properties
-            model.Employee = employee ?? new EmployeeBkp();
-            model.Department = department ?? new Department();
-            model.Station = station ?? new Station();
+            model.LoggedInUserEmployee = loggedInUserEmployee ?? new EmployeeBkp();
+            model.LoggedInUserDepartment = loggedInUserDepartment ?? new Department();
+            model.LoggedInUserStation = loggedInUserStation ?? new Station();
             model.Requisition ??= new Requisition();
             // ✅ Preserve existing RequisitionItems (DO NOT overwrite)
             var existingRequisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
@@ -92,11 +97,11 @@ namespace MRIV.Controllers
         public async Task<IActionResult> TicketAsync(string search = "")
         {
             var tickets = new List<Ticket>();
-            var connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
+         //   var connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
-            using (SqlConnection conn = new SqlConnection(connectionString))
+            using (SqlConnection conn = new SqlConnection(_connectionString))
             {
                 conn.Open();
                 string query;
@@ -241,13 +246,13 @@ namespace MRIV.Controllers
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
 
             // Getlogged in user their employee and department info
-            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
-            System.Diagnostics.Debug.WriteLine($"Station: {station?.StationName ?? "null"}");
+            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            System.Diagnostics.Debug.WriteLine($"Station: {loggedInUserStation?.StationName ?? "null"}");
             using var ktdaContext = new KtdaleaveContext();
 
             //Get List of Admin Employees for Dispatch
             List<EmployeeBkp> employees = new List<EmployeeBkp>(); // Initialize employees to an empty list
-            int AdminDepartmentCode = 104;
+            int AdminDepartmentCode = 106;
             string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
             employees = await ktdaContext.EmployeeBkps.Where(e => e.Department == AdmindepartmentCodeString &&
                    e.EmpisCurrActive == 0).OrderBy(e => e.Fullname).ToListAsync();
@@ -271,10 +276,10 @@ namespace MRIV.Controllers
                 CurrentStep = 2,
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
                 Requisition = requisition,
-                Employee = employee,
+                LoggedInUserEmployee = loggedInUserEmployee,
                 EmployeeBkps = employees,
-                Department = department,
-                Station = station,
+                LoggedInUserDepartment = loggedInUserDepartment,
+                LoggedInUserStation = loggedInUserStation,
                 Departments = ktdaContext.Departments.ToList(), // Fetch all departments
                 Stations = ktdaContext.Stations.ToList(), // Fetch all stations
                 Vendors = await _vendorService.GetVendorsAsync(),
@@ -297,7 +302,7 @@ namespace MRIV.Controllers
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
 
             // Get logged-in user details
-            var (employee, department, station) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            var(loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
 
             if (model.Requisition != null)
             {
@@ -330,24 +335,22 @@ namespace MRIV.Controllers
                 using var ktdaContext = new KtdaleaveContext();
 
                 // Get Admin Employees for Dispatch
-                int AdminDepartmentCode = 104;
+                int AdminDepartmentCode = 106;
                 string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
                 List<EmployeeBkp> employees = await ktdaContext.EmployeeBkps
                     .Where(e => e.Department == AdmindepartmentCodeString && e.EmpisCurrActive == 0)
                     .OrderBy(e => e.Fullname)
                     .ToListAsync();
 
-                // Reload wizard steps
+                // 2. Initialize the model (this resets RequisitionItems to default)
+                model = await InitializeWizardModelAsync(model, HttpContext, currentStep: 3);
+
 
                 // Populate the model again to pass back to the view
                 model.Steps = steps;
                 model.CurrentStep = 2;
-                model.PartialBasePath = "~/Views/Shared/CreateRequisition/";
                 model.Requisition = requisition;
-                model.Employee = employee;
                 model.EmployeeBkps = employees;
-                model.Department = department;
-                model.Station = station;
                 model.Departments = ktdaContext.Departments.ToList();
                 model.Stations = ktdaContext.Stations.ToList();
                 model.Vendors = await _vendorService.GetVendorsAsync();
@@ -389,8 +392,21 @@ namespace MRIV.Controllers
             HttpContext.Session.SetObject("WizardRequisition", requisition);
 
             // Add Approval steps
-            var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, employee);
+            var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
             // Print to console
+            // Print detailed information about the steps
+            Console.WriteLine($"Number of approval steps created: {approvalSteps?.Count ?? 0}");
+            foreach (var step in approvalSteps ?? new List<Approval>())
+            {
+                        Console.WriteLine($"""
+                Step: {step.ApprovalStep}
+                Status: {step.ApprovalStatus}
+                PayrollNo: {step.PayrollNo}
+                RequisitionId: {step.RequisitionId}
+                DepartmentId: {step.DepartmentId}
+                CreatedAt: {step.CreatedAt}
+                """);
+            }
             Console.WriteLine("Approval Steps:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(approvalSteps, Newtonsoft.Json.Formatting.Indented));
             HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);
@@ -444,13 +460,18 @@ namespace MRIV.Controllers
             List<MaterialCategory> materialCategories = await _context.MaterialCategories
                    .ToListAsync();
             var vendors = await _vendorService.GetVendorsAsync();
-
-            // 1. Preserve the posted RequisitionItems (cloned rows data)
+            // 1. Retrieve the requisition object from the session
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            // 2. Preserve the posted RequisitionItems (cloned rows data)
             var requisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
-            // 2. Ensure Material objects are initialized
+            // 3. Ensure Material objects are initialized
             foreach (var item in requisitionItems)
             {
                 item.Material ??= new Material();
+                item.Material.Name = item.Name;
+                item.Material.Description = item.Description;
+                item.Material.CurrentLocationId = requisition.IssueStation;
+            //    item.Material.Status = goodCondition;
             }
 
             if (!ModelState.IsValid)
@@ -497,17 +518,56 @@ namespace MRIV.Controllers
         {
             // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+
+            // Retrieve the approval steps from the session
+            var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
             // Prepare wizard steps and view model
             var steps = GetWizardSteps(currentStep: 4); // Pass the current step
-    
+            var jsonString = System.Text.Json.JsonSerializer.Serialize(approvalSteps, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            Console.WriteLine(jsonString);
+
             var viewModel = new MaterialRequisitionWizardViewModel
             {
                 Steps = steps,
                 CurrentStep = 4,
                 PartialBasePath = "~/Views/Shared/CreateRequisition/",
                 Requisition = requisition,
-               
+                ApprovalSteps = new List<ApprovalStepViewModel>(),
+                DepartmentEmployees = new Dictionary<string, SelectList>()
+
             };
+            // Populate view model with employee/department names
+            if (approvalSteps != null)
+            {
+                for (int i = 0; i < approvalSteps.Count; i++)
+                {
+                    var step = approvalSteps[i];
+                    var department = await _departmentService.GetDepartmentByIdAsync(step.DepartmentId);
+                    var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
+
+                    viewModel.ApprovalSteps.Add(new ApprovalStepViewModel
+                    {
+                        StepNumber = i + 1,
+                        ApprovalStep = step.ApprovalStep,
+                        PayrollNo = step.PayrollNo,
+                        EmployeeName = employee?.Fullname ?? "Unknown",
+                        DepartmentId = step.DepartmentId,
+                        DepartmentName = department?.DepartmentName ?? "Unknown",
+                        ApprovalStatus = step.ApprovalStatus,
+                        CreatedAt = step.CreatedAt
+                    });
+
+                    // Add department employees for dropdowns
+                    if (i == 0) // Only for first step
+                    {
+                        var employees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
+                        viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(employees, "PayrollNo", "FullName");
+                    }
+                }
+            }
 
             return View(WizardViewPath, viewModel);
 

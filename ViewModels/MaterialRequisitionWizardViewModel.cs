@@ -1,4 +1,5 @@
-﻿using MRIV.Models;
+﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using MRIV.Models;
 using System.Net.Sockets;
 
 namespace MRIV.ViewModels
@@ -14,14 +15,17 @@ namespace MRIV.ViewModels
         public List<EmployeeBkp> EmployeeBkps { get; set; } = new();
         public int? TotalCount { get; set; }
         public Requisition? Requisition { get; set; }
-        public EmployeeBkp? Employee { get; set; } 
-        public Department? Department { get; set; }
-        public Station? Station { get; set; }
+        public EmployeeBkp? LoggedInUserEmployee { get; set; } 
+        public Department? LoggedInUserDepartment { get; set; }
+        public Station? LoggedInUserStation { get; set; }
         public List<Vendor> Vendors { get; set; } = new();
         public List<RequisitionItem> RequisitionItems { get; set; } = new();
         public List<MaterialCategory> MaterialCategories { get; set; } = new();
         public MaterialCategory? MaterialCategory { get; set; }
         public List<Material> Materials { get; set; } = new List<Material>();
+
+        public List<ApprovalStepViewModel>? ApprovalSteps { get; set; }
+        public Dictionary<string, SelectList>? DepartmentEmployees { get; set; }
     }
     public class Ticket
     {
@@ -41,7 +45,19 @@ namespace MRIV.ViewModels
         public DateTime? LastModified { get; set; }
     }
 
- 
+    public class ApprovalStepViewModel
+    {
+        public int StepNumber { get; set; }
+        public string ApprovalStep { get; set; }
+        public string PayrollNo { get; set; }
+        public string EmployeeName { get; set; }
+        public int DepartmentId { get; set; }
+        public string DepartmentName { get; set; }
+        public string ApprovalStatus { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+
 }
 
 

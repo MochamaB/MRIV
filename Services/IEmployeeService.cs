@@ -6,11 +6,14 @@ namespace MRIV.Services
 {
     public interface IEmployeeService  // Changed from class to interface
     {
-        Task<(EmployeeBkp employee, Department department, Station station)> GetEmployeeAndDepartmentAsync(string payrollNo);
+        Task<(EmployeeBkp loggedInUserEmployee, Department loggedInUserDepartment, Station loggedInUserStation)> GetEmployeeAndDepartmentAsync(string payrollNo);
         EmployeeBkp GetSupervisor(EmployeeBkp employee);
         Task<EmployeeBkp> GetFactoryEmployeeAsync(string stationName); // Changed to Task<EmployeeBkp>
         Task<EmployeeBkp> GetRegionEmployee(); // Changed to Task<EmployeeBkp>
         Task<EmployeeBkp> GetHoEmployeeAsync(string departmentName);
+
+        Task<EmployeeBkp> GetEmployeeByPayrollAsync(string payrollNo);
+        Task<List<EmployeeBkp>> GetEmployeesByDepartmentAsync(int departmentId);
     }
 
     public class EmployeeService : IEmployeeService
@@ -22,42 +25,42 @@ namespace MRIV.Services
             _context = context;
         }
 
-        public async Task<(EmployeeBkp employee, Department department, Station station)> GetEmployeeAndDepartmentAsync(string payrollNo)
+        public async Task<(EmployeeBkp loggedInUserEmployee, Department loggedInUserDepartment, Station loggedInUserStation)> GetEmployeeAndDepartmentAsync(string payrollNo)
         {
-            var employee = await _context.EmployeeBkps
+            var loggedInUserEmployee = await _context.EmployeeBkps
                 .FirstOrDefaultAsync(e => e.PayrollNo == payrollNo);
 
-            if (employee == null)
+            if (loggedInUserEmployee == null)
                 return (null, null, null);
 
-            var department = await _context.Departments
-                .FirstOrDefaultAsync(d => d.DepartmentId == employee.Department);  // Added Async
+            var loggedInUserDepartment = await _context.Departments
+                .FirstOrDefaultAsync(d => d.DepartmentId == loggedInUserEmployee.Department);  // Added Async
 
-            Station station;
-            if (employee.Station.Equals("HQ", StringComparison.OrdinalIgnoreCase))
+            Station loggedInUserStation;
+            if (loggedInUserEmployee.Station.Equals("HQ", StringComparison.OrdinalIgnoreCase))
             {
                 // Explicitly create an HQ station
-                station = new Station { StationId = 0, StationName = "HQ" };
+                loggedInUserStation = new Station { StationId = 0, StationName = "HQ" };
             }
-            else if (int.TryParse(employee.Station, out int stationId))
+            else if (int.TryParse(loggedInUserEmployee.Station, out int stationId))
             {
-                station = await _context.Stations
+                loggedInUserStation = await _context.Stations
                     .FirstOrDefaultAsync(d => d.StationId == stationId);
             }
             else
             {
                 // Handle invalid station data gracefully
-                station = new Station { StationId = -1, StationName = "Unknown" };
+                loggedInUserStation = new Station { StationId = -1, StationName = "Unknown" };
             }
 
-            return (employee, department, station);
+            return (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation);
         }
 
-        public EmployeeBkp GetSupervisor(EmployeeBkp employee)
+        public EmployeeBkp GetSupervisor(EmployeeBkp loggedInUserEmployee)
         {
             // Get supervisor from employee's HOD or Supervisor property
             return _context.EmployeeBkps
-                .FirstOrDefault(e => e.PayrollNo == employee.Supervisor || e.PayrollNo == employee.Hod);
+                .FirstOrDefault(e => e.PayrollNo == loggedInUserEmployee.Supervisor || e.PayrollNo == loggedInUserEmployee.Hod);
         }
 
         public async Task<EmployeeBkp> GetFactoryEmployeeAsync(string locationName)
@@ -70,7 +73,7 @@ namespace MRIV.Services
                 return _context.EmployeeBkps
                     .Where(e => e.Station == station.StationId.ToString() &&
                                e.Designation == "FIELD SYSTEMS ADMINISTRA")
-                    .FirstOrDefault();
+                    .FirstOrDefault(e => e.EmpisCurrActive == 0);
             }
             return null;
             
@@ -80,7 +83,7 @@ namespace MRIV.Services
         {
             return await _context.EmployeeBkps
                 .Where(e => e.Designation.Contains("REGIONAL ICT"))
-                .FirstOrDefaultAsync(); // Add Async
+                .FirstOrDefaultAsync(e=> e.EmpisCurrActive == 0); // Add Async
         }
 
         public async Task<EmployeeBkp> GetHoEmployeeAsync(string locationName)
@@ -92,9 +95,24 @@ namespace MRIV.Services
             if (department != null)
             {
                 return await _context.EmployeeBkps
-                    .FirstOrDefaultAsync(e => e.Department == department.DepartmentId);
+                    .FirstOrDefaultAsync(e => e.Department == department.DepartmentId &&
+                e.EmpisCurrActive == 0);
             }
             return null;
+        }
+        public async Task<EmployeeBkp> GetEmployeeByPayrollAsync(string payrollNo)
+        {
+            // Implement logic to fetch employee by payroll number
+            return await _context.EmployeeBkps.FirstOrDefaultAsync(e => e.PayrollNo == payrollNo);
+        }
+
+        public async Task<List<EmployeeBkp>> GetEmployeesByDepartmentAsync(int departmentId)
+        {
+
+            return await _context.EmployeeBkps
+                .Where(e => e.Department == departmentId.ToString() && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Fullname)
+                .ToListAsync();
         }
 
 

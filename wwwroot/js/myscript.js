@@ -4,6 +4,8 @@
     const newIndex = itemCounter;
 
 
+
+
     // Add new item
     $('#addNewItemBtn').on('click', function () {
         const originalItem = $('.item-row').first();
@@ -113,7 +115,7 @@
         clone.find('select[name$=".Condition"]').val('GoodCondition'); // Enum name
         clone.find('input[name$=".Quantity"]').val(1);
         // Set MaterialCategoryId to 1 (Uncategorized) in the cloned modal
-        modalClone.find('select[name$=".Material.MaterialCategoryId"]').val('1');
+        modalClone.find('select[name$=".Material.MaterialCategoryId"]').val(1);
 
         // Append cloned item
         $('#itemsContainer').append(clone);
