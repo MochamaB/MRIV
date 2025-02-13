@@ -18,8 +18,9 @@ namespace MRIV.Services
             }
             public async Task<Department> GetDepartmentByIdAsync(int departmentId)
             {
+
                 return await _context.Departments
-                    .FirstOrDefaultAsync(d => d.DepartmentCode == departmentId);
+                    .FirstOrDefaultAsync(d => d.DepartmentId == departmentId.ToString());
             }
 
         }

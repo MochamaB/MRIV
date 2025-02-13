@@ -47,7 +47,7 @@ namespace MRIV.ViewModels
 
     public class ApprovalStepViewModel
     {
-        public int StepNumber { get; set; }
+        public int? StepNumber { get; set; }
         public string ApprovalStep { get; set; }
         public string PayrollNo { get; set; }
         public string EmployeeName { get; set; }

@@ -14,6 +14,7 @@ namespace MRIV.Services
 
         Task<EmployeeBkp> GetEmployeeByPayrollAsync(string payrollNo);
         Task<List<EmployeeBkp>> GetEmployeesByDepartmentAsync(int departmentId);
+        Task<List<EmployeeBkp>> GetEmployeesByStationAsync(string station);
     }
 
     public class EmployeeService : IEmployeeService
@@ -66,17 +67,32 @@ namespace MRIV.Services
         public async Task<EmployeeBkp> GetFactoryEmployeeAsync(string locationName)
         {
             if (string.IsNullOrEmpty(locationName)) return null;
+
+            EmployeeBkp employee = null;
             var station = await _context.Stations
                    .FirstOrDefaultAsync(d => d.StationName == locationName);
+
+            // 1. First attempt: Find employee by station and designation containing "ADMINISTR" (case-insensitive)
             if (station != null)
             {
-                return _context.EmployeeBkps
-                    .Where(e => e.Station == station.StationId.ToString() &&
-                               e.Designation == "FIELD SYSTEMS ADMINISTRA")
-                    .FirstOrDefault(e => e.EmpisCurrActive == 0);
+                string formattedStationId = station.StationId.ToString("D3");
+                employee = await _context.EmployeeBkps
+                    .Where(e => e.Station == formattedStationId &&
+                               e.Designation.ToLower().Contains("field systems administr") && // Partial match for "ADMINISTRATOR" or "ADMINISTRA"
+                               e.EmpisCurrActive == 0)
+                    .FirstOrDefaultAsync();
             }
-            return null;
-            
+
+            // 2. Fallback: If no employee found, search by designation alone (case-insensitive)
+            if (employee == null)
+            {
+                employee = await _context.EmployeeBkps
+                    .Where(e => e.Designation.ToLower().Contains("field systems administr") && // Flexible matching
+                                e.EmpisCurrActive == 0)
+                    .FirstOrDefaultAsync();
+            }
+
+            return employee;
         }
 
         public async Task<EmployeeBkp> GetRegionEmployee()
@@ -112,6 +128,14 @@ namespace MRIV.Services
             return await _context.EmployeeBkps
                 .Where(e => e.Department == departmentId.ToString() && e.EmpisCurrActive == 0)
                 .OrderBy(e => e.Fullname)
+                .ToListAsync();
+        }
+        public async Task<List<EmployeeBkp>> GetEmployeesByStationAsync(string station)
+        {
+
+            return await _context.EmployeeBkps
+                .Where(e => e.Station ==station && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Scale)
                 .ToListAsync();
         }
 

@@ -117,6 +117,17 @@ namespace MRIV.Services
             var regionEmployee = await _employeeService.GetRegionEmployee();
             var hoEmployee = await _employeeService.GetHoEmployeeAsync(requisition.DeliveryStation);
 
+            // Add debug logs to check if factoryEmployee is valid
+            Console.WriteLine($"Factory Employee Payroll: {factoryEmployee?.PayrollNo}");
+            Console.WriteLine($"Factory Employee Department: {factoryEmployee?.Department}");
+
+            // Fetch dispatch admin if DispatchType is "admin"
+            EmployeeBkp? dispatchAdmin = null;
+            if (requisition.DispatchType == "admin" && !string.IsNullOrEmpty(requisition.DispatchPayrollNo))
+            {
+                dispatchAdmin = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
+            }
+
             string issue = requisition.IssueStationCategory;
             string delivery = requisition.DeliveryStationCategory;
             string dispatchType = requisition?.DispatchType ?? "Not Specified";
@@ -127,7 +138,8 @@ namespace MRIV.Services
                     { "supervisor", supervisor },
                     { "headoffice", hoEmployee },
                     { "factory", factoryEmployee },
-                    { "region", regionEmployee }
+                    { "region", regionEmployee },
+                    { "dispatchAdmin", dispatchAdmin }
                 };
 
             // Check if the rule exists in the dictionary
@@ -150,7 +162,7 @@ namespace MRIV.Services
             // Assign sequential step numbers and statuses
             for (int i = 0; i < approvalSteps.Count; i++)
             {
-                approvalSteps[i].ApprovalStatus = i == 0 ? "Pending" : "Not Started";
+                approvalSteps[i].ApprovalStatus = i == 0 ? "Pending Approval" : "Not Started";
                 approvalSteps[i].RequisitionId = requisition.Id;
                 approvalSteps[i].CreatedAt = DateTime.Now;
                 approvalSteps[i].UpdatedAt = i == 0 ? DateTime.Now : null;

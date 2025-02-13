@@ -102,26 +102,28 @@
                 </a>
             </div>
             <div id="badgeContainer" class="">
+                @{
+                            var categorybadge = Model.MaterialCategories.FirstOrDefault(c => c.Id == Model.RequisitionItems[i].Material.MaterialCategoryId);
+                            var vendorId = Convert.ToInt32(Model.RequisitionItems[i].Material.VendorId);
+                            var vendorbadge = Model.Vendors.FirstOrDefault(v => v.VendorID == vendorId);
+                }
 
             <!-- Badges to display the selected values -->
                         <!-- Category Badge -->
-                        @if (Model.RequisitionItems[i].Material.MaterialCategoryId != null)
-                        {
-                            var category = Model.MaterialCategories.FirstOrDefault(c => c.Id == Model.RequisitionItems[i].Material.MaterialCategoryId);
-                            <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory"> Category: @(category?.Name ?? "None")</div>
-                        }
+
+
+                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory"> Category: @(categorybadge?.Name ?? "None")</div>
+                        
                         <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode">
                             SNo.: @(Model.RequisitionItems[i].Material.Code ?? "None")
                         </div>
 
-                        @if (Model.RequisitionItems[i].Material.VendorId != null)
-                        {
-                            var vendorId = Convert.ToInt32(Model.RequisitionItems[i].Material.VendorId);
-                            var vendor = Model.Vendors.FirstOrDefault(v => v.VendorID == vendorId);
+                      
+                          
                             <div class="badge badge-active rounded mb-1">
-                                Vendor: @(vendor?.Name ?? "None")
+                            Vendor: @(vendorbadge?.Name ?? "None")
                             </div>
-                        }
+                        
             </div>
             
             

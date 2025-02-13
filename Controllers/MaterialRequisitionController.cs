@@ -547,30 +547,89 @@ namespace MRIV.Controllers
                     var step = approvalSteps[i];
                     var department = await _departmentService.GetDepartmentByIdAsync(step.DepartmentId);
                     var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
+                    string departmentName = department?.DepartmentName ?? "Unknown";
+                    string employeeName = employee?.Fullname ?? "Unknown";
+                    // Handle Vendor Dispatch
+                    // Handle Vendor Dispatch
+                    if (step.ApprovalStep == "Vendor Dispatch")
+                    {
+                        if (int.TryParse(step.PayrollNo, out int vendorId))
+                        {
+                            var vendor = (await _vendorService.GetVendorsAsync()).FirstOrDefault(v => v.VendorID == vendorId);
+                            employeeName = vendor?.Name ?? "Unknown Vendor";
+                        }
+                        departmentName = "N/A"; // Override department for vendors
+                    }
+                    // Handle Factory Employee Receipt station
+                    if (step.ApprovalStep == "Factory Employee Receipt" && employee != null)
+                    {
+                        departmentName += $" ({employee.Station})";
+                    }
 
                     viewModel.ApprovalSteps.Add(new ApprovalStepViewModel
                     {
                         StepNumber = i + 1,
                         ApprovalStep = step.ApprovalStep,
                         PayrollNo = step.PayrollNo,
-                        EmployeeName = employee?.Fullname ?? "Unknown",
+                        EmployeeName = employeeName, // Use computed employeeName (vendor name)
                         DepartmentId = step.DepartmentId,
-                        DepartmentName = department?.DepartmentName ?? "Unknown",
+                        DepartmentName = departmentName, // Use computed departmentName ("N/A" for vendors)
                         ApprovalStatus = step.ApprovalStatus,
                         CreatedAt = step.CreatedAt
-                    });
 
-                    // Add department employees for dropdowns
-                    if (i == 0) // Only for first step
+                    });
+                  
+                 
+                    // Determine which employees to fetch based on step type
+
+                    // Initialize employees as empty list
+                    IEnumerable<EmployeeBkp> employees = new List<EmployeeBkp>();
+
+                    // Only fetch employees if the step type matches and required data is available
+                    if (!string.IsNullOrEmpty(step.ApprovalStep))
                     {
-                        var employees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
-                        viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(employees, "PayrollNo", "FullName");
+                        if ((step.ApprovalStep == "Supervisor Approval" ||
+                             step.ApprovalStep == "Admin Dispatch Approval" ||
+                             step.ApprovalStep == "HO Employee Receipt") &&
+                            step.DepartmentId != 0)
+                        {
+                            var deptEmployees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
+                            if (deptEmployees != null)
+                            {
+                                employees = deptEmployees;
+                            }
+                        }
+                        else if (step.ApprovalStep == "Factory Employee Receipt" && employee?.Station != null)
+                        {
+                            var stationEmployees = await _employeeService.GetEmployeesByStationAsync(employee.Station);
+                            if (stationEmployees != null)
+                            {
+                                employees = stationEmployees;
+                            }
+                        }
+
+                        // Create SelectList only if we have valid employees
+                        if (employees != null && employees.Any())
+                        {
+                            viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(
+                                        employees.Select(e => new {
+                                                        PayrollNo = e.PayrollNo,
+                                                        DisplayName = $"{e.Fullname} - {e.Designation}"
+                                                        }),
+                                                     "PayrollNo",
+                                                     "DisplayName"
+                                                    );
+                        }
+                        else
+                        {
+                            // Add an empty SelectList to prevent null reference
+                            viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(new List<EmployeeBkp>());
+                        }
                     }
                 }
             }
 
             return View(WizardViewPath, viewModel);
-
         }
 
 
