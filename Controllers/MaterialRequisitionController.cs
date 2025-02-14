@@ -521,13 +521,18 @@ namespace MRIV.Controllers
 
             // Retrieve the approval steps from the session
             var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
+            if (requisition == null || approvalSteps == null)
+            {
+                // Handle the case where the approval steps are not found in the session
+                return RedirectToAction("Requisition");
+            }
             // Prepare wizard steps and view model
             var steps = GetWizardSteps(currentStep: 4); // Pass the current step
-            var jsonString = System.Text.Json.JsonSerializer.Serialize(approvalSteps, new JsonSerializerOptions
-            {
-                WriteIndented = true
-            });
-            Console.WriteLine(jsonString);
+          //  var jsonString = System.Text.Json.JsonSerializer.Serialize(approvalSteps, new JsonSerializerOptions
+          //  {
+         ///       WriteIndented = true
+         //   });
+         //   Console.WriteLine(jsonString);
 
             var viewModel = new MaterialRequisitionWizardViewModel
             {
@@ -563,7 +568,8 @@ namespace MRIV.Controllers
                     // Handle Factory Employee Receipt station
                     if (step.ApprovalStep == "Factory Employee Receipt" && employee != null)
                     {
-                        departmentName += $" ({employee.Station})";
+                        var stationName = await _departmentService.GetStationByIdAsync(requisition.DeliveryStation);
+                        departmentName += $" ({stationName.StationName})";
                     }
 
                     viewModel.ApprovalSteps.Add(new ApprovalStepViewModel
@@ -601,7 +607,7 @@ namespace MRIV.Controllers
                         }
                         else if (step.ApprovalStep == "Factory Employee Receipt" && employee?.Station != null)
                         {
-                            var stationEmployees = await _employeeService.GetEmployeesByStationAsync(employee.Station);
+                            var stationEmployees = await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
                             if (stationEmployees != null)
                             {
                                 employees = stationEmployees;

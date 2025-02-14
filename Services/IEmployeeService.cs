@@ -14,7 +14,8 @@ namespace MRIV.Services
 
         Task<EmployeeBkp> GetEmployeeByPayrollAsync(string payrollNo);
         Task<List<EmployeeBkp>> GetEmployeesByDepartmentAsync(int departmentId);
-        Task<List<EmployeeBkp>> GetEmployeesByStationAsync(string station);
+        Task<List<EmployeeBkp>> GetFactoryEmployeesByStationAsync(string station);
+        Task<List<EmployeeBkp>> GetSupervisorsByDepartmentAsync(int departmentId);
     }
 
     public class EmployeeService : IEmployeeService
@@ -87,7 +88,8 @@ namespace MRIV.Services
             if (employee == null)
             {
                 employee = await _context.EmployeeBkps
-                    .Where(e => e.Designation.ToLower().Contains("field systems administr") && // Flexible matching
+                    .Where(e => e.Designation.ToLower().Contains("field systems administr") && 
+                                e.Station !="HQ" &&
                                 e.EmpisCurrActive == 0)
                     .FirstOrDefaultAsync();
             }
@@ -130,13 +132,28 @@ namespace MRIV.Services
                 .OrderBy(e => e.Fullname)
                 .ToListAsync();
         }
-        public async Task<List<EmployeeBkp>> GetEmployeesByStationAsync(string station)
+        public async Task<List<EmployeeBkp>> GetSupervisorsByDepartmentAsync(int departmentId)
         {
-
+            var roles = new[] { "Admin", "Hod", "supervisor" };
             return await _context.EmployeeBkps
-                .Where(e => e.Station ==station && e.EmpisCurrActive == 0)
+                .Where(e => e.Department == departmentId.ToString() && roles.Contains(e.Role)
+                && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Fullname)
+                .ToListAsync();
+        }
+        public async Task<List<EmployeeBkp>> GetFactoryEmployeesByStationAsync(string station)
+        {
+            var deliveryStation = await _context.Stations
+                  .FirstOrDefaultAsync(d => d.StationName == station);
+            if (deliveryStation != null)
+            {
+                string formattedStationId = deliveryStation.StationId.ToString("D3");
+                return await _context.EmployeeBkps
+                .Where(e => e.Station == formattedStationId && e.EmpisCurrActive == 0)
                 .OrderBy(e => e.Scale)
                 .ToListAsync();
+            }
+            return null;
         }
 
 
