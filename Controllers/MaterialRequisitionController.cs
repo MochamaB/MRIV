@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -356,6 +357,7 @@ namespace MRIV.Controllers
                 model.Vendors = await _vendorService.GetVendorsAsync();
                 var modelJson = JsonSerializer.Serialize(model.Requisition, new JsonSerializerOptions { WriteIndented = true });
                 Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
+               
 
                 // 🚀 Log all validation errors for debugging
                 var errors = ModelState.Where(m => m.Value.Errors.Any())
@@ -390,23 +392,14 @@ namespace MRIV.Controllers
             }
             // Save updated requisition back to session
             HttpContext.Session.SetObject("WizardRequisition", requisition);
+            var requisitionJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine("Requisition Object:\n" + requisitionJson);
 
             // Add Approval steps
             var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
             // Print to console
             // Print detailed information about the steps
-            Console.WriteLine($"Number of approval steps created: {approvalSteps?.Count ?? 0}");
-            foreach (var step in approvalSteps ?? new List<Approval>())
-            {
-                        Console.WriteLine($"""
-                Step: {step.ApprovalStep}
-                Status: {step.ApprovalStatus}
-                PayrollNo: {step.PayrollNo}
-                RequisitionId: {step.RequisitionId}
-                DepartmentId: {step.DepartmentId}
-                CreatedAt: {step.CreatedAt}
-                """);
-            }
+           
             Console.WriteLine("Approval Steps:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(approvalSteps, Newtonsoft.Json.Formatting.Indented));
             HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);
@@ -489,7 +482,7 @@ namespace MRIV.Controllers
 
 
                 var modelJson = JsonSerializer.Serialize(model.RequisitionItems, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
+                Console.WriteLine($"Requisition Items Object JSON:\n{modelJson}");
 
                 // 🚀 Log all validation errors for debugging
                 var errors = ModelState.Where(m => m.Value.Errors.Any())
@@ -504,7 +497,8 @@ namespace MRIV.Controllers
                 return View(WizardViewPath, model);
             }
             HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
-
+            var requisitionItemsJson = JsonSerializer.Serialize(requisitionItems, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine("Requisition Items:\n" + requisitionItemsJson);
 
             // Set a success message in TempData
             TempData["SuccessMessage"] = "Requisition Items Added successfully!";
@@ -568,7 +562,7 @@ namespace MRIV.Controllers
                     // Handle Factory Employee Receipt station
                     if (step.ApprovalStep == "Factory Employee Receipt" && employee != null)
                     {
-                        var stationName = await _departmentService.GetStationByIdAsync(requisition.DeliveryStation);
+                        var stationName = await _departmentService.GetStationByStationNameAsync(requisition.DeliveryStation);
                         departmentName += $" ({stationName.StationName})";
                     }
 
@@ -638,8 +632,131 @@ namespace MRIV.Controllers
             return View(WizardViewPath, viewModel);
         }
 
+        [HttpPost]
+    public async Task<IActionResult> CreateApprovals(IFormCollection form)
+    {
+            // 1. Retrieve session data
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
+
+            if (requisition == null || approvalSteps == null)
+            {
+                return RedirectToAction("Index"); // Handle missing session data
+            }
+
+            // 2. Update collector information
+            requisition.CollectorName = form["Requisition.CollectorName"];
+            requisition.CollectorId = form["Requisition.CollectorId"];
+
+            // 3. Update selected approvers
+            foreach (var step in approvalSteps)
+            {
+                var key = $"SelectedEmployee_{step.StepNumber}";
+                if (form.ContainsKey(key))
+                {
+                    var selectedPayroll = form[key];
+                    if (!string.IsNullOrEmpty(selectedPayroll))
+                    {
+                        // Update approval step with selected employee
+                        step.PayrollNo = selectedPayroll;
+                        var employee = await _employeeService.GetEmployeeByPayrollAsync(selectedPayroll);
+               
+                    }
+                }
+            }
+
+                // 4. Save updated data to session
+                HttpContext.Session.SetObject("WizardRequisition", requisition);
+                HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);
+
+                    // Set a success message in TempData
+                    TempData["SuccessMessage"] = "Approvals and Receivers Added successfully!";
+
+                    // 5. Move to next wizard step (assuming current step is 4)
+                    return RedirectToAction("WizardSummary");
+    }
+
+        [HttpGet]
+        public async Task<IActionResult> WizardSummaryAsync()
+        {
+            // Retrieve the requisition object from the session
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems");
+            var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
+            var materialCategories = await _context.MaterialCategories.ToListAsync();
+            var vendors = await _vendorService.GetVendorsAsync();
+
+           
+            // Log the session data to the console
+            Console.WriteLine("---------- Session Data Debugging ----------");
+
+            // Log Requisition Object
+            if (requisition != null)
+            {
+                var requisitionJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine("Requisition Object:\n" + requisitionJson);
+            }
+            else
+            {
+                Console.WriteLine("Requisition object is null.");
+            }
+
+            // Log Requisition Items
+            if (requisitionItems != null && requisitionItems.Any())
+            {
+                var requisitionItemsJson = JsonSerializer.Serialize(requisitionItems, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine("Requisition Items:\n" + requisitionItemsJson);
+            }
+            else
+            {
+                Console.WriteLine("Requisition items are null or empty.");
+            }
+
+            // Log Approval Steps
+            if (approvalSteps != null && approvalSteps.Any())
+            {
+                var approvalStepsJson = JsonSerializer.Serialize(approvalSteps, new JsonSerializerOptions { WriteIndented = true });
+                Console.WriteLine("Approval Steps:\n" + approvalStepsJson);
+            }
+            else
+            {
+                Console.WriteLine("Approval steps are null or empty.");
+            }
 
 
+            Console.WriteLine("--------------------------------------------");
+
+
+          
+            // Use the service to convert approval steps
+            var approvalStepViewModels = await _approvalService.ConvertToViewModelsAsync(
+                approvalSteps ?? new List<Approval>(),
+                requisition ?? new Requisition(),
+                vendors ?? new List<Vendor>()
+            );
+
+
+            // Prepare wizard steps and view model
+            var steps = GetWizardSteps(currentStep: 5); // Pass the current step
+            var viewModel = new MaterialRequisitionWizardViewModel
+            {
+                Steps = steps,
+                CurrentStep = 3,
+                PartialBasePath = "~/Views/Shared/CreateRequisition/",
+                Requisition = requisition,
+                RequisitionItems = requisitionItems,
+                ApprovalSteps = approvalStepViewModels,
+                employeeDetail = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo),
+                departmentDetail = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId),
+                dispatchEmployee = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo),
+                vendor = await _vendorService.GetVendorByIdAsync(requisition.DispatchVendor),
+                Vendors = vendors
+               
+            };
+
+            return View(WizardViewPath, viewModel);
+
+        }
 
     }
     }

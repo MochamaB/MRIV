@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using MRIV.Models;
 using MRIV.ViewModels;
 
 namespace MRIV.Services
@@ -58,5 +59,15 @@ namespace MRIV.Services
             return vendors;
         }
 
-    }
+        public async Task<Vendor> GetVendorByIdAsync(string vendorName)
+        {
+            Vendor vendor =null;
+            if (int.TryParse(vendorName, out int vendorId))
+            {
+                vendor = (await GetVendorsAsync()).FirstOrDefault(v => v.VendorID == vendorId);
+            }
+            return vendor;
+        }
+
+        }
 }

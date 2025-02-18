@@ -1,0 +1,49 @@
+﻿@using MRIV.Enums
+@using MRIV.Helpers
+@{
+   
+    var currentStep = ViewBag.CurrentStep as string;
+    @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
+}
+<div class="row">
+    <div class="col-md-12" style="">
+        <ul class="bullet-line-list">
+            @foreach (var step in Model.ApprovalSteps)
+            {
+                <li>
+                    <div class="col-md-12 d-flex justify-content-between">
+                        <div class="col-md-12">
+                            <h6 class="text-information">
+                                <b>@step.StepNumber. @step.ApprovalStep</b>
+                            </h6>
+                            <hr />
+                            <p class="text-muted mb-2 fw-bold">
+                                <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                            </p>
+                            <p class="text-muted">
+                                <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>
+                                @step.EmployeeName (@step.PayrollNo)
+                            </p>
+                           
+                            @if (step.ApprovalStep != "Vendor Dispatch")
+                            {
+                                <p class="text-muted">
+                                    <b>DEPARTMENT:</b> @step.DepartmentName
+                                </p>
+                            }
+
+
+                            <p class="text-muted">
+                                <b>STATUS:</b>
+                                <span class=" ms-2 badge @BadgeHelper.GetApprovalsBadgeClass(step.ApprovalStatus)">
+                                    @step.ApprovalStatus
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </li>
+            }
+        </ul>
+    </div>
+</div>

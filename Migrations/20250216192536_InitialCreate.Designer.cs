@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    [Migration("20250203173222_InitialCreate")]
+    [Migration("20250216192536_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -53,10 +53,14 @@ namespace MRIV.Migrations
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
 
-                    b.Property<int>("PayrollNo")
-                        .HasColumnType("int");
+                    b.Property<string>("PayrollNo")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RequisitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StepNumber")
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -276,9 +280,8 @@ namespace MRIV.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("Condition")
-                        .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                    b.Property<int>("Condition")
+                        .HasColumnType("int");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
@@ -291,6 +294,7 @@ namespace MRIV.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Name")
+                        .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -301,7 +305,6 @@ namespace MRIV.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("Status")
-                        .HasMaxLength(20)
                         .HasColumnType("int");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -543,7 +546,7 @@ namespace MRIV.Migrations
 
             modelBuilder.Entity("MRIV.Models.RequisitionItem", b =>
                 {
-                    b.HasOne("MRIV.Models.Material", null)
+                    b.HasOne("MRIV.Models.Material", "Material")
                         .WithMany("RequisitionItems")
                         .HasForeignKey("MaterialId");
 
@@ -552,6 +555,8 @@ namespace MRIV.Migrations
                         .HasForeignKey("RequisitionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("Material");
 
                     b.Navigation("Requisition");
                 });

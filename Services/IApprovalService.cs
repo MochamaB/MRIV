@@ -1,22 +1,29 @@
 ﻿using MRIV.Models;
 using Microsoft.EntityFrameworkCore;
+using MRIV.ViewModels;
+using Microsoft.AspNetCore.Mvc.Rendering;
 
 namespace MRIV.Services
 {
     public interface IApprovalService
     {
         Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee);
+        Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors);
     }
     public class ApprovalService : IApprovalService
     {
         private readonly RequisitionContext _context;
         private readonly IEmployeeService _employeeService;
+        private readonly IDepartmentService _departmentService;
+        private readonly VendorService _vendorService;
 
         public ApprovalService(RequisitionContext context,
-                              IEmployeeService employeeService)
+                              IEmployeeService employeeService,IDepartmentService departmentService,VendorService vendorService)
         {
             _context = context;
             _employeeService = employeeService;
+            _departmentService = departmentService;
+            _vendorService = vendorService;
         }
         // Approval Rules Dictionary (Inside ApprovalService)
         private static readonly Dictionary<(string issue, string delivery), List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>> ApprovalRules =
@@ -162,6 +169,7 @@ namespace MRIV.Services
             // Assign sequential step numbers and statuses
             for (int i = 0; i < approvalSteps.Count; i++)
             {
+                approvalSteps[i].StepNumber = i + 1;
                 approvalSteps[i].ApprovalStatus = i == 0 ? "Pending Approval" : "Not Started";
                 approvalSteps[i].RequisitionId = requisition.Id;
                 approvalSteps[i].CreatedAt = DateTime.Now;
@@ -196,5 +204,106 @@ namespace MRIV.Services
 
 
         }
+        // GET APPROVAl STEPS IN VIEW
+        public async Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors)
+        {
+            var viewModels = new List<ApprovalStepViewModel>();
+
+            foreach (var step in approvalSteps)
+            {
+                var viewModel = await ProcessStep(step, requisition, vendors);
+                viewModels.Add(viewModel);
+            }
+
+            return viewModels;
+        }
+
+        private async Task<ApprovalStepViewModel> ProcessStep(Approval step,Requisition requisition,List<Vendor> vendors)
+        {
+            // Get department and employee information
+            var department = await _departmentService.GetDepartmentByIdAsync(step.DepartmentId);
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
+
+            string departmentName = department?.DepartmentName ?? "Unknown";
+            string employeeName = employee?.Fullname ?? "Unknown";
+
+            // Vendor Dispatch handling
+            if (step.ApprovalStep == "Vendor Dispatch")
+            {
+                employeeName = GetVendorName(step.PayrollNo, vendors);
+                departmentName = "N/A";
+            }
+
+            // Factory Employee Receipt handling
+            if (step.ApprovalStep == "Factory Employee Receipt" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+            {
+                var station = await _departmentService.GetStationByStationNameAsync(requisition.DeliveryStation);
+                departmentName = $"{departmentName} ({station?.StationName ?? "Unknown Station"})";
+            }
+
+            return new ApprovalStepViewModel
+            {
+                StepNumber = step.StepNumber,
+                ApprovalStep = step.ApprovalStep,
+                PayrollNo = step.PayrollNo,
+                EmployeeName = employeeName,
+                DepartmentId = step.DepartmentId,
+                DepartmentName = departmentName,
+                ApprovalStatus = step.ApprovalStatus,
+                CreatedAt = step.CreatedAt
+            };
+        }
+
+      
+        private string GetVendorName(string payrollNo, List<Vendor> vendors)
+        {
+            if (int.TryParse(payrollNo, out int vendorId))
+            {
+                return vendors.FirstOrDefault(v => v.VendorID == vendorId)?.Name
+                       ?? "Unknown Vendor";
+            }
+            return "Invalid Vendor ID";
+        }
+
+        private async Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition,List<Approval> approvalSteps)
+        {
+            var departmentEmployees = new Dictionary<string, SelectList>();
+
+            if (approvalSteps == null) return departmentEmployees;
+
+            foreach (var step in approvalSteps)
+            {
+                IEnumerable<EmployeeBkp> employees = null;
+
+                if (step.ApprovalStep == "Supervisor Approval" ||
+                    step.ApprovalStep == "Admin Dispatch Approval" ||
+                    step.ApprovalStep == "HO Employee Receipt")
+                {
+                    // Get employees by department
+                    employees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
+                }
+                else if (step.ApprovalStep == "Factory Employee Receipt")
+                {
+                    // Get employee first to determine station
+                    var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
+                    if (employee != null)
+                    {
+                        employees = await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
+                    }
+                }
+
+                departmentEmployees[step.ApprovalStep] = new SelectList(
+                    employees.Select(e => new {
+                        PayrollNo = e.PayrollNo,
+                        DisplayName = $"{e.Fullname} - {e.Designation}"
+                    }),
+                                                     "PayrollNo",
+                                                     "DisplayName"
+                                                    );
+            }
+
+            return departmentEmployees;
+        }
+
     }
 }

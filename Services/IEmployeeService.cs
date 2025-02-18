@@ -7,6 +7,8 @@ namespace MRIV.Services
     public interface IEmployeeService  // Changed from class to interface
     {
         Task<(EmployeeBkp loggedInUserEmployee, Department loggedInUserDepartment, Station loggedInUserStation)> GetEmployeeAndDepartmentAsync(string payrollNo);
+
+        Task<(EmployeeBkp employeeDetail, Department departmentDetail, Station stationDetail)> GetEmployeeDepartmentStationDetailAsync(string payrollNo);
         EmployeeBkp GetSupervisor(EmployeeBkp employee);
         Task<EmployeeBkp> GetFactoryEmployeeAsync(string stationName); // Changed to Task<EmployeeBkp>
         Task<EmployeeBkp> GetRegionEmployee(); // Changed to Task<EmployeeBkp>
@@ -56,6 +58,37 @@ namespace MRIV.Services
             }
 
             return (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation);
+        }
+
+        public async Task<(EmployeeBkp employeeDetail, Department departmentDetail, Station stationDetail)> GetEmployeeDepartmentStationDetailAsync(string payrollNo)
+        {
+            var employeeDetail = await _context.EmployeeBkps
+                .FirstOrDefaultAsync(e => e.PayrollNo == payrollNo);
+
+            if (employeeDetail == null)
+                return (null, null, null);
+
+            var departmentDetail = await _context.Departments
+                .FirstOrDefaultAsync(d => d.DepartmentId == employeeDetail.Department);  // Added Async
+
+            Station stationDetail;
+            if (employeeDetail.Station.Equals("HQ", StringComparison.OrdinalIgnoreCase))
+            {
+                // Explicitly create an HQ station
+                stationDetail = new Station { StationId = 0, StationName = "HQ" };
+            }
+            else if (int.TryParse(employeeDetail.Station, out int stationId))
+            {
+                stationDetail = await _context.Stations
+                    .FirstOrDefaultAsync(d => d.StationId == stationId);
+            }
+            else
+            {
+                // Handle invalid station data gracefully
+                stationDetail = new Station { StationId = -1, StationName = "Unknown" };
+            }
+
+            return (employeeDetail, departmentDetail, stationDetail);
         }
 
         public EmployeeBkp GetSupervisor(EmployeeBkp loggedInUserEmployee)

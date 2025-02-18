@@ -237,7 +237,14 @@
             $(badgeContainer).removeClass('d-none');
 
             // Close modal properly
-            bootstrap.Modal.getInstance(modal[0]).hide();
+            const modalElement = modal[0];
+            let modalInstance = bootstrap.Modal.getInstance(modalElement);
+            if (!modalInstance) {
+                // If instance doesn't exist, create a new one
+                modalInstance = new bootstrap.Modal(modalElement);
+            }
+            modalInstance.hide();
+          //  bootstrap.Modal.getInstance(modal[0]).hide();
         }
     });
 
@@ -290,4 +297,61 @@ document.addEventListener('DOMContentLoaded', function () {
         event.stopPropagation();
     });
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const selects = document.querySelectorAll('.formcontrol2');
+
+    // Add event listeners to dynamically check if value is empty
+    selects.forEach(select => {
+        select.addEventListener('change', function () {
+            if (!select.value) {
+                select.style.borderColor = "#fcb900"; // Yellow
+            } else {
+                select.style.borderColor = "#dee2e6"; // Default border color
+            }
+        });
+    });
+});
+
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const form = document.querySelector('form[asp-action="CreateApprovals"]');
+    const collectorNameInput = document.querySelector('input[name="Requisition.CollectorName"]');
+    const collectorIdInput = document.querySelector('input[name="Requisition.CollectorId"]');
+
+    form.addEventListener('submit', function (e) {
+        let isValid = true;
+
+            // Clear any previous validation messages
+            document.querySelectorAll('.validation-error').forEach(el => el.remove());
+
+    // Validate Collector Name
+    if (!collectorNameInput.value.trim()) {
+        showValidationError(collectorNameInput, "Collector Name is required");
+    isValid = false;
+            }
+
+    // Validate Collector ID
+    if (!collectorIdInput.value.trim()) {
+        showValidationError(collectorIdInput, "Collector ID is required");
+    isValid = false;
+            }
+
+    // Prevent form submission if validation fails
+    if (!isValid) {
+        e.preventDefault();
+            }
+        });
+
+    function showValidationError(input, message) {
+            const errorSpan = document.createElement('span');
+    errorSpan.classList.add('text-danger', 'validation-error');
+    errorSpan.textContent = message;
+
+    input.insertAdjacentElement('afterend', errorSpan);
+        }
+    });
+
+
+
 

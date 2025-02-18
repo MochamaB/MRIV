@@ -1,4 +1,198 @@
-﻿
-@*
-    For more information on enabling MVC for empty projects, visit http://go.microsoft.com/fwlink/?LinkID=397860
-*@
+﻿@using MRIV.Enums
+@using MRIV.Helpers
+@{
+    ViewData["Title"] = "Summary";
+    var currentStep = ViewBag.CurrentStep as string;
+@model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
+}
+<style>
+    .table > thead {
+        vertical-align: bottom;
+        background-color: #dee2e6;
+        text-align: center;
+    }
+    .table.select-table th {
+        color: #326408;
+        font-style: normal;
+        font-weight: bold;
+        font-size: 13px;
+        line-height: 15px;
+        text-transform: uppercase;
+        padding-right: 5px;
+        padding-left: 0.5rem;
+    }
+
+    .table.select-table td {
+        font-family: Manrope;
+        font-style: normal;
+        font-weight: normal;
+        font-size: 13px;
+        line-height: 16px;
+        color: #1f1f1f;
+        padding-top: 14px;
+        padding-bottom: 14px;
+        padding-left: 0.5rem;
+    }
+
+    .description-cell {
+        max-width: 150px; /* Set the maximum width */
+        word-wrap: break-word; /* Enable word wrapping */
+        word-break: break-word; /* Ensure long words break correctly */
+        white-space: normal; /* Allow text to wrap to the next line */
+    }
+</style>
+<div class="row">
+    <!-- Personal Details Section -->
+    <div class="col-md-10">
+        <h4 class="ml-1"><b>Summary</b></h4>
+        <hr style="border:2px solid black" />
+    </div>
+    <div class="col-md-7">
+        <div class=" contwrapper">
+            <h6>
+                <b>Material Requisition Details</b>
+            </h6>
+            <hr>
+            @if (Model.Requisition != null)
+            {
+                <dl class="row">
+                    <dt class="col-sm-6">Ticket Number</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.Requisition.TicketId == 0)
+                        {
+                             <span>Inter Factory Borrowing</span>                            
+                        }else{
+                            <span>@Model.Requisition.TicketId</span>
+                        }
+                        </dd>
+
+                <dt class="col-sm-6">Department</dt>
+                <dd class="col-sm-6"> @Model.departmentDetail.DepartmentName</dd>
+
+                <dt class="col-sm-6">Requisition By</dt>
+                <dd class="col-sm-6"> @Model.employeeDetail.Fullname</dd>
+
+                <dt class="col-sm-6">Issue Station Category</dt>
+                <dd class="col-sm-6"> 
+                        @if (Model.Requisition.IssueStationCategory?.ToLower() == "headoffice")
+                        {
+                            <span>Head Office</span>
+                        }
+                        else
+                        {
+                            <!-- Capitalize the first letter for other categories -->
+                            <span style="text-transform: capitalize;">@Model.Requisition.IssueStationCategory</span>
+                        }
+                    </dd>
+
+                <dt class="col-sm-6">Issue Station</dt>
+                    <dd class="col-sm-6"> @Model.Requisition.IssueStation</dd>
+
+                <dt class="col-sm-6">Delivery Station Category</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.Requisition.DeliveryStationCategory?.ToLower() == "headoffice")
+                        {
+                            <span>Head Office</span>
+                        }
+                        else
+                        {
+                            <!-- Capitalize the first letter for other categories -->
+                            <span style="text-transform: capitalize;">@Model.Requisition.DeliveryStationCategory</span>
+                        }
+                        </dd>
+
+                <dt class="col-sm-6">Delivery Station</dt>
+                    <dd class="col-sm-6"> @Model.Requisition.DeliveryStation</dd>
+
+                <dt class="col-sm-6">Remarks</dt>
+                    <dd class="col-sm-6"> @Model.Requisition.Remarks</dd>
+
+                    <!-- DispatchType handling -->
+                    <dt class="col-sm-6">Dispatched By</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.Requisition.DispatchType?.ToLower() == "admin")
+                        {
+                            <span>Admin Department</span>
+                        <dt class="col-sm-6">Admin Dispatch</dt>
+                        <dd class="col-sm-6">@Model.dispatchEmployee?.Fullname</dd> <!-- Show the full name of the dispatcher -->
+                        }
+                        else if (Model.Requisition.DispatchType?.ToLower() == "vendor")
+                        {
+                        <span> Vendor</span>
+                        <dt class="col-sm-6">Vendor Name</dt>
+                        <dd class="col-sm-6">@Model.vendor.Name</dd> <!-- Show the vendor's name -->
+                        }
+                    </dd>
+                      <dt class="col-sm-6">Collected By</dt>
+                    <dd class="col-sm-6"> @Model.Requisition.CollectorName</dd>
+                    <dt class="col-sm-6">Collecter ID</dt>
+                    <dd class="col-sm-6"> @Model.Requisition.CollectorId</dd>
+            </dl>
+            }
+            <!-- Requisition Items -->
+            <h6 class="pt-4">
+                <b>Requisition Items</b>
+            </h6>
+            <hr>
+            <div class="table-responsive">
+                <table class="table select-table">
+                    <thead class="">
+                        <tr>
+                            <th>No</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Condition</th>
+                            <th>Status</th>
+                            <th>Serial No</th>
+                            <th>Vendor</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RequisitionItems != null && Model.RequisitionItems.Any())
+                        {
+                            
+                            int counter = 1;  <!-- Initialize counter -->
+
+            
+                            foreach (var item in Model.RequisitionItems)
+                            {
+                                var vendorName = (item.Material?.VendorId != null)
+                                ? Model.Vendors.FirstOrDefault(v => v.VendorID == Convert.ToInt32(item.Material.VendorId))
+                                : null;
+                                <tr>
+                                    <td>@counter</td>
+                                    <td>@item.Name</td>
+                                    <td style="min-width: 200px;max-width: 200px; word-break: break-word; white-space: normal;">@item.Description</td>
+                                    <td>@item.Quantity</td>
+                                    <td>@item.Condition</td>
+                                    <td>@item.Status</td>
+                                    <td>@(item.Material?.Code ?? "N/A")</td>
+                                    <td>@(vendorName?.Name ?? "N/A")</td>
+                                </tr>
+                                counter++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center">No items found</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        </div>
+    <div class="col-md-5">
+        <div class=" contwrapper" style="background-color: #ffffa8;border: 1px solid #fcb900 ;">
+
+            <h6>
+                <b>Approvals</b>
+            </h6>
+            <hr>
+            <partial name="_ApprovalSteps" />
+        </div>
+        </div>
+</div>

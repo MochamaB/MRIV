@@ -18,6 +18,10 @@ namespace MRIV.ViewModels
         public EmployeeBkp? LoggedInUserEmployee { get; set; } 
         public Department? LoggedInUserDepartment { get; set; }
         public Station? LoggedInUserStation { get; set; }
+
+        public EmployeeBkp? employeeDetail { get; set; }
+        public Department? departmentDetail { get; set; }
+        public Station? stationDetail { get; set; }
         public List<Vendor> Vendors { get; set; } = new();
         public List<RequisitionItem> RequisitionItems { get; set; } = new();
         public List<MaterialCategory> MaterialCategories { get; set; } = new();
@@ -26,6 +30,10 @@ namespace MRIV.ViewModels
 
         public List<ApprovalStepViewModel>? ApprovalSteps { get; set; }
         public Dictionary<string, SelectList>? DepartmentEmployees { get; set; }
+
+        public EmployeeBkp? dispatchEmployee { get; set; }
+        public Vendor? vendor { get; set; }
+
     }
     public class Ticket
     {

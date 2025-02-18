@@ -13,6 +13,8 @@ namespace MRIV.Models
 
         public int DepartmentId { get; set; }
 
+        public int StepNumber { get; set; }
+
         [Required]
         [StringLength(50)]
         public string ApprovalStep { get; set; }
