@@ -3,6 +3,25 @@
     let itemCounter = 0;
     const newIndex = itemCounter;
 
+    // Add remove buttons to existing items (except the first one if you want to keep at least one)
+    $('.item-row:not(:first)').each(function () {
+        const removeBtn = $(`
+            <button class="btn-close remove-item" 
+                data-bs-toggle="tooltip" 
+                title="Remove item" 
+                style="position: absolute; right: 10px; top: 10px; z-index: 10; color: red;">
+                <i class="mdi mdi-close"></i>
+            </button>`);
+
+        // Ensure item-row has relative positioning
+        $(this).css("position", "relative");
+
+        // Add the remove button and its click handler
+        $(this).prepend(removeBtn);
+        removeBtn.click(function () {
+            $(this).closest('.item-row').remove();
+        });
+    });
 
 
 
@@ -67,6 +86,10 @@
         const newModalId = 'inventoryModal_' + itemCounter;
         const modalClone = $('#inventoryModal').clone().attr('id', newModalId);
 
+        // Update modal trigger in clone
+        clone.find('[data-bs-target="#inventoryModal"]')
+            .attr('data-bs-target', '#' + newModalId);
+
         // Update modal IDs
         modalClone.find('[id]').each(function () {
             const originalModalId = $(this).attr('id');
@@ -75,9 +98,7 @@
             }
         });
 
-        // Update modal trigger in clone
-        clone.find('[data-bs-target="#inventoryModal"]')
-            .attr('data-bs-target', '#' + newModalId);
+        
 
         // Append cloned modal to body
         $('body').append(modalClone);
@@ -206,6 +227,10 @@
             const vendorSelector = isOriginalModal ?
                 '#materialVendor' :
                 `#materialVendor_${suffix}`;
+
+            // If material code exists, enable the checkbox
+            const materialCode = $(codeSelector).val();
+            $(checkboxId).prop('disabled', !materialCode);
 
             // Update badges (handle original and cloned)
             const categoryText = $(`${categorySelector} option:selected`).text();

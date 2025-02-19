@@ -325,6 +325,18 @@ namespace MRIV.Controllers
                 requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
                     ? model.Requisition.DispatchVendor
                 : null;
+                // Set IsExternal if DispatchType is "vendor"
+requisition.IsExternal = model.Requisition.DispatchType == "vendor"
+    ? model.Requisition.IsExternal
+    : null;
+
+// Set ForwardToAdmin if DispatchType is "admin"
+requisition.ForwardToAdmin = model.Requisition.DispatchType == "admin"
+    ? model.Requisition.ForwardToAdmin
+    : null;
+
+// Set CreatedAt to the current date and time
+requisition.CreatedAt = DateTime.Now;
             }
             // Always check model state first
             if (!ModelState.IsValid)
@@ -460,11 +472,24 @@ namespace MRIV.Controllers
             // 3. Ensure Material objects are initialized
             foreach (var item in requisitionItems)
             {
-                item.Material ??= new Material();
-                item.Material.Name = item.Name;
-                item.Material.Description = item.Description;
-                item.Material.CurrentLocationId = requisition.IssueStation;
-            //    item.Material.Status = goodCondition;
+                // Only create/update material if SaveToInventory is true or Material.Code exists
+                if (item.SaveToInventory && !string.IsNullOrEmpty(item.Material?.Code))
+                {
+                    item.Material ??= new Material();
+                    item.Material.Name = item.Name;
+                    item.Material.Description = item.Description;
+                    item.Material.CurrentLocationId = requisition.IssueStation;
+
+                    // Add to materials list for saving
+
+                }
+                else
+                {
+                    // Clear material association
+                    item.Material = null;
+                    item.MaterialId = null;
+                }
+
             }
 
             if (!ModelState.IsValid)
@@ -475,6 +500,11 @@ namespace MRIV.Controllers
 
                 // 5. Repopulate other critical view data
                 model.RequisitionItems = requisitionItems;
+                // Initialize Material for each RequisitionItem if it's null
+                foreach (var item in model.RequisitionItems)
+                {
+                    item.Material ??= new Material();
+                }
                 model.MaterialCategories = await _context.MaterialCategories.ToListAsync();
                 model.Vendors = await _vendorService.GetVendorsAsync();
                 model.Steps = steps;
@@ -757,6 +787,26 @@ namespace MRIV.Controllers
             return View(WizardViewPath, viewModel);
 
         }
+        [HttpPost]
+        public async Task<IActionResult> CompleteWizard()
+        {
+            // Retrieve the requisition object from the session
+            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+            var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems");
+            var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
+            if (requisition == null || approvalSteps == null || approvalSteps ==null)
+            {
+                return RedirectToAction("Ticket"); // Handle missing session data
+            }
+            // Save the requisition
+            requisition.Status = RequisitionStatus.PendingApproval;
+            _context.Requisitions.Add(requisition);
+            await _context.SaveChangesAsync();
 
-    }
+            // Redirect to the Requisition Index action
+            TempData["SuccessMessage"] = "Material Requisition has been created successfully.Go to approvals to track progress";
+            return RedirectToAction("Index", "Requisitions");
+        }
+
+        }
     }

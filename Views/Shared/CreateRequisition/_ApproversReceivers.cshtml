@@ -79,12 +79,12 @@
                             <div class="col-md-9">
                                     <div class="form-group">
                                         <label class="control-label"> Collected By</label>  <span class="requiredlabel">*</span>
-                                        <input type="text" asp-for="Requisition.CollectorName" class="form-control " placeholder="Full Name" value="" />
+                                        <input type="text" asp-for="Requisition.CollectorName" class="form-control " placeholder="Full Name" value="" required />
                                         <span asp-validation-for="Requisition.CollectorName" class="text-danger"></span>
                                     </div>
                                     <div class="form-group">
                                         <label class="control-label"> Collectors ID No</label>  <span class="requiredlabel">*</span>
-                                        <input type="number" asp-for="Requisition.CollectorId" class="form-control " placeholder="ID Number" value="" />
+                                        <input type="number" asp-for="Requisition.CollectorId" class="form-control " placeholder="ID Number" value="" required />
                                         <span asp-validation-for="Requisition.CollectorId" class="text-danger"></span>
                                     </div>
                             </div>

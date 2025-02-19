@@ -32,6 +32,9 @@ namespace MRIV.Models
         [Required]
         public RequisitionItemStatus Status { get; set; } //Pending Approval,Dispatched, Received, Returned
 
+        [Display(Name = "Save to Inventory")]
+        public bool SaveToInventory { get; set; }
+
 
         public DateTime CreatedAt { get; set; }
 

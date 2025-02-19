@@ -89,26 +89,30 @@
             <div class="form-group mb-1">
                 <div class="form-check form-check-flat form-check-primary">
                     <label class="form-check-label" style="font-size:1rem">
-                        <input type="checkbox" class="form-check-input" id="saveToInventory" disabled>
+                        <input asp-for="RequisitionItems[i].SaveToInventory" 
+                            type="checkbox" 
+                                       class="form-check-input" 
+                                       id="saveToInventory"
+                                       disabled="@(string.IsNullOrEmpty(Model.RequisitionItems[i].Material?.Code))">
                         Add this Item to Inventory
                         <i class="input-helper"></i>
                     </label>
                 </div>
             </div>
             <div class="mb-0">
-                <a class="table" data-bs-toggle="modal" data-bs-target="#inventoryModal">
+                        <a class="table" data-bs-toggle="modal" data-bs-target="#inventoryModal_@i">
                     <i class="mdi mdi-plus-circle-outline mr-2" style="vertical-align: middle; font-size: 1.4rem;"></i>
                     Add Inventory Details
                 </a>
             </div>
                     @{
-                        var categorybadge = Model.MaterialCategories.FirstOrDefault(c => c.Id == Model.RequisitionItems[i].Material.MaterialCategoryId);
-                        var vendorId = Convert.ToInt32(Model.RequisitionItems[i].Material.VendorId);
+                        var categorybadge = Model.MaterialCategories.FirstOrDefault(c => c.Id == Model.RequisitionItems?[i].Material?.MaterialCategoryId);
+                        var vendorId = Convert.ToInt32(Model.RequisitionItems?[i].Material?.VendorId);
                         var vendorbadge = Model.Vendors.FirstOrDefault(v => v.VendorID == vendorId);
 
                         var hasCategory = categorybadge?.Name != null;
                         var hasVendor = vendorbadge?.Name != null;
-                        var hasCode = !string.IsNullOrEmpty(Model.RequisitionItems[i].Material.Code);
+                        var hasCode = !string.IsNullOrEmpty(Model.RequisitionItems?[i].Material?.Code);
                         var showBadges = hasCategory || hasVendor || hasCode;
                     }
                     <div id="badgeContainer" class="@(showBadges ? "" : "d-none")">
@@ -120,7 +124,7 @@
                         <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory"> Category: @(categorybadge?.Name ?? "None")</div>
                         
                         <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode">
-                            SNo.: @(Model.RequisitionItems[i].Material.Code ?? "None")
+                            SNo.: @(Model.RequisitionItems?[i].Material?.Code ?? "None")
                         </div>
 
                       
@@ -135,7 +139,7 @@
         </div>
    
     <!-- Inventory Modal -->
-    <div class="modal fade" id="inventoryModal" tabindex="-1">
+                <div class="modal fade" id="inventoryModal_@i" tabindex="-1">
         <div class="modal-dialog modal-md">
             <div class="modal-content">
                 <div class="modal-header" style="background-color:#326408">
@@ -161,7 +165,7 @@
                             <div class="form-group">
                                 <label class="control-label">Enter Code / Serial No OR Generate Code</label><span class="requiredlabel">*</span>
                                 <div class="input-group">
-                                            <input type="text" asp-for="RequisitionItems[i].Material.Code" class="form-control" id="materialCode" required >
+                                            <input type="text" asp-for="RequisitionItems[i].Material.Code" class="form-control" id="materialCode"  value=" @Model.RequisitionItems[i].Material.Code" required >
                                     <button type="button" class="btn btn-outline-primary" id="generateCodeBtn">
                                         Generate Code
                                     </button>
