@@ -1,282 +1,329 @@
 ﻿document.addEventListener('DOMContentLoaded', function () {
-    // Clone item functionality
-    let itemCounter = 0;
-    const newIndex = itemCounter;
+    let itemCounter = document.querySelectorAll('.item-row').length - 1;
 
-    // Add remove buttons to existing items (except the first one if you want to keep at least one)
-    $('.item-row:not(:first)').each(function () {
-        const removeBtn = $(`
-            <button class="btn-close remove-item" 
-                data-bs-toggle="tooltip" 
-                title="Remove item" 
-                style="position: absolute; right: 10px; top: 10px; z-index: 10; color: red;">
-                <i class="mdi mdi-close"></i>
-            </button>`);
+       // Initialize existing items on page load or after validation
+    initializeExistingItems();
 
-        // Ensure item-row has relative positioning
-        $(this).css("position", "relative");
+    function initializeExistingItems() {
+        // Initialize all existing item rows
+        document.querySelectorAll('.item-row').forEach((item, index) => {
+            // Add remove button if not first item
+            if (index > 0) {
+                addRemoveButton(item);
+            }
 
-        // Add the remove button and its click handler
-        $(this).prepend(removeBtn);
-        removeBtn.click(function () {
-            $(this).closest('.item-row').remove();
+            // Create modal if doesn't exist
+            const modalId = `inventoryModal_${index}`;
+            if (!document.getElementById(modalId)) {
+                createNewModal(index);
+            }
+
+            // Update badge container visibility
+            const materialCode = item.querySelector('[name$="Material.Code"]')?.value;
+            const saveToInventory = item.querySelector('[name$="SaveToInventory"]')?.checked;
+            
+            if (materialCode || saveToInventory) {
+                const badgeContainer = item.querySelector('[id^="badgeContainer"]');
+                if (!materialCode) {
+                    badgeContainer.classList.add('d-none');
+                    
+                    // Update badges with existing values
+                    updateBadgesFromExistingData(item, index);
+                }
+
+                // Enable checkbox if material code exists
+                const checkbox = item.querySelector('[name$="SaveToInventory"]');
+                if (checkbox && materialCode) {
+                    checkbox.disabled = false;
+                    badgeContainer.classList.remove('d-none');
+                }
+            }
         });
-    });
+    }
+
+    function updateBadgesFromExistingData(item, index) {
+        // Get existing values
+        const categoryId = item.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`)?.value;
+        const categorySelect = document.querySelector(`select[name$="[${index}].Material.MaterialCategoryId"]`);
+        const categoryText = categorySelect?.options[categorySelect.selectedIndex]?.text || 'None';
+
+        const code = item.querySelector(`[name$="[${index}].Material.Code"]`)?.value || 'None';
+        
+        const vendorId = item.querySelector(`[name$="[${index}].Material.VendorId"]`)?.value;
+        const vendorSelect = document.querySelector(`select[name$="[${index}].Material.VendorId"]`);
+        const vendorText = vendorSelect?.options[vendorSelect.selectedIndex]?.text || 'None';
+
+        // Update badges
+        const badgeContainer = item.querySelector('[id^="badgeContainer"]');
+        if (badgeContainer) {
+            const categoryBadge = badgeContainer.querySelector('[id^="selectedMaterialCategory"]');
+            const codeBadge = badgeContainer.querySelector('[id^="selectedMaterialCode"]');
+            const vendorBadge = badgeContainer.querySelector('[id^="selectedMaterialVendor"]');
+
+            if (categoryBadge) categoryBadge.textContent = `Category: ${categoryText}`;
+            if (codeBadge) codeBadge.textContent = `Code: ${code}`;
+            if (vendorBadge) vendorBadge.textContent = `Vendor: ${vendorText}`;
+
+        }
+    }
 
 
-
-    // Add new item
-    $('#addNewItemBtn').on('click', function () {
-        const originalItem = $('.item-row').first();
-        if (originalItem.length === 0) return;
+    // Add new item functionality
+    document.getElementById('addNewItemBtn').addEventListener('click', function () {
+        const originalItem = document.querySelector('.item-row');
+        if (!originalItem) return;
 
         itemCounter++;
-        const newIndex = itemCounter;
-        const clone = originalItem.clone(true);
+        const clone = originalItem.cloneNode(true);
 
-        // Update IDs in cloned item
-        // Update asp-for attributes
-        clone.find('[asp-for]').each(function () {
-            const originalAspFor = $(this).attr('asp-for');
-            const newAspFor = originalAspFor.replace(/\[(\d+)\]/, `[${newIndex}]`);
-            $(this).attr('asp-for', newAspFor);
-        });
-        // Update name attributes
-        clone.find('[name]').each(function () {
-            const originalName = $(this).attr('name');
-            // Check if name attribute contains array index
-            if (originalName.includes('[')) {
-                const newName = originalName.replace(/\[(\d+)\]/, `[${newIndex}]`);
-                $(this).attr('name', newName);
-            }
-        });
-        // Update validation span elements
-        clone.find('[asp-validation-for]').each(function () {
-            const originalValidationFor = $(this).attr('asp-validation-for');
-            const newValidationFor = originalValidationFor.replace(/\[(\d+)\]/, `[${newIndex}]`);
-            $(this).attr('asp-validation-for', newValidationFor);
-        });
+        // Update all form elements in clone
+        updateClonedElements(clone, itemCounter);
 
-        clone.find('[id]').each(function () {
-            const originalId = $(this).attr('id');
-            const newId = originalId + '_' + itemCounter;
-            $(this).attr('id', newId);
-
-            // Update labels
-            const label = clone.find(`label[for="${originalId}"]`);
-            if (label.length) label.attr('for', newId);
-        });
-
-        // 1. Reset the checkbox state for the CLONED item
-        const clonedCheckboxId = `#saveToInventory_${itemCounter}`;
-        clone.find(clonedCheckboxId)
-            .prop('checked', false)
-            .prop('disabled', true);
-
-        // 2. Hide the badge container for the CLONED item
-        const clonedBadgeContainerId = `#badgeContainer_${itemCounter}`;
-        clone.find(clonedBadgeContainerId).addClass('d-none');
-
-        // 3. Reset badge text for the CLONED item
-        clone.find(`#selectedMaterialCategory_${itemCounter}`).text('Category: None');
-        clone.find(`#selectedMaterialCode_${itemCounter}`).text('Code: None');
-        clone.find(`#selectedMaterialVendor_${itemCounter}`).text('Vendor: None');
-
-        // Create new modal for cloned item
-        const newModalId = 'inventoryModal_' + itemCounter;
-        const modalClone = $('#inventoryModal').clone().attr('id', newModalId);
-
-        // Update modal trigger in clone
-        clone.find('[data-bs-target="#inventoryModal"]')
-            .attr('data-bs-target', '#' + newModalId);
-
-        // Update modal IDs
-        modalClone.find('[id]').each(function () {
-            const originalModalId = $(this).attr('id');
-            if (originalModalId !== 'inventoryModal') {
-                $(this).attr('id', originalModalId + '_' + itemCounter);
-            }
-        });
-
-        
-
-        // Append cloned modal to body
-        $('body').append(modalClone);
-
-        // Initialize Bootstrap modal
-        new bootstrap.Modal(modalClone[0]);
-
-        // Reset form elements in clone
-        clone.find('input:not([type="button"]), select, textarea').val('');
-
-        clone.find('#saveToInventory').prop('checked', false).prop('disabled', true);
-        clone.find('.badge').text(function (i, text) {
-            return text.replace(/:.*/, ': None');
-        });
-
+        // Reset form values
+        resetClonedFormValues(clone);
 
         // Add remove button
-        const removeBtn = $(`
-    <button class="btn-close remove-item" 
-        data-bs-toggle="tooltip" title="Remove item" 
-        style="position: absolute; right: 10px; top: 10px; z-index: 10; color: red;">
-        <i class="mdi mdi-close"></i>
-    </button>`).click(function () {
-            $(this).closest('.item-row').remove();
-        });
+        addRemoveButton(clone);
 
-        // Ensure the item row has `position: relative;` for proper button placement
-        clone.css("position", "relative");
-
-        // Prepend remove button directly inside `.item-row` before `.col-md-6`
-        clone.prepend(removeBtn);
-
-        // Reset Status and Condition to defaults
-        clone.find('select[name$=".Status"]').val('PendingApproval'); // Enum name
-        clone.find('select[name$=".Condition"]').val('GoodCondition'); // Enum name
-        clone.find('input[name$=".Quantity"]').val(1);
-        // Set MaterialCategoryId to 1 (Uncategorized) in the cloned modal
-        modalClone.find('select[name$=".Material.MaterialCategoryId"]').val(1);
+        // Create and append new modal
+        createNewModal(itemCounter);
 
         // Append cloned item
-        $('#itemsContainer').append(clone);
+        document.getElementById('itemsContainer').appendChild(clone);
     });
 
-    // Generate code handler (fixed for first modal)
-    $(document).on('click', '[id^="generateCodeBtn"]', function () {
-        const modal = $(this).closest('.modal');
-        const modalId = modal.attr('id');
-        const isOriginalModal = modalId === 'inventoryModal';
-
-        // Get correct suffix
-        const suffix = isOriginalModal ? '' : modalId.split('_')[1];
-
-        // Get correct selectors
-        const categorySelector = isOriginalModal ?
-            '#materialCategoryId' :
-            `#materialCategoryId_${suffix}`;
-
-        const codeSelector = isOriginalModal ?
-            '#materialCode' :
-            `#materialCode_${suffix}`;
-
-      //  codeSelector.val('1');
-        const categoryId = $(categorySelector).val();
-
-        if (!categoryId) {
-            alert('Please select a Material Category first.');
-            return;
-        }
-
-        $.ajax({
-            url: '/Materials/GetNextCode',
-            type: 'GET',
-            data: {
-                categoryId: categoryId,
-                rowIndex: suffix || '0' // Send '0' for original modal
-            },
-            success: function (code) {
-                $(codeSelector).val(code);
-            },
-            error: function (xhr) {
-                console.error('Error:', xhr.responseText);
-                alert('Error generating code. Please try again.');
+    function updateClonedElements(clone, index) {
+        // Update input elements
+        clone.querySelectorAll('[name]').forEach(element => {
+            const name = element.getAttribute('name');
+            if (name && name.includes('[')) {
+                element.setAttribute('name', name.replace(/\[(\d+)\]/, `[${index}]`));
             }
         });
-    });
 
-    // Save modal data handler (unchanged)
-    // Save modal data handler (fixed for first modal)
-    $(document).on('click', '[id^="saveInventoryDetails"]', function () {
-        const modal = $(this).closest('.modal');
-        const modalId = modal.attr('id');
-        const isOriginalModal = modalId === 'inventoryModal';
-        const suffix = isOriginalModal ? '' : modalId.split('_')[1];
+        // Update asp-for attributes
+        clone.querySelectorAll('[asp-for]').forEach(element => {
+            const aspFor = element.getAttribute('asp-for');
+            if (aspFor) {
+                element.setAttribute('asp-for', aspFor.replace(/\[(\d+)\]/, `[${index}]`));
+            }
+        });
 
-        let isValid = true;
+        // Update validation elements
+        clone.querySelectorAll('[asp-validation-for]').forEach(element => {
+            const validationFor = element.getAttribute('asp-validation-for');
+            if (validationFor) {
+                element.setAttribute('asp-validation-for', validationFor.replace(/\[(\d+)\]/, `[${index}]`));
+            }
+        });
 
-        // Validate required fields
-        modal.find('[required]').each(function () {
-            if (!$(this).val().trim()) {
-                $(this).addClass('is-invalid');
-                isValid = false;
+        // Update IDs and related labels
+        clone.querySelectorAll('[id]').forEach(element => {
+            const originalId = element.getAttribute('id');
+            const newId = `${originalId}_${index}`;
+            element.setAttribute('id', newId);
+
+            // Update corresponding labels
+            const relatedLabel = clone.querySelector(`label[for="${originalId}"]`);
+            if (relatedLabel) {
+                relatedLabel.setAttribute('for', newId);
+            }
+        });
+
+        // Update modal trigger
+        const modalTrigger = clone.querySelector('[data-bs-target]');
+        if (modalTrigger) {
+            modalTrigger.setAttribute('data-bs-target', `#inventoryModal_${index}`);
+        }
+    }
+
+    function resetClonedFormValues(clone) {
+        // Reset input values
+        clone.querySelectorAll('input:not([type="button"]):not([type="hidden"])').forEach(input => {
+            if (input.type === 'checkbox') {
+                input.checked = false;
+                input.disabled = true;
+            } else if (input.type === 'number' && input.getAttribute('name').includes('.Quantity')) {
+                input.value = '1';
             } else {
-                $(this).removeClass('is-invalid');
+                input.value = '';
             }
         });
 
-        if (isValid) {
-            // Update checkbox (handle original and cloned)
-            const checkboxId = isOriginalModal ?
-                '#saveToInventory' :
-                `#saveToInventory_${suffix}`;
-
-            $(checkboxId)
-                .prop('disabled', false)
-                .prop('checked', true);
-
-            // Get selectors based on modal type
-            const categorySelector = isOriginalModal ?
-                '#materialCategoryId' :
-                `#materialCategoryId_${suffix}`;
-
-            const codeSelector = isOriginalModal ?
-                '#materialCode' :
-                `#materialCode_${suffix}`;
-
-            const vendorSelector = isOriginalModal ?
-                '#materialVendor' :
-                `#materialVendor_${suffix}`;
-
-            // If material code exists, enable the checkbox
-            const materialCode = $(codeSelector).val();
-            $(checkboxId).prop('disabled', !materialCode);
-
-            // Update badges (handle original and cloned)
-            const categoryText = $(`${categorySelector} option:selected`).text();
-            const codeValue = $(codeSelector).val();
-            const vendorText = $(`${vendorSelector} option:selected`).text() || 'None';
-
-            // Badge selectors
-            const categoryBadge = isOriginalModal ?
-                '#selectedMaterialCategory' :
-                `#selectedMaterialCategory_${suffix}`;
-
-            const codeBadge = isOriginalModal ?
-                '#selectedMaterialCode' :
-                `#selectedMaterialCode_${suffix}`;
-
-            const vendorBadge = isOriginalModal ?
-                '#selectedMaterialVendor' :
-                `#selectedMaterialVendor_${suffix}`;
-
-            $(categoryBadge).text(`Category: ${categoryText}`);
-            $(codeBadge).text(`Code: ${codeValue}`);
-            $(vendorBadge).text(`Vendor: ${vendorText}`);
-
-            // Show badge container
-            const badgeContainer = isOriginalModal ?
-                '#badgeContainer' :
-                `#badgeContainer_${suffix}`;
-
-            $(badgeContainer).removeClass('d-none');
-
-            // Close modal properly
-            const modalElement = modal[0];
-            let modalInstance = bootstrap.Modal.getInstance(modalElement);
-            if (!modalInstance) {
-                // If instance doesn't exist, create a new one
-                modalInstance = new bootstrap.Modal(modalElement);
+        // Reset select elements
+        clone.querySelectorAll('select').forEach(select => {
+            const name = select.getAttribute('name');
+            if (name?.includes('.Status')) {
+                select.value = 'PendingApproval';
+            } else if (name?.includes('.Condition')) {
+                select.value = 'GoodCondition';
+            } else if (name?.includes('.Material.MaterialCategoryId')) {
+                select.value = '1'; // Set to default category ID
+            } else {
+                select.value = '';
             }
-            modalInstance.hide();
-          //  bootstrap.Modal.getInstance(modal[0]).hide();
+        });
+
+        // Reset textarea elements
+        clone.querySelectorAll('textarea').forEach(textarea => {
+            textarea.value = '';
+        });
+
+        // Reset badge container
+        const badgeContainer = clone.querySelector('[id^="badgeContainer"]');
+        if (badgeContainer) {
+            badgeContainer.classList.add('d-none');
+            badgeContainer.querySelectorAll('.badge').forEach(badge => {
+                const text = badge.textContent.split(':')[0];
+                badge.textContent = `${text}: None`;
+            });
+        }
+    }
+
+    function createNewModal(index) {
+        const originalModal = document.querySelector('.modal');
+        if (!originalModal) return;
+
+        const newModal = originalModal.cloneNode(true);
+        newModal.id = `inventoryModal_${index}`;
+
+        // Update modal elements
+        updateClonedElements(newModal, index);
+
+        // Reset form values in modal
+        resetClonedFormValues(newModal);
+
+        // Append new modal
+        document.body.appendChild(newModal);
+
+        // Initialize new Bootstrap modal
+        new bootstrap.Modal(newModal);
+    }
+
+    function addRemoveButton(clone) {
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'btn-close remove-item';
+        removeBtn.setAttribute('data-bs-toggle', 'tooltip');
+        removeBtn.setAttribute('title', 'Remove item');
+        removeBtn.style.cssText = 'position: absolute; right: 10px; top: 10px; z-index: 10; color: red;';
+
+        removeBtn.addEventListener('click', function () {
+            clone.remove();
+        });
+
+        clone.style.position = 'relative';
+        clone.insertBefore(removeBtn, clone.firstChild);
+    }
+
+    // Handle generate code button clicks
+    document.addEventListener('click', function (e) {
+        if (e.target.id.startsWith('generateCodeBtn')) {
+            const modal = e.target.closest('.modal');
+            const modalId = modal.id;
+
+            // Handle both original and cloned modals
+            const index = modalId === 'inventoryModal_0' ? '0' : modalId.split('_')[1];
+
+            const categorySelect = modal.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`);
+            const codeInput = modal.querySelector(`[name$="[${index}].Material.Code"]`);
+
+            const categoryId = categorySelect.value;
+            if (!categoryId) {
+                alert('Please select a Material Category first.');
+                return;
+            }
+
+            // Make AJAX call to get next code
+            fetch(`/Materials/GetNextCode?categoryId=${categoryId}&rowIndex=${index}`)
+                .then(response => response.text())
+                .then(code => {
+                    codeInput.value = code;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error generating code. Please try again.');
+                });
         }
     });
 
-    // Remove modal backdrop after close
-    $(document).on('hidden.bs.modal', '.modal', function () {
-        $('.modal-backdrop').remove();
-        $('body').removeClass('modal-open');
+    // Save inventory details handler
+    document.addEventListener('click', function (e) {
+        if (e.target.id.startsWith('saveInventoryDetails')) {
+            const modal = e.target.closest('.modal');
+            const modalId = modal.id;
+            const index = modalId === 'inventoryModal_0' ? '0' : modalId.split('_')[1];
+
+            let isValid = true;
+
+            // Validate required fields
+            modal.querySelectorAll('[required]').forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            if (isValid) {
+                // Get the related item row
+                const itemRow = document.querySelector(`.item-row:nth-child(${parseInt(index) + 1})`);
+
+                // Enable and check the inventory checkbox
+                const checkbox = itemRow.querySelector(`[name$="[${index}].SaveToInventory"]`);
+                if (checkbox) {
+                    checkbox.disabled = false;
+                    checkbox.checked = true;
+                }
+
+                // Update badges
+                const badgeContainer = itemRow.querySelector('[id^="badgeContainer"]');
+                if (badgeContainer) {
+                    badgeContainer.classList.remove('d-none');
+
+                    // Update category badge
+                    const categorySelect = modal.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`);
+                    const categoryBadge = badgeContainer.querySelector('[id^="selectedMaterialCategory"]');
+                    if (categorySelect && categoryBadge) {
+                        const categoryText = categorySelect.options[categorySelect.selectedIndex].text;
+                        categoryBadge.textContent = `Category: ${categoryText}`;
+                    }
+
+                    // Update code badge
+                    const codeInput = modal.querySelector(`[name$="[${index}].Material.Code"]`);
+                    const codeBadge = badgeContainer.querySelector('[id^="selectedMaterialCode"]');
+                    if (codeInput && codeBadge) {
+                        codeBadge.textContent = `Code: ${codeInput.value}`;
+                    }
+
+                    // Update vendor badge
+                    const vendorSelect = modal.querySelector(`[name$="[${index}].Material.VendorId"]`);
+                    const vendorBadge = badgeContainer.querySelector('[id^="selectedMaterialVendor"]');
+                    if (vendorSelect && vendorBadge) {
+                        const vendorText = vendorSelect.options[vendorSelect.selectedIndex].text;
+                        vendorBadge.textContent = `Vendor: ${vendorText || 'None'}`;
+                    }
+                }
+
+                // Close the modal
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+            }
+        }
+    });
+
+    // Clean up modal backdrop
+    document.addEventListener('hidden.bs.modal', function (e) {
+        const modalBackdrops = document.querySelectorAll('.modal-backdrop');
+        modalBackdrops.forEach(backdrop => backdrop.remove());
+        document.body.classList.remove('modal-open');
+    });
+
+    // Initialize form controls
+    document.querySelectorAll('.formcontrol2').forEach(select => {
+        select.addEventListener('change', function () {
+            this.style.borderColor = this.value ? '#dee2e6' : '#fcb900';
+        });
     });
 });
 

@@ -91,6 +91,45 @@ namespace MRIV.Controllers
             return model;
         }
 
+        private async Task<MaterialRequisitionWizardViewModel> GetWizardViewModelAsync(int currentStep, 
+            Requisition requisition = null,
+        EmployeeBkp logge = null,  // New optional parameter
+        Department preFetchedDepartment = null,
+        Station preFetchedStation = null)
+        {
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) =
+                await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            var steps = GetWizardSteps(currentStep);
+
+            using var ktdaContext = new KtdaleaveContext();
+
+            // Get Admin Employees for Dispatch
+            int adminDepartmentCode = 106;
+            string adminDeptCodeString = adminDepartmentCode.ToString();
+            var employees = await ktdaContext.EmployeeBkps
+                .Where(e => e.Department == adminDeptCodeString && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Fullname)
+                .ToListAsync();
+            List<MaterialCategory> materialCategories = await _context.MaterialCategories
+                 .ToListAsync();
+
+            return new MaterialRequisitionWizardViewModel
+            {
+                Steps = steps,
+                CurrentStep = currentStep,
+                PartialBasePath = "~/Views/Shared/CreateRequisition/",
+                Requisition = requisition ?? HttpContext.Session.GetObject<Requisition>("WizardRequisition"),
+                LoggedInUserEmployee = loggedInUserEmployee,
+                EmployeeBkps = employees,
+                LoggedInUserDepartment = loggedInUserDepartment,
+                LoggedInUserStation = loggedInUserStation,
+                Departments = await ktdaContext.Departments.ToListAsync(),
+                Stations = await ktdaContext.Stations.ToListAsync(),
+                Vendors = await _vendorService.GetVendorsAsync(),
+                MaterialCategories = materialCategories,
+            };
+        }
         //1. SELECT TICKET ////////////////////
 
 
@@ -244,20 +283,7 @@ namespace MRIV.Controllers
         {
             // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
-            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-
-            // Getlogged in user their employee and department info
-            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
-            System.Diagnostics.Debug.WriteLine($"Station: {loggedInUserStation?.StationName ?? "null"}");
-            using var ktdaContext = new KtdaleaveContext();
-
-            //Get List of Admin Employees for Dispatch
-            List<EmployeeBkp> employees = new List<EmployeeBkp>(); // Initialize employees to an empty list
-            int AdminDepartmentCode = 106;
-            string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
-            employees = await ktdaContext.EmployeeBkps.Where(e => e.Department == AdmindepartmentCodeString &&
-                   e.EmpisCurrActive == 0).OrderBy(e => e.Fullname).ToListAsync();
-
+        
             if (requisition != null)
             {
                 // Use the requisition data as needed
@@ -269,27 +295,7 @@ namespace MRIV.Controllers
                 ViewBag.Remark = remarks;
             }
 
-            // Prepare wizard steps and view model
-            var steps = GetWizardSteps(currentStep: 2); // Pass the current step
-            var viewModel = new MaterialRequisitionWizardViewModel
-            {
-                Steps = steps,
-                CurrentStep = 2,
-                PartialBasePath = "~/Views/Shared/CreateRequisition/",
-                Requisition = requisition,
-                LoggedInUserEmployee = loggedInUserEmployee,
-                EmployeeBkps = employees,
-                LoggedInUserDepartment = loggedInUserDepartment,
-                LoggedInUserStation = loggedInUserStation,
-                Departments = ktdaContext.Departments.ToList(), // Fetch all departments
-                Stations = ktdaContext.Stations.ToList(), // Fetch all stations
-                Vendors = await _vendorService.GetVendorsAsync(),
-
-                // Tickets = tickets // Add tickets to view model
-            };
-
-         
-           
+            var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
 
             return View(WizardViewPath, viewModel);
         }
@@ -299,15 +305,9 @@ namespace MRIV.Controllers
         {
             Console.WriteLine($"🔹 Received direction: {direction}");
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
-            var steps = GetWizardSteps(currentStep: 2);
-            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-
-            // Get logged-in user details
-            var(loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
-
+            var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
             if (model.Requisition != null)
             {
-
                 // Map properties
                 requisition.DepartmentId = model.Requisition.DepartmentId;
                 requisition.PayrollNo = model.Requisition.PayrollNo;
@@ -325,48 +325,19 @@ namespace MRIV.Controllers
                 requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
                     ? model.Requisition.DispatchVendor
                 : null;
-                // Set IsExternal if DispatchType is "vendor"
-requisition.IsExternal = model.Requisition.DispatchType == "vendor"
-    ? model.Requisition.IsExternal
-    : null;
-
-// Set ForwardToAdmin if DispatchType is "admin"
-requisition.ForwardToAdmin = model.Requisition.DispatchType == "admin"
-    ? model.Requisition.ForwardToAdmin
-    : null;
-
-// Set CreatedAt to the current date and time
-requisition.CreatedAt = DateTime.Now;
+                // Set ForwardToAdmin to true if DispatchType is "admin"
+                requisition.ForwardToAdmin = model.Requisition.DispatchType == "admin";
+                // Set IsExternal to true if DispatchType is "vendor"
+                requisition.IsExternal = model.Requisition.DispatchType == "vendor";
+            
+                // Set CreatedAt to the current date and time
+                requisition.CreatedAt = DateTime.Now;
             }
             // Always check model state first
             if (!ModelState.IsValid)
             {
                 // Handle validation errors
-                // Instead of redirecting, fetch needed data and return the same view
-                
-
-                using var ktdaContext = new KtdaleaveContext();
-
-                // Get Admin Employees for Dispatch
-                int AdminDepartmentCode = 106;
-                string AdmindepartmentCodeString = AdminDepartmentCode.ToString();
-                List<EmployeeBkp> employees = await ktdaContext.EmployeeBkps
-                    .Where(e => e.Department == AdmindepartmentCodeString && e.EmpisCurrActive == 0)
-                    .OrderBy(e => e.Fullname)
-                    .ToListAsync();
-
-                // 2. Initialize the model (this resets RequisitionItems to default)
-                model = await InitializeWizardModelAsync(model, HttpContext, currentStep: 3);
-
-
-                // Populate the model again to pass back to the view
-                model.Steps = steps;
-                model.CurrentStep = 2;
-                model.Requisition = requisition;
-                model.EmployeeBkps = employees;
-                model.Departments = ktdaContext.Departments.ToList();
-                model.Stations = ktdaContext.Stations.ToList();
-                model.Vendors = await _vendorService.GetVendorsAsync();
+                viewModel.Requisition = model.Requisition; // Preserve user input
                 var modelJson = JsonSerializer.Serialize(model.Requisition, new JsonSerializerOptions { WriteIndented = true });
                 Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
                
@@ -381,7 +352,7 @@ requisition.CreatedAt = DateTime.Now;
                 TempData["ErrorMessage"] = "Check Validation Errors Below!";
 
                 // Return view directly (NO REDIRECTION)
-                return View(WizardViewPath, model);
+                return View(WizardViewPath, viewModel);
              
             }
 
@@ -406,9 +377,10 @@ requisition.CreatedAt = DateTime.Now;
             HttpContext.Session.SetObject("WizardRequisition", requisition);
             var requisitionJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
             Console.WriteLine("Requisition Object:\n" + requisitionJson);
-
-            // Add Approval steps
-            var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
+            // ✅ Retrieve logged-in user from the viewModel
+            var loggedInUserEmployee =viewModel.LoggedInUserEmployee;
+                    // Add Approval steps
+                    var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
             // Print to console
             // Print detailed information about the steps
            
@@ -427,32 +399,21 @@ requisition.CreatedAt = DateTime.Now;
 
         public async Task<IActionResult> RequisitionItemsAsync()
         {
-            // Retrieve the requisition object from the session
-            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
-            // Prepare wizard steps and view model
-            var steps = GetWizardSteps(currentStep: 3); // Pass the current step
-            List<MaterialCategory> materialCategories = await _context.MaterialCategories
-                   .ToListAsync();
-            var viewModel = new MaterialRequisitionWizardViewModel
+            // Prepare the wizard view model using the centralized method
+            var viewModel = await GetWizardViewModelAsync(currentStep: 3);
+            if (viewModel.RequisitionItems == null || !viewModel.RequisitionItems.Any())
             {
-                Steps = steps,
-                CurrentStep = 3,
-                PartialBasePath = "~/Views/Shared/CreateRequisition/",
-                Requisition = requisition,
-                RequisitionItems = new List<RequisitionItem>
-                {
-                    new RequisitionItem
-                    {
-                        Material = new Material(),
-                        Status = RequisitionItemStatus.PendingApproval,
-                        Condition = RequisitionItemCondition.GoodCondition
-                    }
-                },
-                MaterialCategories = materialCategories,
-                Vendors = await _vendorService.GetVendorsAsync()
-
-
+                viewModel.RequisitionItems = new List<RequisitionItem>
+        {
+            new RequisitionItem
+            {
+                Material = new Material(),
+                Status = RequisitionItemStatus.PendingApproval,
+                Condition = RequisitionItemCondition.GoodCondition
+            }
         };
+            }
+
 
             return View(WizardViewPath, viewModel);
 
@@ -461,12 +422,8 @@ requisition.CreatedAt = DateTime.Now;
         public async Task<IActionResult> CreateRequisitionItemsAsync(MaterialRequisitionWizardViewModel model, string? direction = null)
         {
            
-            var steps = GetWizardSteps(currentStep: 3);
-            List<MaterialCategory> materialCategories = await _context.MaterialCategories
-                   .ToListAsync();
-            var vendors = await _vendorService.GetVendorsAsync();
-            // 1. Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+           
             // 2. Preserve the posted RequisitionItems (cloned rows data)
             var requisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
             // 3. Ensure Material objects are initialized
@@ -494,23 +451,14 @@ requisition.CreatedAt = DateTime.Now;
 
             if (!ModelState.IsValid)
             {
-               
-                // 2. Initialize the model (this resets RequisitionItems to default)
-                model = await InitializeWizardModelAsync(model, HttpContext, currentStep: 3);
-
+                var viewModel = await GetWizardViewModelAsync(currentStep: 3);
                 // 5. Repopulate other critical view data
-                model.RequisitionItems = requisitionItems;
+                viewModel.RequisitionItems = requisitionItems;
                 // Initialize Material for each RequisitionItem if it's null
-                foreach (var item in model.RequisitionItems)
+                foreach (var item in viewModel.RequisitionItems)
                 {
                     item.Material ??= new Material();
                 }
-                model.MaterialCategories = await _context.MaterialCategories.ToListAsync();
-                model.Vendors = await _vendorService.GetVendorsAsync();
-                model.Steps = steps;
-                model.CurrentStep = 3;
-
-
                 var modelJson = JsonSerializer.Serialize(model.RequisitionItems, new JsonSerializerOptions { WriteIndented = true });
                 Console.WriteLine($"Requisition Items Object JSON:\n{modelJson}");
 
@@ -524,7 +472,7 @@ requisition.CreatedAt = DateTime.Now;
                 TempData["ErrorMessage"] = "Check Validation Errors Below!";
 
                 // Return view directly (NO REDIRECTION)
-                return View(WizardViewPath, model);
+                return View(WizardViewPath, viewModel);
             }
             HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
             var requisitionItemsJson = JsonSerializer.Serialize(requisitionItems, new JsonSerializerOptions { WriteIndented = true });
