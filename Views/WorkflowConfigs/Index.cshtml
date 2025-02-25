@@ -1,12 +1,13 @@
-﻿@model IEnumerable<MRIV.Models.MaterialCategory>
+﻿@model IEnumerable<MRIV.Models.WorkflowConfig>
 
 @{
     ViewData["Title"] = "Index";
 }
+
 <a asp-action="Create" class="btn btn-primary text-white mb-3 me-0  float-end">
     <div style="display: flex; align-items: center;">
         <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
-        <span>  Add Category</span>
+        <span>  Add Configuration</span>
     </div>
 </a>
 <div style="clear: both;"></div>
@@ -32,35 +33,36 @@
                class="table">
     <thead>
         <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UnitOfMeasure)
-            </th>
+            <th>ID</th>
+            <th>Issue Station</th>
+            <th>Delivery Station</th>
+            <th>Steps</th>
             <th></th>
         </tr>
     </thead>
     <tbody>
 @foreach (var item in Model) {
         <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
+                        <td>@item.Id</td>
+            <td style="text-transform:capitalize">
+                @Html.DisplayFor(modelItem => item.IssueStationCategory)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
+            <td style="text-transform:capitalize">
+                @Html.DisplayFor(modelItem => item.DeliveryStationCategory)
             </td>
+                        <td>
+                            @foreach (var step in item.Steps.OrderBy(s => s.StepOrder))
+                            {
+                                <div>
+                                    @step.StepOrder.
+                                    @step.StepName
+                                </div>
+                            }
+                        </td>
             <td>
-                @Html.DisplayFor(modelItem => item.UnitOfMeasure)
-            </td>
-            <td>
-
-                            <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a> 
-                            <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a> 
-                            <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                    <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                    <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                    <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
             </td>
         </tr>
 }

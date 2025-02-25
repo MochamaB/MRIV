@@ -488,24 +488,16 @@ namespace MRIV.Controllers
 
         public async Task<IActionResult> ApproversReceiversAsync()
         {
-            // Retrieve the requisition object from the session
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
-
-            // Retrieve the approval steps from the session
             var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
+
             if (requisition == null || approvalSteps == null)
             {
                 // Handle the case where the approval steps are not found in the session
                 return RedirectToAction("Requisition");
             }
             // Prepare wizard steps and view model
-            var steps = GetWizardSteps(currentStep: 4); // Pass the current step
-          //  var jsonString = System.Text.Json.JsonSerializer.Serialize(approvalSteps, new JsonSerializerOptions
-          //  {
-         ///       WriteIndented = true
-         //   });
-         //   Console.WriteLine(jsonString);
-
+            var steps = GetWizardSteps(currentStep: 4);
             var viewModel = new MaterialRequisitionWizardViewModel
             {
                 Steps = steps,
@@ -514,98 +506,16 @@ namespace MRIV.Controllers
                 Requisition = requisition,
                 ApprovalSteps = new List<ApprovalStepViewModel>(),
                 DepartmentEmployees = new Dictionary<string, SelectList>()
-
             };
-            // Populate view model with employee/department names
-            if (approvalSteps != null)
-            {
-                for (int i = 0; i < approvalSteps.Count; i++)
-                {
-                    var step = approvalSteps[i];
-                    var department = await _departmentService.GetDepartmentByIdAsync(step.DepartmentId);
-                    var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
-                    string departmentName = department?.DepartmentName ?? "Unknown";
-                    string employeeName = employee?.Fullname ?? "Unknown";
-                    // Handle Vendor Dispatch
-                    // Handle Vendor Dispatch
-                    if (step.ApprovalStep == "Vendor Dispatch")
-                    {
-                        if (int.TryParse(step.PayrollNo, out int vendorId))
-                        {
-                            var vendor = (await _vendorService.GetVendorsAsync()).FirstOrDefault(v => v.VendorID == vendorId);
-                            employeeName = vendor?.Name ?? "Unknown Vendor";
-                        }
-                        departmentName = "N/A"; // Override department for vendors
-                    }
-                    // Handle Factory Employee Receipt station
-                    if (step.ApprovalStep == "Factory Employee Receipt" && employee != null)
-                    {
-                        var stationName = await _departmentService.GetStationByStationNameAsync(requisition.DeliveryStation);
-                        departmentName += $" ({stationName.StationName})";
-                    }
 
-                    viewModel.ApprovalSteps.Add(new ApprovalStepViewModel
-                    {
-                        StepNumber = i + 1,
-                        ApprovalStep = step.ApprovalStep,
-                        PayrollNo = step.PayrollNo,
-                        EmployeeName = employeeName, // Use computed employeeName (vendor name)
-                        DepartmentId = step.DepartmentId,
-                        DepartmentName = departmentName, // Use computed departmentName ("N/A" for vendors)
-                        ApprovalStatus = step.ApprovalStatus,
-                        CreatedAt = step.CreatedAt
+            // Get vendors for vendor steps
+            var vendors = await _vendorService.GetVendorsAsync();
 
-                    });
-                  
-                 
-                    // Determine which employees to fetch based on step type
+            // Use service to convert approval steps to view models
+            viewModel.ApprovalSteps = await _approvalService.ConvertToViewModelsAsync(approvalSteps, requisition, vendors);
 
-                    // Initialize employees as empty list
-                    IEnumerable<EmployeeBkp> employees = new List<EmployeeBkp>();
-
-                    // Only fetch employees if the step type matches and required data is available
-                    if (!string.IsNullOrEmpty(step.ApprovalStep))
-                    {
-                        if ((step.ApprovalStep == "Supervisor Approval" ||
-                             step.ApprovalStep == "Admin Dispatch Approval" ||
-                             step.ApprovalStep == "HO Employee Receipt") &&
-                            step.DepartmentId != 0)
-                        {
-                            var deptEmployees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
-                            if (deptEmployees != null)
-                            {
-                                employees = deptEmployees;
-                            }
-                        }
-                        else if (step.ApprovalStep == "Factory Employee Receipt" && employee?.Station != null)
-                        {
-                            var stationEmployees = await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
-                            if (stationEmployees != null)
-                            {
-                                employees = stationEmployees;
-                            }
-                        }
-
-                        // Create SelectList only if we have valid employees
-                        if (employees != null && employees.Any())
-                        {
-                            viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(
-                                        employees.Select(e => new {
-                                                        PayrollNo = e.PayrollNo,
-                                                        DisplayName = $"{e.Fullname} - {e.Designation}"
-                                                        }),
-                                                     "PayrollNo",
-                                                     "DisplayName"
-                                                    );
-                        }
-                        else
-                        {
-                            // Add an empty SelectList to prevent null reference
-                            viewModel.DepartmentEmployees[step.ApprovalStep] = new SelectList(new List<EmployeeBkp>());
-                        }
-                    }
-                }
-            }
+            // Use service to populate department employees
+            viewModel.DepartmentEmployees = await _approvalService.PopulateDepartmentEmployeesAsync(requisition, approvalSteps);
 
             return View(WizardViewPath, viewModel);
         }
@@ -638,7 +548,22 @@ namespace MRIV.Controllers
                         // Update approval step with selected employee
                         step.PayrollNo = selectedPayroll;
                         var employee = await _employeeService.GetEmployeeByPayrollAsync(selectedPayroll);
-               
+                        // If this is a regular employee (not vendor dispatch)
+                        if (step.ApprovalStep != "Vendor Dispatch" && employee != null)
+                        {
+                            // Update the department ID based on the selected employee
+                            step.DepartmentId = Convert.ToInt32(employee.Department);
+
+                            // If this is HO Employee Receipt or Factory Employee Receipt,
+                            // we might need to update other related information as well
+                            if (step.ApprovalStep == "Factory Employee Receipt" ||
+                                step.ApprovalStep == "HO Employee Receipt")
+                            {
+                                // You might want to update requisition.DeliveryStation here
+                                // if employee selection should affect that
+                            }
+                        }
+
                     }
                 }
             }

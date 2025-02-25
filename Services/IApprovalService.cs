@@ -9,6 +9,7 @@ namespace MRIV.Services
     {
         Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee);
         Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors);
+        Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition, List<Approval> approvalSteps);
     }
     public class ApprovalService : IApprovalService
     {
@@ -240,6 +241,13 @@ namespace MRIV.Services
                 var station = await _departmentService.GetStationByStationNameAsync(requisition.DeliveryStation);
                 departmentName = $"{departmentName} ({station?.StationName ?? "Unknown Station"})";
             }
+            // Factory Employee Receipt handling
+            if (step.ApprovalStep == "HO Employee Receipt" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+            {
+                var station = await _departmentService.GetDepartmentByNameAsync(requisition.DeliveryStation);
+                departmentName = $"{departmentName}";
+            }
+
 
             return new ApprovalStepViewModel
             {
@@ -265,7 +273,7 @@ namespace MRIV.Services
             return "Invalid Vendor ID";
         }
 
-        private async Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition,List<Approval> approvalSteps)
+        public async Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition, List<Approval> approvalSteps)
         {
             var departmentEmployees = new Dictionary<string, SelectList>();
 
@@ -273,36 +281,62 @@ namespace MRIV.Services
 
             foreach (var step in approvalSteps)
             {
-                IEnumerable<EmployeeBkp> employees = null;
+                // Get appropriate employees for this step
+                var employees = await GetAppropriateEmployeesForStepAsync(step, requisition);
 
-                if (step.ApprovalStep == "Supervisor Approval" ||
-                    step.ApprovalStep == "Admin Dispatch Approval" ||
-                    step.ApprovalStep == "HO Employee Receipt")
+                // Create SelectList if we have valid employees
+                if (employees != null && employees.Any())
                 {
-                    // Get employees by department
-                    employees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
+                    departmentEmployees[step.ApprovalStep] = new SelectList(
+                        employees.Select(e => new {
+                            PayrollNo = e.PayrollNo,
+                            DisplayName = $"{e.Fullname} - {e.Designation}"
+                        }),
+                        "PayrollNo",
+                        "DisplayName"
+                    );
                 }
-                else if (step.ApprovalStep == "Factory Employee Receipt")
+                else
                 {
-                    // Get employee first to determine station
-                    var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
-                    if (employee != null)
-                    {
-                        employees = await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
-                    }
+                    // Add an empty SelectList to prevent null reference
+                    departmentEmployees[step.ApprovalStep] = new SelectList(new List<EmployeeBkp>());
                 }
-
-                departmentEmployees[step.ApprovalStep] = new SelectList(
-                    employees.Select(e => new {
-                        PayrollNo = e.PayrollNo,
-                        DisplayName = $"{e.Fullname} - {e.Designation}"
-                    }),
-                                                     "PayrollNo",
-                                                     "DisplayName"
-                                                    );
             }
 
             return departmentEmployees;
+        }
+
+        private async Task<IEnumerable<EmployeeBkp>> GetAppropriateEmployeesForStepAsync(Approval step, Requisition requisition)
+        {
+            if (string.IsNullOrEmpty(step.ApprovalStep))
+                return new List<EmployeeBkp>();
+
+            // Handle office employee scenarios
+            if (step.ApprovalStep == "Supervisor Approval" ||
+                step.ApprovalStep == "Admin Dispatch Approval" ||
+                step.ApprovalStep == "HO Employee Receipt")
+            {
+                // Try to get from department ID first
+                var departmentEmployees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
+
+                // If we have a delivery station and no department employees, try by department name
+                if ((departmentEmployees == null || !departmentEmployees.Any()) &&
+                    !string.IsNullOrEmpty(requisition.DeliveryStation))
+                {
+                    return await _employeeService.GetEmployeesByDepartmentNameAsync(requisition.DeliveryStation);
+                }
+
+                return departmentEmployees ?? new List<EmployeeBkp>();
+            }
+            // Handle factory employee receipt
+            else if (step.ApprovalStep == "Factory Employee Receipt" &&
+                     !string.IsNullOrEmpty(requisition.DeliveryStation))
+            {
+                return await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
+            }
+
+            // Return empty list for other cases
+            return new List<EmployeeBkp>();
         }
 
     }

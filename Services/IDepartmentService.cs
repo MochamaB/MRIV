@@ -7,6 +7,7 @@ namespace MRIV.Services
     {
         // In IDepartmentService
         Task<Department> GetDepartmentByIdAsync(int departmentId);
+        Task<Department> GetDepartmentByNameAsync(string deliveryStation);
         Task<Station> GetStationByStationNameAsync(string employeeStation);
     }
         public class DepartmentService : IDepartmentService
@@ -23,7 +24,14 @@ namespace MRIV.Services
                 return await _context.Departments
                     .FirstOrDefaultAsync(d => d.DepartmentId == departmentId.ToString());
                 }
-            public async Task<Station> GetStationByStationNameAsync(string deliveryStation)
+
+        public async Task<Department> GetDepartmentByNameAsync(string deliveryStation)
+        {
+
+            return await _context.Departments
+                .FirstOrDefaultAsync(d => d.DepartmentName == deliveryStation);
+        }
+        public async Task<Station> GetStationByStationNameAsync(string deliveryStation)
             {
            // var stationId = Convert.ToInt32(employeeStation);
             return await _context.Stations

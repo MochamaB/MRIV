@@ -63,6 +63,12 @@ namespace MRIV.ViewModels
         public string DepartmentName { get; set; }
         public string ApprovalStatus { get; set; }
         public DateTime CreatedAt { get; set; }
+
+        // New properties for selection
+        public SelectList? AvailableDepartments { get; set; }
+        public SelectList? AvailableStations { get; set; }
+        public int? SelectedDepartmentId { get; set; }
+        public string? SelectedStation { get; set; }
     }
 
 

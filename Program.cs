@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 using MRIV.Services;
+using MRIV.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,7 +41,16 @@ using (var scope = app.Services.CreateScope())
 {
     var services = scope.ServiceProvider;
     var ktdaContext = services.GetRequiredService<KtdaleaveContext>();
-   
+    try
+    {
+        var context = services.GetRequiredService<RequisitionContext>();
+        WorkflowConfigSeeder.SeedWorkflowConfigurations(context);
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"An error occurred while seeding the database: {ex.Message}");
+    }
+
 }
 
 // Configure the HTTP request pipeline.

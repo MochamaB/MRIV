@@ -16,6 +16,7 @@ namespace MRIV.Services
 
         Task<EmployeeBkp> GetEmployeeByPayrollAsync(string payrollNo);
         Task<List<EmployeeBkp>> GetEmployeesByDepartmentAsync(int departmentId);
+        Task<List<EmployeeBkp>> GetEmployeesByDepartmentNameAsync(string deliveryStation);
         Task<List<EmployeeBkp>> GetFactoryEmployeesByStationAsync(string station);
         Task<List<EmployeeBkp>> GetSupervisorsByDepartmentAsync(int departmentId);
     }
@@ -162,6 +163,19 @@ namespace MRIV.Services
 
             return await _context.EmployeeBkps
                 .Where(e => e.Department == departmentId.ToString() && e.EmpisCurrActive == 0)
+                .OrderBy(e => e.Fullname)
+                .ToListAsync();
+        }
+        public async Task<List<EmployeeBkp>> GetEmployeesByDepartmentNameAsync(string deliveryStation)
+        {
+            var department = await _context.Departments
+                .FirstOrDefaultAsync(d => d.DepartmentName == deliveryStation);
+
+            if (department == null)
+                return new List<EmployeeBkp>(); // Return empty list if department not found
+
+            return await _context.EmployeeBkps
+                .Where(e => e.Department == department.DepartmentId && e.EmpisCurrActive == 0)
                 .OrderBy(e => e.Fullname)
                 .ToListAsync();
         }

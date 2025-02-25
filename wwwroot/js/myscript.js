@@ -386,44 +386,55 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const form = document.querySelector('form[asp-action="CreateApprovals"]');
-    const collectorNameInput = document.querySelector('input[name="Requisition.CollectorName"]');
-    const collectorIdInput = document.querySelector('input[name="Requisition.CollectorId"]');
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.querySelector('.myForm');
+
+    if (!form) {
+        console.error('Form not found');
+        return;
+    }
 
     form.addEventListener('submit', function (e) {
         let isValid = true;
+        const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
 
-            // Clear any previous validation messages
-            document.querySelectorAll('.validation-error').forEach(el => el.remove());
+        // Clear previous errors
+        document.querySelectorAll('.validation-error').forEach(el => el.remove());
+        requiredInputs.forEach(input => input.classList.remove('is-invalid'));
 
-    // Validate Collector Name
-    if (!collectorNameInput.value.trim()) {
-        showValidationError(collectorNameInput, "Collector Name is required");
-    isValid = false;
-            }
+        requiredInputs.forEach(input => {
+            const value = input.value.trim();
+            const isCheckbox = input.type === 'checkbox';
+            const isRadio = input.type === 'radio';
+            const isSelect = input.tagName === 'SELECT';
 
-    // Validate Collector ID
-    if (!collectorIdInput.value.trim()) {
-        showValidationError(collectorIdInput, "Collector ID is required");
-    isValid = false;
-            }
+            if ((isCheckbox && !input.checked) ||
+                (isRadio && !form.querySelector(`input[name="${input.name}"]:checked`)) ||
+                (!isCheckbox && !isRadio && !value)) {
 
-    // Prevent form submission if validation fails
-    if (!isValid) {
-        e.preventDefault();
+                isValid = false;
+                input.classList.add('is-invalid');
+                const label = form.querySelector(`label[for="${input.id}"]`);
+                const fieldName = label ? label.textContent.replace('*', '').trim() : 'This field';
+                showValidationError(input, `${fieldName} is required`);
             }
         });
 
-    function showValidationError(input, message) {
-            const errorSpan = document.createElement('span');
-    errorSpan.classList.add('text-danger', 'validation-error');
-    errorSpan.textContent = message;
-
-    input.insertAdjacentElement('afterend', errorSpan);
+        if (!isValid) {
+            e.preventDefault();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     });
 
+    function showValidationError(input, message) {
+        const errorSpan = document.createElement('span');
+        errorSpan.classList.add('text-danger', 'validation-error', 'd-block', 'mt-1');
+        errorSpan.textContent = message;
+
+        // Insert after the input element
+        input.parentNode.insertBefore(errorSpan, input.nextElementSibling);
+    }
+});
 
 
 

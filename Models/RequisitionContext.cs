@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
 namespace MRIV.Models;
@@ -21,6 +22,10 @@ public partial class RequisitionContext : DbContext
     public DbSet<Material> Materials { get; set; }
     public DbSet<MaterialCategory> MaterialCategories { get; set; }
     public DbSet<Approval> Approvals { get; set; }
+
+    public DbSet<WorkflowConfig> WorkflowConfigs { get; set; }
+    public DbSet<WorkflowStepConfig> WorkflowStepConfigs { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -68,6 +73,20 @@ public partial class RequisitionContext : DbContext
             .HasForeignKey(m => m.MaterialCategoryId);
 
         OnModelCreatingPartial(modelBuilder);
+
+        modelBuilder.Entity<WorkflowStepConfig>()
+      .Property(e => e.Conditions)
+      .HasColumnType("NVARCHAR(MAX)")
+      .HasConversion(
+          v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+          v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions)null));
+
+        modelBuilder.Entity<WorkflowStepConfig>()
+       .Property(e => e.RoleParameters)
+       .HasColumnType("NVARCHAR(MAX)")
+       .HasConversion(
+           v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
+           v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions)null));
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

@@ -14,7 +14,7 @@
         <hr style="border:2px solid black" />
     </div>
 </div>
-<form asp-controller="MaterialRequisition" asp-action="CreateApprovals">
+<form asp-controller="MaterialRequisition" asp-action="CreateApprovals" class="myForm">
 <div class="row">
     <div class="col-md-12" style="padding:2.0rem 4.0rem">
         <ul class="bullet-line-list">
@@ -30,6 +30,12 @@
                             <p class="text-muted mb-2 fw-bold">
                                 <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
                             </p>
+                                @if (step.ApprovalStep != "Vendor Dispatch")
+                                {
+                                    <p class="text-muted">
+                                        <b>DEPARTMENT:</b> @step.DepartmentName
+                                    </p>
+                                }
                             <p class="text-muted">
                                 <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>  
                                 @step.EmployeeName (@step.PayrollNo)
@@ -51,12 +57,7 @@
                                              )
                                 </p>
                             }
-                            @if (step.ApprovalStep != "Vendor Dispatch")
-                            {
-                                <p class="text-muted">
-                                    <b>DEPARTMENT:</b> @step.DepartmentName
-                                </p>
-                            }
+                           
                             
                            
                             <p class="text-muted">
