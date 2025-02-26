@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
+using MRIV.Services;
 using MRIV.ViewModels;
 
 namespace MRIV.Controllers
@@ -13,10 +14,12 @@ namespace MRIV.Controllers
     public class WorkflowConfigsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly IStationCategoryService _stationCategoryService;
 
-        public WorkflowConfigsController(RequisitionContext context)
+        public WorkflowConfigsController(RequisitionContext context, IStationCategoryService stationCategoryService)
         {
             _context = context;
+            _stationCategoryService = stationCategoryService;
         }
 
         // GET: WorkflowConfigs
@@ -50,7 +53,7 @@ namespace MRIV.Controllers
         }
 
         // GET: WorkflowConfigs/Create
-        public IActionResult Create()
+        public async Task<IActionResult> CreateAsync()
         {
             var viewModel = new WorkflowConfigViewModel
             {
@@ -60,7 +63,9 @@ namespace MRIV.Controllers
                 {
                     new WorkflowStepConfig { StepOrder = 1, StepName = "Supervisor Approval", ApproverRole = "supervisor" }
                 },
-                StationCategories = GetStationCategoriesSelectList(),
+
+                IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue"),
+                DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery"),
                 ApproverRoles = GetApproverRolesSelectList()
             };
 
@@ -85,7 +90,8 @@ namespace MRIV.Controllers
                 if (existingWorkflow != null)
                 {
                     ModelState.AddModelError("", "A workflow with these station categories already exists.");
-                    viewModel.StationCategories = GetStationCategoriesSelectList();
+                    viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+                    viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
                     viewModel.ApproverRoles = GetApproverRolesSelectList();
                     return View(viewModel);
                 }
@@ -98,7 +104,8 @@ namespace MRIV.Controllers
                 return RedirectToAction(nameof(Index));
             }
 
-            viewModel.StationCategories = GetStationCategoriesSelectList();
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
             viewModel.ApproverRoles = GetApproverRolesSelectList();
             return View(viewModel);
         }
@@ -124,7 +131,8 @@ namespace MRIV.Controllers
             {
                 WorkflowConfig = workflowConfig,
                 Steps = workflowConfig.Steps.ToList(),
-                StationCategories = GetStationCategoriesSelectList(),
+                IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue"),
+                DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery"),
                 ApproverRoles = GetApproverRolesSelectList()
             };
 
@@ -219,8 +227,9 @@ namespace MRIV.Controllers
                     }
                 }
 
-                viewModel.StationCategories = GetStationCategoriesSelectList();
-                viewModel.ApproverRoles = GetApproverRolesSelectList();
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
+            viewModel.ApproverRoles = GetApproverRolesSelectList();
                 return View(viewModel);
             }
 
@@ -266,7 +275,7 @@ namespace MRIV.Controllers
         }
 
         [HttpPost]
-        public IActionResult AddStep(WorkflowConfigViewModel viewModel)
+        public async Task<IActionResult> AddStepAsync(WorkflowConfigViewModel viewModel)
         {
             var steps = viewModel.Steps ?? new List<WorkflowStepConfig>();
 
@@ -288,14 +297,15 @@ namespace MRIV.Controllers
             });
 
             viewModel.Steps = steps;
-            viewModel.StationCategories = GetStationCategoriesSelectList();
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
             viewModel.ApproverRoles = GetApproverRolesSelectList();
 
             return View(viewModel.WorkflowConfig.Id > 0 ? "Edit" : "Create", viewModel);
         }
 
         [HttpPost]
-        public IActionResult CloneStep(WorkflowConfigViewModel viewModel, int stepIndex)
+        public async Task<IActionResult> CloneStepAsync(WorkflowConfigViewModel viewModel, int stepIndex)
         {
             var steps = viewModel.Steps ?? new List<WorkflowStepConfig>();
 
@@ -323,14 +333,15 @@ namespace MRIV.Controllers
             steps.Add(clonedStep);
 
             viewModel.Steps = steps;
-            viewModel.StationCategories = GetStationCategoriesSelectList();
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
             viewModel.ApproverRoles = GetApproverRolesSelectList();
 
             return View(viewModel.WorkflowConfig.Id > 0 ? "Edit" : "Create", viewModel);
         }
 
         [HttpPost]
-        public IActionResult RemoveStep(WorkflowConfigViewModel viewModel, int stepIndex)
+        public async Task<IActionResult> RemoveStepAsync(WorkflowConfigViewModel viewModel, int stepIndex)
         {
             var steps = viewModel.Steps ?? new List<WorkflowStepConfig>();
 
@@ -348,7 +359,8 @@ namespace MRIV.Controllers
             }
 
             viewModel.Steps = steps;
-            viewModel.StationCategories = GetStationCategoriesSelectList();
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
             viewModel.ApproverRoles = GetApproverRolesSelectList();
 
             return View(viewModel.WorkflowConfig.Id > 0 ? "Edit" : "Create", viewModel);
@@ -359,12 +371,7 @@ namespace MRIV.Controllers
             return _context.Set<WorkflowConfig>().Any(e => e.Id == id);
         }
 
-        private SelectList GetStationCategoriesSelectList()
-        {
-            var categories = new List<string> { "headoffice", "factory", "region", "vendor" };
-            return new SelectList(categories);
-        }
-
+       
         private SelectList GetApproverRolesSelectList()
         {
             var roles = new List<string> {

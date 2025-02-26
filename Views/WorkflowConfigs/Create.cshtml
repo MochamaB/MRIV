@@ -1,35 +1,151 @@
-﻿@model MRIV.Models.WorkflowConfig
+﻿@model MRIV.ViewModels.WorkflowConfigViewModel
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Workflow Configuration";
 }
-
-<h1>Create</h1>
-
-<h4>WorkflowConfig</h4>
+<div class=" contwrapper">
+<h4>Create Workflow Configuration</h4>
 <hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                <label asp-for="IssueStationCategory" class="control-label"></label>
-                <input asp-for="IssueStationCategory" class="form-control" />
-                <span asp-validation-for="IssueStationCategory" class="text-danger"></span>
+
+<form asp-action="Create" method="post">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+           <h5 class="pt-3">Workflow Details</h5>
+       
+            <div class="row mb-5">
+                <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="WorkflowConfig.IssueStationCategory" class="control-label">Issue Station Category</label>
+                    <select asp-for="WorkflowConfig.IssueStationCategory" asp-items="Model.IssueStationCategories" class="formcontrol2">
+                        <option value="">-- Select Issue Station Category --</option>
+                    </select>
+                    <span asp-validation-for="WorkflowConfig.IssueStationCategory" class="text-danger"></span>
+                </div>
+                </div>
+                <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="WorkflowConfig.DeliveryStationCategory" class="control-label">Delivery Station Category</label>
+                    <select asp-for="WorkflowConfig.DeliveryStationCategory" asp-items="Model.DeliveryStationCategories" class="formcontrol2">
+                        <option value="">-- Select Delivery Station Category --</option>
+                    </select>
+                    <span asp-validation-for="WorkflowConfig.DeliveryStationCategory" class="text-danger"></span>
+                </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label asp-for="DeliveryStationCategory" class="control-label"></label>
-                <input asp-for="DeliveryStationCategory" class="form-control" />
-                <span asp-validation-for="DeliveryStationCategory" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+        
+    
+
+    <div class=" mb-4">
+        <div class=" d-flex justify-content-between align-items-center">
+            <h4>Workflow Steps</h4>
+            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-success">
+                <i class="fas fa-plus"></i> Add Step
+            </button>
+        </div>
+        <div class="card-body">
+            @if (Model.Steps != null && Model.Steps.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover">
+                        <thead class="thead-light">
+                            <tr>
+                                <th>Order</th>
+                                <th>Step Name</th>
+                                <th>Approver Role</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < Model.Steps.Count; i++)
+                            {
+                                <tr>
+                                    <td style="width: 10%">
+                                        <input asp-for="Steps[i].Id" type="hidden" />
+                                        <input asp-for="Steps[i].StepOrder" class="form-control" readonly />
+                                    </td>
+                                    <td style="width: 40%">
+                                        <input asp-for="Steps[i].StepName" class="form-control" />
+                                        <span asp-validation-for="Steps[i].StepName" class="text-danger"></span>
+                                    </td>
+                                    <td style="width: 30%">
+                                        <select asp-for="Steps[i].ApproverRole" asp-items="Model.ApproverRoles" class="form-control">
+                                            <option value="">-- Select Role --</option>
+                                        </select>
+                                        <span asp-validation-for="Steps[i].ApproverRole" class="text-danger"></span>
+                                    </td>
+                                    <td style="width: 20%">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-info btn-sm" data-toggle="collapse" data-target="#parameters-@i">
+                                                <i class="fas fa-cogs"></i> Parameters
+                                            </button>
+                                            <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-clone"></i> Clone
+                                            </button>
+                                            <button type="submit" formaction="@Url.Action("RemoveStep", new { stepIndex = i })" class="btn btn-danger btn-sm">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td colspan="4" class="p-0">
+                                        <div id="parameters-@i" class="collapse">
+                                            <div class="card card-body bg-light">
+                                                <div class="row">
+                                                    <div class="col-md-6">
+                                                        <h5>Role Parameters</h5>
+                                                        @{
+                    // Here you would handle dynamic parameters - basic implementation
+                                                            <div class="form-group">
+                                                                <label>Department</label>
+                                                                <input type="text" name="Steps[@i].RoleParameters[Department]" value="@(Model.Steps[i].RoleParameters != null && Model.Steps[i].RoleParameters.ContainsKey("Department") ? Model.Steps[i].RoleParameters["Department"] : "")" class="form-control" />
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                    <div class="col-md-6">
+                                                        <h5>Conditions</h5>
+                                                        @{
+                    // Here you would handle dynamic conditions - basic implementation
+                                                            <div class="form-group">
+                                                                <label>Amount Threshold</label>
+                                                                <input type="text" name="Steps[@i].Conditions[AmountThreshold]" value="@(Model.Steps[i].Conditions != null && Model.Steps[i].Conditions.ContainsKey("AmountThreshold") ? Model.Steps[i].Conditions["AmountThreshold"] : "")" class="form-control" />
+                                                            </div>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <p>No steps have been added to this workflow yet. Click "Add Step" to begin.</p>
+                </div>
+            }
+        </div>
     </div>
+
+    <div class="form-group">
+        <button type="submit" class="btn btn-primary">Create Workflow</button>
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</form>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+    <script>
+        $(document).ready(function () {
+            // This function will help sort the steps if needed in the future
+            // Currently the controller handles reordering on removal
+        });
+    </script>
+}

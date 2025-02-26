@@ -7,7 +7,8 @@ namespace MRIV.ViewModels
     {
         public WorkflowConfig WorkflowConfig { get; set; }
         public List<WorkflowStepConfig> Steps { get; set; }
-        public SelectList StationCategories { get; set; }
+        public SelectList IssueStationCategories { get; set; }
+        public SelectList DeliveryStationCategories { get; set; }
         public SelectList ApproverRoles { get; set; }
     }
 }

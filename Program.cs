@@ -19,6 +19,7 @@ builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IApprovalService, ApprovalService>();
 builder.Services.AddScoped<IDepartmentService ,DepartmentService>();
+builder.Services.AddScoped<IStationCategoryService, StationCategoryService>();
 builder.Services.AddScoped<VendorService>();
 
 builder.Services.AddHttpContextAccessor();

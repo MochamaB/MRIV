@@ -641,7 +641,50 @@ td.wrapcell {
     word-wrap: break-word; /* Enable word wrapping */
     word-break: break-word; /* Ensure long words break correctly */
     white-space: normal; /* Allow text to wrap to the next line */
-}s
+}
+
+/* custom.css */
+
+/* Target the <thead> for tables with both classes */
+.table.select-table > thead {
+    vertical-align: bottom;
+    background-color: #dee2e6;
+    text-align: left;
+}
+
+/* Header cells for tables with both classes */
+.table.select-table th {
+    color: #326408;
+    font-style: normal;
+    font-weight: bold;
+    font-size: 13px;
+    line-height: 15px;
+    text-transform: uppercase;
+    padding-right: 5px;
+    padding-left: 0.5rem;
+}
+
+/* Data cells for tables with both classes */
+.table.select-table td {
+    font-family: Manrope;
+    font-style: normal;
+    font-weight: normal;
+    font-size: 13px;
+    line-height: 16px;
+    color: #1f1f1f;
+    padding-top: 14px;
+    padding-bottom: 14px;
+    padding-left: 0.5rem;
+}
+
+/* Additional styling for any cell that requires wrapping */
+.description-cell {
+    max-width: 150px;
+    word-wrap: break-word;
+    word-break: break-word;
+    white-space: normal;
+}
+
 
 /* === FOOTER === */
 .footer {

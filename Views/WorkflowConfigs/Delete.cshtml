@@ -1,33 +1,39 @@
 ﻿@model MRIV.Models.WorkflowConfig
 
 @{
-    ViewData["Title"] = "Delete";
+    ViewData["Title"] = "Delete Workflow Configuration";
 }
 
-<h1>Delete</h1>
+<h2>Delete Workflow Configuration</h2>
 
-<h3>Are you sure you want to delete this?</h3>
-<div>
-    <h4>WorkflowConfig</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IssueStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IssueStationCategory)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DeliveryStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DeliveryStationCategory)
-        </dd>
-    </dl>
-    
-    <form asp-action="Delete">
-        <input type="hidden" asp-for="Id" />
-        <input type="submit" value="Delete" class="btn btn-danger" /> |
-        <a asp-action="Index">Back to List</a>
-    </form>
+<div class="alert alert-danger">
+    <h4>Are you sure you want to delete this workflow configuration?</h4>
+    <p>This action cannot be undone. All workflow steps associated with this configuration will also be deleted.</p>
 </div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h4>Workflow Information</h4>
+    </div>
+    <div class="card-body">
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.Id</dd>
+
+            <dt class="col-sm-3">Issue Station Category</dt>
+            <dd class="col-sm-9">@Model.IssueStationCategory</dd>
+
+            <dt class="col-sm-3">Delivery Station Category</dt>
+            <dd class="col-sm-9">@Model.DeliveryStationCategory</dd>
+
+            <dt class="col-sm-3">Number of Steps</dt>
+            <dd class="col-sm-9">@(Model.Steps != null ? Model.Steps.Count : 0)</dd>
+        </dl>
+    </div>
+</div>
+
+<form asp-action="Delete" method="post">
+    <input type="hidden" asp-for="Id" />
+    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+    <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+</form>

@@ -4,27 +4,77 @@
     ViewData["Title"] = "Details";
 }
 
-<h1>Details</h1>
 
+<div class=" contwrapper">
 <div>
-    <h4>WorkflowConfig</h4>
+        <h4 style="text-transform:capitalize"><strong>Station Categories:</strong> @Model.IssueStationCategory → @Model.DeliveryStationCategory</h4>
     <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IssueStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IssueStationCategory)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DeliveryStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DeliveryStationCategory)
-        </dd>
-    </dl>
+        <dl class="row">
+            <dt class="col-sm-3">ID</dt>
+            <dd class="col-sm-9">@Model.Id</dd>
+
+            <dt class="col-sm-3">Issue Station Category</dt>
+            <dd class="col-sm-9">@Model.IssueStationCategory</dd>
+
+            <dt class="col-sm-3">Delivery Station Category</dt>
+            <dd class="col-sm-9">@Model.DeliveryStationCategory</dd>
+        </dl>
 </div>
+    <h5 class="mt-2 pt-4">Workflow Steps</h5>
+    <div class="table-responsive">
+    <table class="table select-table">
+        <thead>
+            <tr>
+                <th>Order</th>
+                <th>Step Name</th>
+                <th>Approver Role</th>
+                <th>Conditions</th>
+                <th>Role Parameters</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var step in Model.Steps.OrderBy(s => s.StepOrder))
+            {
+                <tr>
+                    <td>@step.StepOrder</td>
+                    <td>@step.StepName</td>
+                    <td>@step.ApproverRole</td>
+                    <td>
+                        @if (step.Conditions != null && step.Conditions.Count > 0)
+                        {
+                            <ul>
+                                @foreach (var condition in step.Conditions)
+                                {
+                                    <li><strong>@condition.Key:</strong> @condition.Value</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <span>No conditions</span>
+                        }
+                    </td>
+                    <td>
+                        @if (step.RoleParameters != null && step.RoleParameters.Count > 0)
+                        {
+                            <ul>
+                                @foreach (var param in step.RoleParameters)
+                                {
+                                    <li><strong>@param.Key:</strong> @param.Value</li>
+                                }
+                            </ul>
+                        }
+                        else
+                        {
+                            <span>No parameters</span>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+    </div>
 <div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
     <a asp-action="Index">Back to List</a>
+</div>
 </div>

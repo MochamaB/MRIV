@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data.Common;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,6 +24,7 @@ public partial class RequisitionContext : DbContext
     public DbSet<MaterialCategory> MaterialCategories { get; set; }
     public DbSet<Approval> Approvals { get; set; }
 
+    public DbSet<StationCategory> StationCategories { get; set; }
     public DbSet<WorkflowConfig> WorkflowConfigs { get; set; }
     public DbSet<WorkflowStepConfig> WorkflowStepConfigs { get; set; }
 
@@ -87,6 +89,45 @@ public partial class RequisitionContext : DbContext
        .HasConversion(
            v => JsonSerializer.Serialize(v, (JsonSerializerOptions)null),
            v => JsonSerializer.Deserialize<Dictionary<string, string>>(v, (JsonSerializerOptions)null));
+
+        modelBuilder.Entity<StationCategory>().HasData(
+      new StationCategory
+      {
+          Id = 1,
+          Code = "headoffice",
+          StationName = "Head Office",
+          StationPoint = "both",
+          DataSource = "Department",
+          FilterCriteria = null // No special filtering needed for departments
+      },
+      new StationCategory
+      {
+          Id = 2,
+          Code = "factory",
+          StationName = "Factory",
+          StationPoint = "both",
+          DataSource = "Station",
+          FilterCriteria = "{\"exclude\": [\"region\", \"zonal\"]}" // Exclude stations containing "region" or "zonal"
+      },
+      new StationCategory
+      {
+          Id = 3,
+          Code = "region",
+          StationName = "Region",
+          StationPoint = "both",
+          DataSource = "Station",
+          FilterCriteria = "{\"include\": [\"region\"]}" // Only include stations with "region" in the name
+      },
+      new StationCategory
+      {
+          Id = 4,
+          Code = "vendor",
+          StationName = "Vendor",
+          StationPoint = "delivery", // Vendors can only be delivery points, not issue points
+          DataSource = "Vendor",
+          FilterCriteria = null // No special filtering for vendors
+      }
+  );
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
