@@ -297,6 +297,12 @@ namespace MRIV.Controllers
         public async Task<IActionResult> CreateRequisitionAsync(MaterialRequisitionWizardViewModel model, string? direction = null)
         {
             Console.WriteLine($"🔹 Received direction: {direction}");
+            // Handle Previous button
+            if (direction?.ToLower() == "previous")
+            {
+                // Navigate to previous step
+                return RedirectToAction("Ticket"); // The appropriate previous action
+            }
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
             var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
             if (model.Requisition != null)

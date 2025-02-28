@@ -439,14 +439,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
 document.addEventListener('DOMContentLoaded', function () {
     // Target all select elements
-    const selectElements = document.querySelectorAll('select');
+    const selectElements = document.querySelectorAll('select,input, textarea');
 
     // Function to check if select has a non-empty value selected
     function updateSelectBackground(select) {
         // Check if the user has chosen an option (not the first/default option)
         // This works because the first option typically has empty value or is the placeholder
         if (select.selectedIndex > 0) {
-            select.style.backgroundColor = '#e6f7ff'; // Light blue background
+            select.style.backgroundColor = '#f8f9fa'; // Light blue background
         } else {
             select.style.backgroundColor = ''; // Reset to default
         }

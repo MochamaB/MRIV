@@ -121,51 +121,40 @@
             const currentStepName = '@Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName'.trim();
             let currentStepIndex = steps.findIndex(step => step.stepName.trim().toLowerCase() === currentStepName.toLowerCase());
 
-            // 🚀 Function to Update Progress Bar
+            // Function to Update Progress Bar
             function updateProgressBar() {
                 let completedSteps = currentStepIndex;
                 const progressPercentage = (completedSteps / (steps.length - 1)) * 100;
                 progressLine.style.setProperty('--progress', progressPercentage + '%');
-                console.log("Progress Updated:", progressPercentage + "%");
             }
 
-            // 🚀 Initial Progress Bar Update
+            // Initial Progress Bar Update
             updateProgressBar();
 
-            // 🚀 Handle "Previous Step" button click
+            // Handle "Previous Step" button click
             $(".wizardpreviousBtn").click(function (event) {
-                event.preventDefault(); // Prevent form submission
+                event.preventDefault();
 
-                if (currentStepIndex > 0) {
-                    currentStepIndex--; // Move to previous step
-                    const previousStep = steps[currentStepIndex]?.stepName?.replace(/\s+/g, '').replace(/&/g, ''); // Safely access stepName
-                    if (!previousStep) {
-                        console.error("Invalid step detected while moving to the previous step.");
-                        return;
-                    }
-                    console.log("⬅ Moving to Previous Step:", previousStep);
+                // Get the form element
+                const form = $(this).closest('form');
 
-                    // Update URL without refreshing the page
-                    history.pushState({}, '', `/MaterialRequisition/${previousStep}`);
-
-                    // Reload only the step content via AJAX
-                    $("#stepContent").load(`/MaterialRequisition/${previousStep} #stepContent`, function () {
-                        updateProgressBar(); // Update progress after loading
-                        updateNavButtons(); // Update button visibility
-                    });
+                // Add a hidden input for direction
+                if (!form.find('input[name="direction"]').length) {
+                    form.append('<input type="hidden" name="direction" value="previous">');
                 } else {
-                    console.warn("Already at the first step. Cannot move further back.");
+                    form.find('input[name="direction"]').val('previous');
                 }
+
+                // Submit the form to the current action
+                form.submit();
             });
 
-           
-
-            // 🚀 Function to Update Navigation Buttons
+            // Function to Update Navigation Buttons
             function updateNavButtons() {
                 if (currentStepIndex === 0) {
-                    $(".wizardpreviousBtn").hide(); // Hide "Previous" button on the first step
+                    $(".wizardpreviousBtn").hide();
                 } else {
-                    $(".wizardpreviousBtn").show(); // Show "Previous" button otherwise
+                    $(".wizardpreviousBtn").show();
                 }
 
                 if (currentStepIndex === steps.length - 1) {
@@ -175,7 +164,7 @@
                 }
             }
 
-            // 🚀 Initial Navigation Button Update
+            // Initial Navigation Button Update
             updateNavButtons();
         });
     </script>
