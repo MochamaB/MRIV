@@ -437,4 +437,32 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 
+document.addEventListener('DOMContentLoaded', function () {
+    // Target all select elements
+    const selectElements = document.querySelectorAll('select');
+
+    // Function to check if select has a non-empty value selected
+    function updateSelectBackground(select) {
+        // Check if the user has chosen an option (not the first/default option)
+        // This works because the first option typically has empty value or is the placeholder
+        if (select.selectedIndex > 0) {
+            select.style.backgroundColor = '#e6f7ff'; // Light blue background
+        } else {
+            select.style.backgroundColor = ''; // Reset to default
+        }
+    }
+
+    // Apply to all select elements
+    selectElements.forEach(select => {
+        // Initial check
+        updateSelectBackground(select);
+
+        // On change event
+        select.addEventListener('change', function () {
+            updateSelectBackground(this);
+        });
+    });
+});
+
+
 

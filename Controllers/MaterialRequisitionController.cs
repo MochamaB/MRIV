@@ -249,11 +249,48 @@ namespace MRIV.Controllers
             }
 
             var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
+            // Initialize user location (only if not already set)
+            await _stationCategoryService.InitializeUserLocationAsync(
+                requisition,
+                viewModel.LoggedInUserEmployee,
+                viewModel.LoggedInUserDepartment,
+                viewModel.LoggedInUserStation
+            );
+            // Update session with any changes
+            HttpContext.Session.SetObject("WizardRequisition", requisition);
+            var modelJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine($"RequisitionModel JSON:\n{modelJson}");
+            // Make sure the viewModel has the updated requisition
+            viewModel.Requisition = requisition;
             // Populate station categories
             viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
             viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
 
+            // Helper function to load locations
+            async Task<SelectList> LoadLocations(string categoryCode, string stationValue)
+            {
+                return !string.IsNullOrEmpty(categoryCode)
+                    ? await _stationCategoryService.GetLocationsForCategoryAsync(categoryCode, stationValue)
+                    : new SelectList(new List<SelectListItem>());
+            }
+
+            // Load locations for both issue and delivery
+            viewModel.IssueLocations = await LoadLocations(requisition.IssueStationCategory, requisition.IssueStation);
+            viewModel.DeliveryLocations = await LoadLocations(requisition.DeliveryStationCategory, requisition.DeliveryStation);
+
             return View(WizardViewPath, viewModel);
+        }
+        [HttpGet]
+        public async Task<IActionResult> GetLocationsForCategory(string category, string selectedValue = null)
+        {
+            if (string.IsNullOrEmpty(category))
+            {
+                return Json(new List<object>());
+            }
+
+            // Use a different approach - return formatted data directly
+            var result = await _stationCategoryService.GetLocationItemsForJsonAsync(category, selectedValue);
+            return Json(result);
         }
 
         [HttpPost]

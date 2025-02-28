@@ -70,7 +70,12 @@
             </div>
             <div class="form-group mb-3">
                 <label class="control-label">Issue Station</label><span class="requiredlabel">*</span>
-                <select asp-for="Requisition.IssueStation" id="issueStation" class="station-dropdown formcontrol2">
+                <select asp-for="Requisition.IssueStation" id="issueStation"
+                        asp-items="Model.IssueLocations"  class="station-dropdown formcontrol2">
+                        @if(Model.Requisition.IssueStation != null)
+                    {
+                        <option value="@Model.Requisition.IssueStation"> @Model.Requisition.IssueStation</option>
+                    }
                     <option value="">Select Station</option>
                 </select>
                 <span asp-validation-for="Requisition.IssueStation" class="text-danger"></span>

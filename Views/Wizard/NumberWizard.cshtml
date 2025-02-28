@@ -245,144 +245,86 @@
     </script>
 
     <!-- Load The requistion Locations Script -->
-    <script>
-
+   <script>
         document.addEventListener("DOMContentLoaded", function () {
-        // Serialize data
-        const allStations = @Html.Raw(Json.Serialize(Model.Stations));
-        const allDepartments = @Html.Raw(Json.Serialize(Model.Departments));
-        const userDepartment = @Html.Raw(Json.Serialize(Model.LoggedInUserDepartment));
-        const userStation = @Html.Raw(Json.Serialize(Model.LoggedInUserStation));
-
-            // Initialize elements
-            const deliveryCategory = document.getElementById('deliveryStationCategory');
-            const deliveryStation = document.getElementById('deliveryStation');
+            // Elements
             const issueCategory = document.getElementById('issueStationCategory');
             const issueStation = document.getElementById('issueStation');
+            const deliveryCategory = document.getElementById('deliveryStationCategory');
+            const deliveryStation = document.getElementById('deliveryStation');
 
+            // Load locations based on category selection
+            function loadLocations(categoryDropdown, locationDropdown) {
+                const category = categoryDropdown.value;
 
-            // Generic population function with selection preservation
-            function populateDropdown(dropdown, items, valueField, textField, selectedValue) {
-                dropdown.innerHTML = '<option value="">Select Station</option>';
-                items.forEach(item => {
-                    const option = document.createElement('option');
-                    option.value = item[valueField];
-                    option.textContent = item[textField];
-                    if (item[valueField] === selectedValue) {
-                        option.selected = true;
-                    }
-                    dropdown.appendChild(option);
-                });
+                // If no category is selected, clear the location dropdown and return
+                if (!category) {
+                    locationDropdown.innerHTML = '<option value="">Select Location</option>';
+                    return;
+                }
+
+                // Get current selection if any
+                const currentSelection = locationDropdown.value;
+
+                // Set loading state
+                locationDropdown.innerHTML = '<option value="">Loading...</option>';
+
+                // Fetch new options via AJAX
+                fetch(`/MaterialRequisition/GetLocationsForCategory?category=${category}&selectedValue=${currentSelection}`)
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! Status: ${response.status}`);
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        // Clear loading option
+                        locationDropdown.innerHTML = '<option value="">Select Location</option>';
+
+                        // Populate dropdown with received data
+                        if (data && Array.isArray(data)) {
+                            data.forEach(item => {
+                                const option = document.createElement('option');
+                                option.value = item.value;
+                                option.textContent = item.text;
+                                if (item.value === currentSelection) {
+                                    option.selected = true;
+                                }
+                                locationDropdown.appendChild(option);
+                            });
+                        }
+
+                        // Trigger dispatch section visibility check if it exists
+                        if (typeof toggleDispatchSection === 'function') {
+                            toggleDispatchSection();
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching locations:', error);
+                        locationDropdown.innerHTML = '<option value="">Error loading options</option>';
+                    });
             }
 
-            // ======== Delivery Station Logic ========
-            function handleDeliveryCategoryChange() {
-                const category = deliveryCategory.value.toLowerCase();
-                const selectedValue = "@(Model.Requisition?.DeliveryStation ?? "")";
+            // Set up event listeners
+            if (issueCategory) {
+                issueCategory.addEventListener('change', () => loadLocations(issueCategory, issueStation));
 
-                switch (category) {
-                    case 'region':
-                        const regionStations = allStations.filter(s =>
-                            s.stationName.toLowerCase().includes('region')
-                        );
-                        populateDropdown(deliveryStation, regionStations, 'stationName', 'stationName', selectedValue);
-                        break;
-
-                    case 'factory':
-                        const factoryStations = allStations.filter(s =>
-                            !s.stationName.toLowerCase().includes('region') &&
-                            !s.stationName.toLowerCase().includes('zonal')
-                        );
-                        populateDropdown(deliveryStation, factoryStations, 'stationName', 'stationName', selectedValue);
-                        break;
-                    case 'headoffice':
-                        populateDropdown(deliveryStation, allDepartments, 'departmentName', 'departmentName');
-                        break;
-                    case 'vendor':
-                        const externalVendors = [
-                            { stationId: 'external', stationName: 'External Vendor' }
-                        ];
-                        populateDropdown(deliveryStation, externalVendors, 'stationId', 'stationName');
-                        break;
-
-                    default:
-                        console.warn("[Delivery] Unhandled category:", this.value);
-
-                    // ... other cases ...
+                // Initialize if category already selected
+                if (issueCategory.value) {
+                    loadLocations(issueCategory, issueStation);
                 }
             }
 
-            // Initialize and set up listener
-            deliveryCategory.addEventListener('change', handleDeliveryCategoryChange);
-            handleDeliveryCategoryChange(); // Trigger on page load
+            if (deliveryCategory) {
+                deliveryCategory.addEventListener('change', () => loadLocations(deliveryCategory, deliveryStation));
 
-            // ======== Issue Station Logic ========
-            function handleIssueCategoryChange() {
-                const category = issueCategory.value.toLowerCase();
-                const selectedValue = issueStation.value;
-
-                switch (category) {
-                    case 'headoffice':
-                        populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName', selectedValue);
-                        break;
-
-                    case 'region':
-                        const regionStations = allStations.filter(s =>
-                            s.stationName.toLowerCase().includes('region')
-                        );
-                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName', selectedValue);
-                        break;
-                    case 'factory':
-                        const factoryStations = allStations.filter(s =>
-                            !s.stationName.toLowerCase().includes('region') &&
-                            !s.stationName.toLowerCase().includes('zonal')
-                        );
-                        populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
-                        break;
-                    // ... other cases ...
+                // Initialize if category already selected
+                if (deliveryCategory.value) {
+                    loadLocations(deliveryCategory, deliveryStation);
                 }
             }
-
-            // Initialize and set up listener
-            issueCategory.addEventListener('change', handleIssueCategoryChange);
-            handleIssueCategoryChange(); // Trigger on page load
-
-            // ======== Initial User Setup ========
-            function initializeUserSettings() {
-                const userStationName = userStation?.stationName?.toLowerCase() || '';
-
-                if (userStationName === 'hq') {
-                    issueCategory.value = 'headoffice';
-                    populateDropdown(issueStation, allDepartments, 'departmentName', 'departmentName');
-                    if (userDepartment) {
-                        issueStation.value = userDepartment.departmentName;
-                    }
-                } else {
-                    // ... existing user station logic ...
-                    // Determine if the user's station is a region/factory
-                    if (userStation.toLowerCase().includes("region")) {
-                        issueCategory.value = "region";
-                        const regionStations = allStations.filter(s =>
-                            s.stationName.toLowerCase().includes('region')
-                        );
-                        populateDropdown(issueStation, regionStations, 'stationName', 'stationName');
-                    } else {
-                        issueCategory.value = "factory";
-                        const factoryStations = allStations.filter(s =>
-                            !s.stationName.toLowerCase().includes('region') &&
-                            !s.stationName.toLowerCase().includes('zonal')
-                        );
-                        populateDropdown(issueStation, factoryStations, 'stationName', 'stationName');
-                    }
-                    if (userStation) {
-                        issueStationDropdown.value = userStation.stationName;
-                    }
-                }
-            }
-
-            initializeUserSettings();
         });
-    </script>
+   </script>
 
     <!-- Dynamic Resize text Areas script -->
     <script>

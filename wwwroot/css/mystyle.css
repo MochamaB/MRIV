@@ -220,6 +220,14 @@ a.text-primary:hover {
 }
 
 .form-control, .asColorPicker-input, .dataTables_wrapper select, .select2-container--default .select2-selection--single, .select2-container--default .select2-selection--single .select2-search__field, .typeahead, .tt-query, .tt-hint {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: right 0.75rem center !important;
+    background-size: 16px 12px !important;
+    padding-right: 2.5rem !important; /* Make room for the arrow */
+    appearance: none !important; /* Remove default arrow in some browsers */
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
     border: 1px solid #dee2e6;
     font-weight: 400;
     font-size: 0.875rem;
@@ -271,6 +279,7 @@ input.form-control.form-control-sm.search-input {
     padding-right: 10px;
     width: 100%;
 }
+
    .input-validation-error {
         border-color: #dc3545;
     }
