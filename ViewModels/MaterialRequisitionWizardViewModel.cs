@@ -15,6 +15,14 @@ namespace MRIV.ViewModels
         public List<EmployeeBkp> EmployeeBkps { get; set; } = new();
         public int? TotalCount { get; set; }
         public Requisition? Requisition { get; set; }
+
+        //  new properties for station categories
+        public SelectList? IssueStationCategories { get; set; }
+        public SelectList? DeliveryStationCategories { get; set; }
+
+        //  dynamic locations based on selected category
+        public SelectList? IssueLocations { get; set; }
+        public SelectList? DeliveryLocations { get; set; }
         public EmployeeBkp? LoggedInUserEmployee { get; set; } 
         public Department? LoggedInUserDepartment { get; set; }
         public Station? LoggedInUserStation { get; set; }

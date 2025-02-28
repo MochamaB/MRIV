@@ -4,17 +4,19 @@
     ViewData["Title"] = "Edit Workflow Configuration";
 }
 
-<h2>Edit Workflow Configuration</h2>
+<div class=" contwrapper">
+    <h4>Edit Workflow Configuration</h4>
+    <hr />
 
 <form asp-action="Edit" method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <input type="hidden" asp-for="WorkflowConfig.Id" />
 
-    <div class="card mb-4">
-        <div class="card-header">
-            <h4>Workflow Details</h4>
-        </div>
-        <div class="card-body">
+    
+        
+            <h5>Workflow Details</h5>
+       
+        
             <div class="row mb-3">
                 <div class="col-md-6">
                     <div class="form-group">
@@ -35,21 +37,21 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
+        
+    
 
-    <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h4>Workflow Steps</h4>
-            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-success">
-                <i class="fas fa-plus"></i> Add Step
+    
+        <div class=" d-flex justify-content-between align-items-center">
+            <h5>Workflow Steps</h5>
+            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary">
+                <i class="mdi mdi-plus-circle-outline"></i> Add Step
             </button>
         </div>
         <div class="card-body">
             @if (Model.Steps != null && Model.Steps.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
+                    <table class="table select-table">
                         <thead class="thead-light">
                             <tr>
                                 <th>Order</th>
@@ -79,13 +81,13 @@
                                     <td style="width: 20%">
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-info btn-sm" data-toggle="collapse" data-target="#parameters-@i">
-                                                <i class="fas fa-cogs"></i> Parameters
+                                                <i class="mdi mdi-cogs"></i> Parameters
                                             </button>
                                             <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-clone"></i> Clone
+                                                <i class="mdi mdi-content-copy"></i> Clone
                                             </button>
                                             <button type="submit" formaction="@Url.Action("RemoveStep", new { stepIndex = i })" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="mdi mdi-delete"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -132,13 +134,14 @@
                 </div>
             }
         </div>
-    </div>
+   
 
     <div class="form-group">
         <button type="submit" class="btn btn-primary">Save Changes</button>
         <a asp-action="Index" class="btn btn-secondary">Back to List</a>
     </div>
 </form>
+</div>
 
 @section Scripts {
     @{

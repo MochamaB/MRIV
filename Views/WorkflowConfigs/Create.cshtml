@@ -10,7 +10,7 @@
 <form asp-action="Create" method="post">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
-           <h5 class="pt-3">Workflow Details</h5>
+           <h5 class="pt-3">1. Workflow Details</h5>
        
             <div class="row mb-5">
                 <div class="col-md-6">
@@ -37,17 +37,17 @@
 
     <div class=" mb-4">
         <div class=" d-flex justify-content-between align-items-center">
-            <h4>Workflow Steps</h4>
-            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-success">
-                <i class="fas fa-plus"></i> Add Step
+            <h5>2. Workflow Steps</h5>
+                <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary me-3">
+                    <i class="mdi mdi-plus-circle-outline"></i> Add Step
             </button>
         </div>
         <div class="card-body">
             @if (Model.Steps != null && Model.Steps.Any())
             {
                 <div class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="thead-light">
+                        <table class="table select-table">
+                        <thead class="">
                             <tr>
                                 <th>Order</th>
                                 <th>Step Name</th>
@@ -68,7 +68,7 @@
                                         <span asp-validation-for="Steps[i].StepName" class="text-danger"></span>
                                     </td>
                                     <td style="width: 30%">
-                                        <select asp-for="Steps[i].ApproverRole" asp-items="Model.ApproverRoles" class="form-control">
+                                        <select asp-for="Steps[i].ApproverRole" asp-items="Model.ApproverRoles" class="formcontrol2">
                                             <option value="">-- Select Role --</option>
                                         </select>
                                         <span asp-validation-for="Steps[i].ApproverRole" class="text-danger"></span>
@@ -76,13 +76,13 @@
                                     <td style="width: 20%">
                                         <div class="btn-group" role="group">
                                             <button type="button" class="btn btn-info btn-sm" data-toggle="collapse" data-target="#parameters-@i">
-                                                <i class="fas fa-cogs"></i> Parameters
+                                                <i class="mdi mdi-cogs"></i> Parameters
                                             </button>
                                             <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary btn-sm">
-                                                <i class="fas fa-clone"></i> Clone
+                                                <i class="mdi mdi-content-copy"></i> Clone
                                             </button>
                                             <button type="submit" formaction="@Url.Action("RemoveStep", new { stepIndex = i })" class="btn btn-danger btn-sm">
-                                                <i class="fas fa-trash"></i>
+                                                <i class="mdi mdi-delete"></i>
                                             </button>
                                         </div>
                                     </td>

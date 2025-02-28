@@ -28,8 +28,9 @@ namespace MRIV.Controllers
         private readonly RequisitionContext _context;
         private readonly IApprovalService _approvalService;
         private readonly string _connectionString;
+        private readonly IStationCategoryService _stationCategoryService;
         public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context, 
-            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService)
+            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, IStationCategoryService stationCategoryService)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
@@ -37,6 +38,7 @@ namespace MRIV.Controllers
             _approvalService = approvalService;
             _connectionString = configuration.GetConnectionString("RequisitionContext");
             _departmentService = departmentService;
+            _stationCategoryService = stationCategoryService;
         }
 
 
@@ -207,56 +209,7 @@ namespace MRIV.Controllers
             return View(WizardViewPath, viewModel);
         }
 
-        private List<Ticket> QueryTicketsFromDatabase(string search = "")
-        {
-            var tickets = new List<Ticket>();
-            var connectionString = "Data Source=.;Initial Catalog=Lansupport_5_4;Persist Security Info=True;User ID=sa;Password=P@ssw0rd;Trust Server Certificate=True";
-
-            using (SqlConnection conn = new SqlConnection(connectionString))
-            {
-                conn.Open();
-                string query = string.IsNullOrEmpty(search)
-                    ? @"SELECT TOP 15 [RequestID], [Title], [Description] 
-               FROM [Lansupport_5_4].[dbo].[Requests] 
-               ORDER BY RequestID DESC"
-                    : @"SELECT [RequestID], [Title], [Description] 
-               FROM [Lansupport_5_4].[dbo].[Requests] 
-               WHERE [RequestID] = @search 
-               ORDER BY RequestID DESC";
-
-                using (SqlCommand cmd = new SqlCommand(query, conn))
-                {
-                    if (!string.IsNullOrEmpty(search))
-                    {
-                        // Ensure the search term is parsed as an integer for RequestID
-                        if (int.TryParse(search, out int requestId))
-                        {
-                            cmd.Parameters.AddWithValue("@search", requestId);
-                        }
-                        else
-                        {
-                            // If the search term is not a valid integer, return an empty list
-                            return tickets;
-                        }
-                    }
-
-                    using (SqlDataReader reader = cmd.ExecuteReader())
-                    {
-                        while (reader.Read())
-                        {
-                            tickets.Add(new Ticket
-                            {
-                                RequestID = reader.GetInt32(0),
-                                Title = reader.GetString(1),
-                                Description = reader.GetString(2)
-                            });
-                        }
-                    }
-                }
-            }
-
-            return tickets;
-        }
+    
 
         public async Task<IActionResult> SelectTicket(int RequisitionID, string Description)
         {
@@ -296,6 +249,9 @@ namespace MRIV.Controllers
             }
 
             var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
+            // Populate station categories
+            viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
+            viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
 
             return View(WizardViewPath, viewModel);
         }
