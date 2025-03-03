@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
@@ -249,6 +250,29 @@ namespace MRIV.Controllers
             }
 
             var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
+            // If there are validation errors from a previous post, restore the model state
+            if (TempData["ValidationErrors"] is string errorsJson)
+            {
+                try
+                {
+                    var errors = JsonSerializer.Deserialize<Dictionary<string, string[]>>(errorsJson);
+                    if (errors != null)
+                    {
+                        foreach (var error in errors)
+                        {
+                            foreach (var message in error.Value)
+                            {
+                                ModelState.AddModelError(error.Key, message);
+                            }
+                        }
+                    }
+                }
+                catch (JsonException ex)
+                {
+                    // Log the exception but continue
+                    Console.WriteLine($"Error deserializing validation errors: {ex.Message}");
+                }
+            }
             // Initialize user location (only if not already set)
             await _stationCategoryService.InitializeUserLocationAsync(
                 requisition,
@@ -296,7 +320,7 @@ namespace MRIV.Controllers
         [HttpPost]
         public async Task<IActionResult> CreateRequisitionAsync(MaterialRequisitionWizardViewModel model, string? direction = null)
         {
-            Console.WriteLine($"🔹 Received direction: {direction}");
+           
             // Handle Previous button
             if (direction?.ToLower() == "previous")
             {
@@ -304,7 +328,7 @@ namespace MRIV.Controllers
                 return RedirectToAction("Ticket"); // The appropriate previous action
             }
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
-            var viewModel = await GetWizardViewModelAsync(currentStep: 2, requisition);
+          
             if (model.Requisition != null)
             {
                 // Map properties
@@ -332,57 +356,49 @@ namespace MRIV.Controllers
                 // Set CreatedAt to the current date and time
                 requisition.CreatedAt = DateTime.Now;
             }
+            HttpContext.Session.SetObject("WizardRequisition", requisition);
+            // Log the requisition data to help with debugging
+            var requisitionJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine($"Saving to session: {requisitionJson}");
             // Always check model state first
+            // Store model state and form data in TempData
             if (!ModelState.IsValid)
             {
-                // Handle validation errors
-                viewModel.Requisition = model.Requisition; // Preserve user input
-                var modelJson = JsonSerializer.Serialize(model.Requisition, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine($"MaterialRequisitionModel JSON:\n{modelJson}");
-               
+                // Extract validation errors into a serializable dictionary
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        kvp => kvp.Key,
+                        kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                    );
 
-                // 🚀 Log all validation errors for debugging
-                var errors = ModelState.Where(m => m.Value.Errors.Any())
-                                       .Select(m => new { Field = m.Key, Errors = m.Value.Errors.Select(e => e.ErrorMessage) })
-                                       .ToList();
+                // Store the errors in TempData
+                TempData["ValidationErrors"] = JsonSerializer.Serialize(errors);
 
-                var errorsJson = JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine($"Validation Errors:\n{errorsJson}");
-                TempData["ErrorMessage"] = "Check Validation Errors Below!";
 
-                // Return view directly (NO REDIRECTION)
-                return View(WizardViewPath, viewModel);
-             
+                // Provide user-friendly error message
+                TempData["ErrorMessage"] = "Please correct the validation errors.";
+
+                // Redirect back to the GET action
+                return RedirectToAction("RequisitionDetails");
             }
 
 
-            
 
-            // 🚀 Handle Previous Step Logic
-            // 🚀 Handle Previous Step Logic
-            if (!string.IsNullOrEmpty(direction) && direction.ToLower() == "previous")
-            {
-                model.CurrentStep = Math.Max(1, model.CurrentStep - 1);
-                model.PartialBasePath = "~/Views/Shared/CreateRequisition/";
-                Console.WriteLine("⬅ Moving to Previous Step");
 
-                // Save progress in session
-                HttpContext.Session.SetObject("WizardRequisition", requisition);
 
-                // 🚀 Return the same view instead of redirecting
-                return View(WizardViewPath, model);
-            }
             // Save updated requisition back to session
             HttpContext.Session.SetObject("WizardRequisition", requisition);
-            var requisitionJson = JsonSerializer.Serialize(requisition, new JsonSerializerOptions { WriteIndented = true });
-            Console.WriteLine("Requisition Object:\n" + requisitionJson);
-            // ✅ Retrieve logged-in user from the viewModel
-            var loggedInUserEmployee =viewModel.LoggedInUserEmployee;
-                    // Add Approval steps
-                    var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
+      
+            // ✅ Retrieve logged-in user 
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) =
+                await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            // Add Approval steps
+                      var approvalSteps = await _approvalService.CreateApprovalStepsAsync(requisition, loggedInUserEmployee);
             // Print to console
             // Print detailed information about the steps
-           
+
             Console.WriteLine("Approval Steps:");
             Console.WriteLine(Newtonsoft.Json.JsonConvert.SerializeObject(approvalSteps, Newtonsoft.Json.Formatting.Indented));
             HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);

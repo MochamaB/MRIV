@@ -438,31 +438,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
 
 document.addEventListener('DOMContentLoaded', function () {
-    // Target all select elements
-    const selectElements = document.querySelectorAll('select,input, textarea');
+    // Target select, input (text and number), and textarea elements
+    const elements = document.querySelectorAll('select, input[type="text"], input[type="number"], textarea');
 
-    // Function to check if select has a non-empty value selected
-    function updateSelectBackground(select) {
-        // Check if the user has chosen an option (not the first/default option)
-        // This works because the first option typically has empty value or is the placeholder
-        if (select.selectedIndex > 0) {
-            select.style.backgroundColor = '#f8f9fa'; // Light blue background
-        } else {
-            select.style.backgroundColor = ''; // Reset to default
+    // Function to update background based on the element type and value
+    function updateBackground(element) {
+        const tag = element.tagName.toLowerCase();
+        if (tag === 'select') {
+            // For select elements, check if a non-default option is selected
+            if (element.selectedIndex > 0) {
+                element.style.backgroundColor = '#f8f9fa'; // Light blue background
+            } else {
+                element.style.backgroundColor = ''; // Reset to default
+            }
+        } else if (tag === 'input' || tag === 'textarea') {
+            // For input and textarea, check if the value is not empty
+            if (element.value.trim() !== '') {
+                element.style.backgroundColor = '#f8f9fa';
+            } else {
+                element.style.backgroundColor = '';
+            }
         }
     }
 
-    // Apply to all select elements
-    selectElements.forEach(select => {
-        // Initial check
-        updateSelectBackground(select);
+    // Apply the function to each element and add event listeners for changes
+    elements.forEach(element => {
+        // Initial background update
+        updateBackground(element);
 
-        // On change event
-        select.addEventListener('change', function () {
-            updateSelectBackground(this);
+        // Listen for change events
+        element.addEventListener('change', function () {
+            updateBackground(this);
+        });
+
+        // For inputs and textareas, also update on input event for immediate feedback
+        element.addEventListener('input', function () {
+            updateBackground(this);
         });
     });
 });
+
 
 
 

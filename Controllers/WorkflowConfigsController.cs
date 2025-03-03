@@ -14,12 +14,14 @@ namespace MRIV.Controllers
     public class WorkflowConfigsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly KtdaleaveContext _ktdaleaveContext;
         private readonly IStationCategoryService _stationCategoryService;
 
-        public WorkflowConfigsController(RequisitionContext context, IStationCategoryService stationCategoryService)
+        public WorkflowConfigsController(RequisitionContext context,KtdaleaveContext ktdaleaveContext, IStationCategoryService stationCategoryService)
         {
             _context = context;
             _stationCategoryService = stationCategoryService;
+            _ktdaleaveContext = ktdaleaveContext;
         }
 
         // GET: WorkflowConfigs
@@ -371,18 +373,26 @@ namespace MRIV.Controllers
             return _context.Set<WorkflowConfig>().Any(e => e.Id == id);
         }
 
-       
+
         private SelectList GetApproverRolesSelectList()
         {
-            var roles = new List<string> {
-                "supervisor",
-                "headoffice",
-                "factory",
-                "region",
-                "dispatchAdmin",
-                "vendor"
-            };
-            return new SelectList(roles);
+            try
+            {
+                // Assuming you have a Roles DbSet in your context
+                var roles = _ktdaleaveContext.Roles
+                    .OrderBy(r => r.RoleName)  // Optional: Order by role name
+                    .Select(r => r.RoleName)   // Assuming Name is the property storing role names
+                    .ToList();
+
+                return new SelectList(roles);
+            }
+            catch (Exception ex)
+            {
+                // Handle exceptions (log, return empty list, etc.)
+              
+                return new SelectList(Enumerable.Empty<string>());
+            }
         }
+
     }
 }

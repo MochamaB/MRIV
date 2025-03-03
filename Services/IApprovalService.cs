@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRIV.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.Extensions.Logging;
 
 namespace MRIV.Services
 {
@@ -17,155 +18,83 @@ namespace MRIV.Services
         private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly VendorService _vendorService;
+        private readonly ILogger<ApprovalService> _logger;
 
         public ApprovalService(RequisitionContext context,
-                              IEmployeeService employeeService,IDepartmentService departmentService,VendorService vendorService)
+                              IEmployeeService employeeService,IDepartmentService departmentService,VendorService vendorService
+            , ILogger<ApprovalService> logger)
         {
             _context = context;
             _employeeService = employeeService;
             _departmentService = departmentService;
             _vendorService = vendorService;
+            _logger = logger;
         }
-        // Approval Rules Dictionary (Inside ApprovalService)
-        private static readonly Dictionary<(string issue, string delivery), List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>> ApprovalRules =
-            new()
-            {
-                { ("headoffice", "headoffice"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => CreateStep("HO Employee Receipt", empMap["headoffice"])
-                    }
-             },
-        // Update other rules ,
-                { ("headoffice", "factory"),new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval",empMap["supervisor"]),
-                        (req, empMap) => req.DispatchType == "admin"
-                            ? CreateStep("Admin Dispatch Approval", empMap["dispatchAdmin"])
-                            : CreateVendorStep("Vendor Dispatch", req.DispatchVendor ?? "Not Specified"),
-                        (req, empMap) => CreateStep("Factory Employee Receipt", empMap["factory"])
-                    }
-                },
-                { ("headoffice", "region"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => req.DispatchType == "admin"
-                            ? CreateStep("Admin Dispatch Approval", empMap["dispatchAdmin"])
-                            : CreateVendorStep("Vendor Dispatch", req.DispatchVendor ?? "Not Specified"),
-                        (req, empMap) => CreateStep("Region Employee Receipt",  empMap["region"])
-                    }
-                },
-                { ("headoffice", "vendor"),new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => req.DispatchType == "admin"
-                            ? CreateStep("Admin Dispatch Approval", empMap["dispatchAdmin"])
-                            : CreateVendorStep("Vendor Dispatch", req.DispatchVendor ?? "Not Specified"),
-                    }
-                },
-
-                { ("factory", "headoffice"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                         (req, empMap) => CreateStep("HO Employee Receipt", empMap["headoffice"])
-                    }
-                },
-                { ("factory", "factory"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => CreateStep("Factory Employee Receipt", empMap["factory"])
-                    }
-                },
-                { ("factory", "region"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => CreateStep("Region Employee Receipt", empMap["region"])
-                    }
-                },
-                { ("factory", "vendor"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                         (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-
-                    }
-                },
-
-                 { ("region", "headoffice"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                       (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                          (req, empMap) => CreateStep("HO Employee Receipt", empMap["headoffice"])
-                    }
-                },
-                { ("region", "factory"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => CreateStep("Factory Employee Receipt", empMap["factory"])
-                    }
-                },
-                { ("region", "region"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                        (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-                        (req, empMap) => CreateStep("Region Employee Receipt", empMap["region"])
-                    }
-                },
-                { ("region", "vendor"), new List<Func<Requisition, Dictionary<string, EmployeeBkp>, Approval>>
-                    {
-                         (req, empMap) => CreateStep("Supervisor Approval", empMap["supervisor"]),
-
-                    }
-                }
-                // Add more rules as needed...
-            };
         public async Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee)
         {
             var approvalSteps = new List<Approval>();
 
-            // Get required employees
-            var supervisor = _employeeService.GetSupervisor(loggedInUserEmployee);
-            var factoryEmployee = await _employeeService.GetFactoryEmployeeAsync(requisition.DeliveryStation);
-            var regionEmployee = await _employeeService.GetRegionEmployee();
-            var hoEmployee = await _employeeService.GetHoEmployeeAsync(requisition.DeliveryStation);
+            // Get the workflow configuration based on issue and delivery station categories
+            var workflowConfig = await _context.WorkflowConfigs
+                .Include(wc => wc.Steps.OrderBy(s => s.StepOrder))
+                .FirstOrDefaultAsync(wc =>
+                    wc.IssueStationCategory.ToLower() == requisition.IssueStationCategory.ToLower() &&
+                    wc.DeliveryStationCategory.ToLower() == requisition.DeliveryStationCategory.ToLower());
 
-            // Add debug logs to check if factoryEmployee is valid
-            Console.WriteLine($"Factory Employee Payroll: {factoryEmployee?.PayrollNo}");
-            Console.WriteLine($"Factory Employee Department: {factoryEmployee?.Department}");
-
-            // Fetch dispatch admin if DispatchType is "admin"
-            EmployeeBkp? dispatchAdmin = null;
-            if (requisition.DispatchType == "admin" && !string.IsNullOrEmpty(requisition.DispatchPayrollNo))
+            if (workflowConfig == null)
             {
-                dispatchAdmin = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
+                _logger.LogWarning($"No workflow configuration found for {requisition.IssueStationCategory} to {requisition.DeliveryStationCategory}");
+                return approvalSteps;
             }
 
-            string issue = requisition.IssueStationCategory;
-            string delivery = requisition.DeliveryStationCategory;
-            string dispatchType = requisition?.DispatchType ?? "Not Specified";
-
-            // Define the employee mapping based on the station
-            var employeeMapping = new Dictionary<string, EmployeeBkp>
-                {
-                    { "supervisor", supervisor },
-                    { "headoffice", hoEmployee },
-                    { "factory", factoryEmployee },
-                    { "region", regionEmployee },
-                    { "dispatchAdmin", dispatchAdmin }
-                };
-
-            // Check if the rule exists in the dictionary
-            if (ApprovalRules.TryGetValue((issue, delivery), out var steps))
+            // Process each step in the workflow configuration
+            foreach (var stepConfig in workflowConfig.Steps)
             {
-                foreach (var step in steps)
+                // Check if the step should be included based on conditions
+                if (ShouldIncludeStep(stepConfig, requisition))
                 {
-                    // Pass the entire employeeMapping to the step
-                    approvalSteps.Add(step(requisition, employeeMapping));
+                    // For the first step (usually supervisor), use the issue context
+                    bool isFirstStep = stepConfig.StepOrder == 1;
+                    string locationContext = isFirstStep ? requisition.IssueStation : requisition.DeliveryStation;
+
+                    // Get the appropriate approver
+                    object approver;
+
+                    if (stepConfig.ApproverRole.ToLower() == "vendor" && requisition.DispatchType == "vendor")
+                    {
+                        // Handle vendor case specially
+                        approver = requisition.DispatchVendor;
+                    }
+                    else
+                    {
+                        // Use new employee service method for dynamic role-based lookup
+                        approver = await _employeeService.GetEmployeeByRoleAndLocationAsync(
+                            stepConfig.ApproverRole,
+                            locationContext,
+                            requisition.DepartmentId,
+                            isFirstStep,
+                            loggedInUserEmployee,
+                            stepConfig.RoleParameters
+                        );
+                    }
+
+                    if (approver != null)
+                    {
+                        var approval = new Approval
+                        {
+                            ApprovalStep = stepConfig.StepName,
+                            PayrollNo = approver is EmployeeBkp employee ? employee.PayrollNo : approver.ToString(),
+                            DepartmentId = approver is EmployeeBkp employee2 ?
+                                (string.IsNullOrEmpty(employee2.Department) ? 0 : Convert.ToInt32(employee2.Department)) : 0,
+                            WorkflowConfigId = workflowConfig.Id,
+                            StepConfigId = stepConfig.Id,
+                            IsAutoGenerated = true
+                        };
+
+                        approvalSteps.Add(approval);
+                    }
                 }
             }
-            else
-            {
-                Console.WriteLine("No matching approval rules found");
-            }
-
-
-            // Add other combinations similarly (e.g., Head Office -> Region, etc.)
 
             // Assign sequential step numbers and statuses
             for (int i = 0; i < approvalSteps.Count; i++)
@@ -180,30 +109,32 @@ namespace MRIV.Services
             return approvalSteps;
         }
 
-        private static Approval CreateStep(string stepName, EmployeeBkp employee)
+        private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)
         {
-            return new Approval
+            // If no conditions are present, always include the step
+            if (stepConfig.Conditions == null || !stepConfig.Conditions.Any())
+                return true;
+
+            // Check each condition
+            foreach (var condition in stepConfig.Conditions)
             {
-                ApprovalStep = stepName,
-                PayrollNo = employee?.PayrollNo ?? "Not Specified",
-                DepartmentId = string.IsNullOrEmpty(employee?.Department)
-                            ? 0 // Default value for null or empty strings
-                            : Convert.ToInt32(employee.Department) // Handle nulls as needed
-            };
-        }
+                var propertyName = condition.Key;
+                var expectedValue = condition.Value;
 
-        // Overload for vendors (no employee)
-        private static Approval CreateVendorStep(string stepName, string vendorName)
-        {
-            return new Approval
-            {
-                ApprovalStep = stepName,
-                PayrollNo = vendorName,
-                DepartmentId = 0 // Or set to a default department for vendors
-            };
+                // Use reflection to get the property value
+                var propertyInfo = requisition.GetType().GetProperty(propertyName);
+                if (propertyInfo == null)
+                    continue;
 
+                var actualValue = propertyInfo.GetValue(requisition)?.ToString();
 
+                // If the condition doesn't match, skip this step
+                if (actualValue != expectedValue)
+                    return false;
+            }
 
+            // All conditions match
+            return true;
         }
         // GET APPROVAl STEPS IN VIEW
         public async Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors)

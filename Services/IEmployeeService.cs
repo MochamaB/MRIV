@@ -6,6 +6,13 @@ namespace MRIV.Services
 {
     public interface IEmployeeService  // Changed from class to interface
     {
+        Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
+        string role,
+        string location,
+        int departmentId,
+        bool isIssueContext,
+        EmployeeBkp requestingEmployee,
+        Dictionary<string, string> parameters = null);
         Task<(EmployeeBkp loggedInUserEmployee, Department loggedInUserDepartment, Station loggedInUserStation)> GetEmployeeAndDepartmentAsync(string payrollNo);
 
         Task<(EmployeeBkp employeeDetail, Department departmentDetail, Station stationDetail)> GetEmployeeDepartmentStationDetailAsync(string payrollNo);
@@ -28,6 +35,94 @@ namespace MRIV.Services
         public EmployeeService(KtdaleaveContext context)
         {
             _context = context;
+        }
+
+        public async Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
+            string role,
+            string location,
+            int departmentId,
+            bool isIssueContext,
+            EmployeeBkp requestingEmployee,
+            Dictionary<string, string> parameters = null)
+        {
+            // Default to empty dictionary if null
+            parameters = parameters ?? new Dictionary<string, string>();
+
+            // If no role provided, return null
+            if (string.IsNullOrEmpty(role))
+                return null;
+
+            role = role.ToLower();
+
+            // Special case for supervisor - first check direct supervisor
+            if (role == "supervisor" || role == "hod")
+            {
+                // Try to get the supervisor or HOD of the requesting employee
+                var supervisor = GetSupervisor(requestingEmployee);
+                if (supervisor != null)
+                    return supervisor;
+
+                // If no direct supervisor, try department supervisors
+                var departmentSupervisors = await GetSupervisorsByDepartmentAsync(departmentId);
+                return departmentSupervisors.FirstOrDefault();
+            }
+
+            // Special case for admin dispatch
+            if (role == "dispatchadmin" && parameters.TryGetValue("payrollNo", out var payrollNo))
+            {
+                return await GetEmployeeByPayrollAsync(payrollNo);
+            }
+
+            // For role-based searches in departments (HQ context)
+            if (location.Contains("Department", StringComparison.OrdinalIgnoreCase) ||
+                isIssueContext && location.ToLower().Contains("hq"))
+            {
+                // For HQ employees, search by department and role
+                var departmentEmployees = await GetEmployeesByDepartmentNameAsync(location);
+
+                // Filter by role if provided
+                return departmentEmployees.FirstOrDefault(e => string.Equals(e.Role, role, StringComparison.OrdinalIgnoreCase));
+            }
+
+            // For factory or field locations
+            if (role.Contains("field") || (!isIssueContext && location.ToLower().Contains("factory")))
+            {
+                switch (role.ToLower())
+                {
+                    case "fieldsupervisor":
+                        return await GetRegionEmployee(); // For regional supervisor
+
+                    case "fielduser":
+                        return await GetFactoryEmployeeAsync(location); // For factory employee
+
+                    default:
+                        // Get all employees at the station, then filter by role
+                        var stationEmployees = await GetFactoryEmployeesByStationAsync(location);
+                        return stationEmployees.FirstOrDefault(e => string.Equals(e.Role, role, StringComparison.OrdinalIgnoreCase));
+                }
+            }
+
+            // For regional locations
+            if (role.Contains("region") || (!isIssueContext && location.ToLower().Contains("region")))
+            {
+                return await GetRegionEmployee();
+            }
+
+            // Generic role-based lookup as fallback
+            // Try to find in department first
+            var employees = await GetEmployeesByDepartmentAsync(departmentId);
+            var roleMatch = employees.FirstOrDefault(e => string.Equals(e.Role, role, StringComparison.OrdinalIgnoreCase));
+            if (roleMatch != null)
+                return roleMatch;
+
+            // If not found in department, try by station name
+            if (!string.IsNullOrEmpty(location))
+            {
+                var stationEmployees = await GetFactoryEmployeesByStationAsync(location);
+                return stationEmployees.FirstOrDefault(e => string.Equals(e.Role, role, StringComparison.OrdinalIgnoreCase));
+            }
+
+            return null;
         }
 
         public async Task<(EmployeeBkp loggedInUserEmployee, Department loggedInUserDepartment, Station loggedInUserStation)> GetEmployeeAndDepartmentAsync(string payrollNo)
