@@ -1,330 +1,263 @@
 ﻿document.addEventListener('DOMContentLoaded', function () {
-    let itemCounter = document.querySelectorAll('.item-row').length - 1;
+    const itemsContainer = document.getElementById('itemsContainer');
+    const addNewItemBtn = document.getElementById('addNewItemBtn');
+    const materialSearch = document.getElementById('materialSearch');
+    const clearMaterialSearch = document.getElementById('clearMaterialSearch');
+    const searchResultsContainer = document.getElementById('searchResultsContainer');
 
-       // Initialize existing items on page load or after validation
-    initializeExistingItems();
-
-    function initializeExistingItems() {
-        // Initialize all existing item rows
-        document.querySelectorAll('.item-row').forEach((item, index) => {
-            // Add remove button if not first item
-            if (index > 0) {
-                addRemoveButton(item);
-            }
-
-            // Create modal if doesn't exist
-            const modalId = `inventoryModal_${index}`;
-            if (!document.getElementById(modalId)) {
-                createNewModal(index);
-            }
-
-            // Update badge container visibility
-            const materialCode = item.querySelector('[name$="Material.Code"]')?.value;
-            const saveToInventory = item.querySelector('[name$="SaveToInventory"]')?.checked;
-            
-            if (materialCode || saveToInventory) {
-                const badgeContainer = item.querySelector('[id^="badgeContainer"]');
-                if (!materialCode) {
-                    badgeContainer.classList.add('d-none');
-                    
-                    // Update badges with existing values
-                    updateBadgesFromExistingData(item, index);
-                }
-
-                // Enable checkbox if material code exists
-                const checkbox = item.querySelector('[name$="SaveToInventory"]');
-                if (checkbox && materialCode) {
-                    checkbox.disabled = false;
-                    badgeContainer.classList.remove('d-none');
-                }
-            }
-        });
-    }
-
-    function updateBadgesFromExistingData(item, index) {
-        // Get existing values
-        const categoryId = item.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`)?.value;
-        const categorySelect = document.querySelector(`select[name$="[${index}].Material.MaterialCategoryId"]`);
-        const categoryText = categorySelect?.options[categorySelect.selectedIndex]?.text || 'None';
-
-        const code = item.querySelector(`[name$="[${index}].Material.Code"]`)?.value || 'None';
-        
-        const vendorId = item.querySelector(`[name$="[${index}].Material.VendorId"]`)?.value;
-        const vendorSelect = document.querySelector(`select[name$="[${index}].Material.VendorId"]`);
-        const vendorText = vendorSelect?.options[vendorSelect.selectedIndex]?.text || 'None';
-
-        // Update badges
-        const badgeContainer = item.querySelector('[id^="badgeContainer"]');
-        if (badgeContainer) {
-            const categoryBadge = badgeContainer.querySelector('[id^="selectedMaterialCategory"]');
-            const codeBadge = badgeContainer.querySelector('[id^="selectedMaterialCode"]');
-            const vendorBadge = badgeContainer.querySelector('[id^="selectedMaterialVendor"]');
-
-            if (categoryBadge) categoryBadge.textContent = `Category: ${categoryText}`;
-            if (codeBadge) codeBadge.textContent = `Code: ${code}`;
-            if (vendorBadge) vendorBadge.textContent = `Vendor: ${vendorText}`;
-
-        }
-    }
-
-
-    // Add new item functionality
-    document.getElementById('addNewItemBtn').addEventListener('click', function () {
-        const originalItem = document.querySelector('.item-row');
-        if (!originalItem) return;
-
-        itemCounter++;
-        const clone = originalItem.cloneNode(true);
-
-        // Update all form elements in clone
-        updateClonedElements(clone, itemCounter);
-
-        // Reset form values
-        resetClonedFormValues(clone);
-
-        // Add remove button
-        addRemoveButton(clone);
-
-        // Create and append new modal
-        createNewModal(itemCounter);
-
-        // Append cloned item
-        document.getElementById('itemsContainer').appendChild(clone);
+    // 1. Add new item button click
+    addNewItemBtn.addEventListener('click', function () {
+        // Submit the form to add a new item
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = '/MaterialRequisition/AddRequisitionItem';
+        document.body.appendChild(form);
+        form.submit();
     });
 
-    function updateClonedElements(clone, index) {
-        // Update input elements
-        clone.querySelectorAll('[name]').forEach(element => {
-            const name = element.getAttribute('name');
-            if (name && name.includes('[')) {
-                element.setAttribute('name', name.replace(/\[(\d+)\]/, `[${index}]`));
-            }
-        });
-
-        // Update asp-for attributes
-        clone.querySelectorAll('[asp-for]').forEach(element => {
-            const aspFor = element.getAttribute('asp-for');
-            if (aspFor) {
-                element.setAttribute('asp-for', aspFor.replace(/\[(\d+)\]/, `[${index}]`));
-            }
-        });
-
-        // Update validation elements
-        clone.querySelectorAll('[asp-validation-for]').forEach(element => {
-            const validationFor = element.getAttribute('asp-validation-for');
-            if (validationFor) {
-                element.setAttribute('asp-validation-for', validationFor.replace(/\[(\d+)\]/, `[${index}]`));
-            }
-        });
-
-        // Update IDs and related labels
-        clone.querySelectorAll('[id]').forEach(element => {
-            const originalId = element.getAttribute('id');
-            const newId = `${originalId}_${index}`;
-            element.setAttribute('id', newId);
-
-            // Update corresponding labels
-            const relatedLabel = clone.querySelector(`label[for="${originalId}"]`);
-            if (relatedLabel) {
-                relatedLabel.setAttribute('for', newId);
-            }
-        });
-
-        // Update modal trigger
-        const modalTrigger = clone.querySelector('[data-bs-target]');
-        if (modalTrigger) {
-            modalTrigger.setAttribute('data-bs-target', `#inventoryModal_${index}`);
-        }
-    }
-
-    function resetClonedFormValues(clone) {
-        // Reset input values
-        clone.querySelectorAll('input:not([type="button"]):not([type="hidden"])').forEach(input => {
-            if (input.type === 'checkbox') {
-                input.checked = false;
-                input.disabled = true;
-            } else if (input.type === 'number' && input.getAttribute('name').includes('.Quantity')) {
-                input.value = '1';
-            } else {
-                input.value = '';
-            }
-        });
-
-        // Reset select elements
-        clone.querySelectorAll('select').forEach(select => {
-            const name = select.getAttribute('name');
-            if (name?.includes('.Status')) {
-                select.value = 'PendingApproval';
-            } else if (name?.includes('.Condition')) {
-                select.value = 'GoodCondition';
-            } else if (name?.includes('.Material.MaterialCategoryId')) {
-                select.value = '1'; // Set to default category ID
-            } else {
-                select.value = '';
-            }
-        });
-
-        // Reset textarea elements
-        clone.querySelectorAll('textarea').forEach(textarea => {
-            textarea.value = '';
-        });
-
-        // Reset badge container
-        const badgeContainer = clone.querySelector('[id^="badgeContainer"]');
-        if (badgeContainer) {
-            badgeContainer.classList.add('d-none');
-            badgeContainer.querySelectorAll('.badge').forEach(badge => {
-                const text = badge.textContent.split(':')[0];
-                badge.textContent = `${text}: None`;
-            });
-        }
-    }
-
-    function createNewModal(index) {
-        const originalModal = document.querySelector('.modal');
-        if (!originalModal) return;
-
-        const newModal = originalModal.cloneNode(true);
-        newModal.id = `inventoryModal_${index}`;
-
-        // Update modal elements
-        updateClonedElements(newModal, index);
-
-        // Reset form values in modal
-        resetClonedFormValues(newModal);
-
-        // Append new modal
-        document.body.appendChild(newModal);
-
-        // Initialize new Bootstrap modal
-        new bootstrap.Modal(newModal);
-    }
-
-    function addRemoveButton(clone) {
-        const removeBtn = document.createElement('button');
-        removeBtn.className = 'btn-close remove-item';
-        removeBtn.setAttribute('data-bs-toggle', 'tooltip');
-        removeBtn.setAttribute('title', 'Remove item');
-        removeBtn.style.cssText = 'position: absolute; right: 10px; top: 10px; z-index: 10; color: red;';
-
-        removeBtn.addEventListener('click', function () {
-            clone.remove();
-        });
-
-        clone.style.position = 'relative';
-        clone.insertBefore(removeBtn, clone.firstChild);
-    }
-
-    // Handle generate code button clicks
+    // 2. Remove item button click
     document.addEventListener('click', function (e) {
-        if (e.target.id.startsWith('generateCodeBtn')) {
-            const modal = e.target.closest('.modal');
-            const modalId = modal.id;
+        if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
+            const btn = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
+            const index = btn.getAttribute('data-index');
 
-            // Handle both original and cloned modals
-            const index = modalId === 'inventoryModal_0' ? '0' : modalId.split('_')[1];
+            if (confirm('Are you sure you want to remove this item?')) {
+                document.getElementById(`removeForm_${index}`).submit();
+            }
+        }
+    });
 
-            const categorySelect = modal.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`);
-            const codeInput = modal.querySelector(`[name$="[${index}].Material.Code"]`);
+    // 3. Generate code button click
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('generateCodeBtn')) {
+            const index = e.target.getAttribute('data-index');
+            const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
+            const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
 
-            const categoryId = categorySelect.value;
-            if (!categoryId) {
-                alert('Please select a Material Category first.');
+            if (categorySelect.value) {
+                fetch('/MaterialRequisition/GenerateCode', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({
+                        categoryId: parseInt(categorySelect.value),
+                        itemIndex: parseInt(index)
+                    })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        codeInput.value = data.code;
+                    })
+                    .catch(error => console.error('Error generating code:', error));
+            } else {
+                alert('Please select a material category first');
+            }
+        }
+    });
+
+    // 4. Save inventory details button click
+    document.addEventListener('click', function (e) {
+        if (e.target.classList.contains('saveInventoryDetailsBtn')) {
+            const index = e.target.getAttribute('data-index');
+            const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
+            const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
+            const vendorSelect = document.querySelector(`.materialVendor[data-index="${index}"]`);
+
+            // Basic validation
+            if (!categorySelect.value || !codeInput.value) {
+                alert('Please fill in all required fields');
                 return;
             }
 
-            // Make AJAX call to get next code
-            fetch(`/Materials/GetNextCode?categoryId=${categoryId}&rowIndex=${index}`)
-                .then(response => response.text())
-                .then(code => {
-                    codeInput.value = code;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    alert('Error generating code. Please try again.');
+            // Update badge container visibility
+            const badgeContainer = document.getElementById(`badgeContainer_${index}`);
+            badgeContainer.classList.remove('d-none');
+
+            // Update badge content
+            const categoryBadge = document.getElementById(`selectedMaterialCategory_${index}`);
+            const codeBadge = document.getElementById(`selectedMaterialCode_${index}`);
+            const vendorBadge = document.getElementById(`selectedMaterialVendor_${index}`);
+
+            categoryBadge.textContent = `Category: ${categorySelect.options[categorySelect.selectedIndex].text}`;
+            codeBadge.textContent = `SNo.: ${codeInput.value}`;
+            vendorBadge.textContent = `Vendor: ${vendorSelect.options[vendorSelect.selectedIndex].text || 'None'}`;
+
+            // Enable SaveToInventory checkbox
+            // First try with ID
+            let saveToInventory = document.getElementById(`saveToInventory_${index}`);
+
+            // If not found, try with name attribute (which contains the index)
+            if (!saveToInventory) {
+                saveToInventory = document.querySelector(`input[name$="[${index}].SaveToInventory"]`);
+            }
+            // If we found the checkbox, enable and check it
+            if (saveToInventory) {
+                saveToInventory.disabled = false;
+                saveToInventory.checked = true;
+                console.log(`Checkbox found and enabled: ${saveToInventory.id}`);
+            } else {
+                console.error(`SaveToInventory checkbox not found for index ${index}`);
+            }
+
+            // Close modal
+            const modalElement = document.getElementById(`inventoryModal_${index}`);
+            const modal = bootstrap.Modal.getInstance(modalElement);
+            if (modal) {
+                modal.hide();
+            } else {
+                // If modal instance is not found, create one and hide it
+                new bootstrap.Modal(modalElement).hide();
+            }
+            setTimeout(() => {
+                const modalBackdrops = document.querySelectorAll('.modal-backdrop');
+                modalBackdrops.forEach(backdrop => {
+                    backdrop.remove();
                 });
+                // Also restore the body classes
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+            }, 150);
         }
     });
 
-    // Save inventory details handler
-    document.addEventListener('click', function (e) {
-        if (e.target.id.startsWith('saveInventoryDetails')) {
-            const modal = e.target.closest('.modal');
-            const modalId = modal.id;
-            const index = modalId === 'inventoryModal_0' ? '0' : modalId.split('_')[1];
+    // 5. Material search functionality
+    let searchTimeout;
+    materialSearch.addEventListener('input', function () {
+        clearTimeout(searchTimeout);
+        const searchTerm = this.value.trim();
 
-            let isValid = true;
+        if (searchTerm.length > 0) {
+            clearMaterialSearch.classList.remove('d-none');
+        } else {
+            clearMaterialSearch.classList.add('d-none');
+            searchResultsContainer.style.display = 'none';
+            return;
+        }
 
-            // Validate required fields
-            modal.querySelectorAll('[required]').forEach(field => {
-                if (!field.value.trim()) {
-                    field.classList.add('is-invalid');
-                    isValid = false;
-                } else {
-                    field.classList.remove('is-invalid');
-                }
-            });
+        // Only search when user has stopped typing for 300ms
+        searchTimeout = setTimeout(() => {
+            if (searchTerm.length >= 2) {
+                fetch('/MaterialRequisition/SearchMaterials', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                    },
+                    body: JSON.stringify({ searchTerm })
+                })
+                    .then(response => response.json())
+                    .then(data => {
+                        searchResultsContainer.innerHTML = '';
 
-            if (isValid) {
-                // Get the related item row
-                const itemRow = document.querySelector(`.item-row:nth-child(${parseInt(index) + 1})`);
+                        if (data.length === 0) {
+                            searchResultsContainer.innerHTML = '<div class="dropdown-item">No materials found</div>';
+                        } else {
+                            data.forEach(material => {
+                                const item = document.createElement('div');
+                                item.className = 'dropdown-item';
+                                item.style.cursor = 'pointer';
+                                item.innerHTML = `<strong>${material.code}</strong> - ${material.name}`;
+                                item.addEventListener('click', () => selectMaterial(material));
+                                searchResultsContainer.appendChild(item);
+                            });
+                        }
 
-                // Enable and check the inventory checkbox
-                const checkbox = itemRow.querySelector(`[name$="[${index}].SaveToInventory"]`);
-                if (checkbox) {
-                    checkbox.disabled = false;
-                    checkbox.checked = true;
-                }
+                        searchResultsContainer.style.display = 'block';
+                    })
+                    .catch(error => console.error('Error searching materials:', error));
+            } else {
+                searchResultsContainer.style.display = 'none';
+            }
+        }, 300);
+    });
 
-                // Update badges
-                const badgeContainer = itemRow.querySelector('[id^="badgeContainer"]');
-                if (badgeContainer) {
-                    badgeContainer.classList.remove('d-none');
+    // Clear search
+    clearMaterialSearch.addEventListener('click', function () {
+        materialSearch.value = '';
+        this.classList.add('d-none');
+        searchResultsContainer.style.display = 'none';
+    });
 
-                    // Update category badge
-                    const categorySelect = modal.querySelector(`[name$="[${index}].Material.MaterialCategoryId"]`);
-                    const categoryBadge = badgeContainer.querySelector('[id^="selectedMaterialCategory"]');
-                    if (categorySelect && categoryBadge) {
-                        const categoryText = categorySelect.options[categorySelect.selectedIndex].text;
-                        categoryBadge.textContent = `Category: ${categoryText}`;
-                    }
+    // Select material from search results
+    function selectMaterial(material) {
+        // Find first empty item or add new one
+        let emptyItemFound = false;
+        const items = document.querySelectorAll('.item-row');
 
-                    // Update code badge
-                    const codeInput = modal.querySelector(`[name$="[${index}].Material.Code"]`);
-                    const codeBadge = badgeContainer.querySelector('[id^="selectedMaterialCode"]');
-                    if (codeInput && codeBadge) {
-                        codeBadge.textContent = `Code: ${codeInput.value}`;
-                    }
+        for (let i = 0; i < items.length; i++) {
+            const nameInput = items[i].querySelector('input[name^="RequisitionItems"][name$="Name"]');
 
-                    // Update vendor badge
-                    const vendorSelect = modal.querySelector(`[name$="[${index}].Material.VendorId"]`);
-                    const vendorBadge = badgeContainer.querySelector('[id^="selectedMaterialVendor"]');
-                    if (vendorSelect && vendorBadge) {
-                        const vendorText = vendorSelect.options[vendorSelect.selectedIndex].text;
-                        vendorBadge.textContent = `Vendor: ${vendorText || 'None'}`;
-                    }
-                }
-
-                // Close the modal
-                const modalInstance = bootstrap.Modal.getInstance(modal);
-                modalInstance.hide();
+            if (!nameInput.value) {
+                fillItemWithMaterial(i, material);
+                emptyItemFound = true;
+                break;
             }
         }
-    });
 
-    // Clean up modal backdrop
-    document.addEventListener('hidden.bs.modal', function (e) {
-        const modalBackdrops = document.querySelectorAll('.modal-backdrop');
-        modalBackdrops.forEach(backdrop => backdrop.remove());
-        document.body.classList.remove('modal-open');
-    });
+        if (!emptyItemFound) {
+            // Submit form to add new item, then fill it with the material details
+            sessionStorage.setItem('selectedMaterial', JSON.stringify(material));
+            addNewItemBtn.click();
+        }
 
-    // Initialize form controls
-    document.querySelectorAll('.formcontrol2').forEach(select => {
-        select.addEventListener('change', function () {
-            this.style.borderColor = this.value ? '#dee2e6' : '#fcb900';
-        });
-    });
+        // Close search results
+        searchResultsContainer.style.display = 'none';
+        materialSearch.value = '';
+        clearMaterialSearch.classList.add('d-none');
+    }
+
+    function fillItemWithMaterial(index, material) {
+        // Fill in form fields
+        const nameInput = document.querySelector(`input[name="RequisitionItems[${index}].Name"]`);
+        const descInput = document.querySelector(`textarea[name="RequisitionItems[${index}].Description"]`);
+        const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
+        const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
+        const vendorSelect = document.querySelector(`.materialVendor[data-index="${index}"]`);
+
+        nameInput.value = material.name;
+        descInput.value = material.description || '';
+        categorySelect.value = material.categoryId;
+        codeInput.value = material.code;
+        vendorSelect.value = material.vendorId || '';
+
+        // Update badges
+        const badgeContainer = document.getElementById(`badgeContainer_${index}`);
+        badgeContainer.classList.remove('d-none');
+
+        const categoryBadge = document.getElementById(`selectedMaterialCategory_${index}`);
+        const codeBadge = document.getElementById(`selectedMaterialCode_${index}`);
+        const vendorBadge = document.getElementById(`selectedMaterialVendor_${index}`);
+
+        categoryBadge.textContent = `Category: ${material.categoryName}`;
+        codeBadge.textContent = `SNo.: ${material.code}`;
+
+        if (material.vendorId) {
+            // Find vendor name from selected option
+            const vendorName = vendorSelect.options[vendorSelect.selectedIndex]?.text || 'None';
+            vendorBadge.textContent = `Vendor: ${vendorName}`;
+        } else {
+            vendorBadge.textContent = 'Vendor: None';
+        }
+
+        // Enable SaveToInventory checkbox
+        const saveToInventory = document.getElementById(`saveToInventory_${index}`);
+        saveToInventory.disabled = false;
+        saveToInventory.checked = true;
+    }
+
+    // Check for stored material after page load (for new items)
+    const storedMaterial = sessionStorage.getItem('selectedMaterial');
+    if (storedMaterial) {
+        const material = JSON.parse(storedMaterial);
+        const items = document.querySelectorAll('.item-row');
+        const lastIndex = items.length - 1;
+
+        fillItemWithMaterial(lastIndex, material);
+        sessionStorage.removeItem('selectedMaterial');
+    }
 });
 
 /////  VALIDATION OF REQUISITION ITEMS

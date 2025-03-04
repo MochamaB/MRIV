@@ -1,22 +1,32 @@
 ﻿@using MRIV.Enums
 @using MRIV.Helpers
-@using MRIV.ViewModels
-
 @model MRIV.Models.RequisitionItem
 @{
     // The index must be passed via ViewData with key "Index"
     int index = ViewData["Index"] as int? ?? 0;
-    var vendors = ViewData["Vendors"] as List<Vendor> ?? new List<Vendor>();
+    var vendors = ViewData["Vendors"] as List<MRIV.ViewModels.Vendor> ?? new List<MRIV.ViewModels.Vendor>();
     var materialCategories = ViewData["MaterialCategories"] as List<MRIV.Models.MaterialCategory> ?? new List<MRIV.Models.MaterialCategory>();
 }
 
 <div class="row item-row mb-5" data-index="@index" style="border:1px solid #f3ca6e; border-left:5px solid #fcb900; margin:0.1rem; padding:1rem">
+    <!-- Hidden form for removing this item -->
+    <form id="removeForm_@index" asp-controller="MaterialRequisition" asp-action="RemoveRequisitionItem" method="post">
+        <input type="hidden" name="itemIndex" value="@index" />
+         @if (index > 0) @* Only show remove button for non-first items *@
+    {
+        <button type="submit" class="btn-danger float-end" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    }
+    </form>
+
+
     <div class="col-md-6">
         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
         <div class="form-group">
             <label class="control-label">Name</label> <span class="requiredlabel">*</span>
             <input type="text" asp-for="Name" name="RequisitionItems[@index].Name" class="form-control" placeholder="Brand or Title" />
-            <span asp-validation-for="Name" name="RequisitionItems[@index].Name"  class="text-danger"></span>
+            <span asp-validation-for="Name" class="text-danger"></span>
         </div>
         <div class="form-group">
             <label class="control-label">Description (optional)</label>
@@ -39,11 +49,12 @@
         </div>
         <div class="form-group mb-2">
             <label class="control-label">Status</label> <span class="requiredlabel">*</span>
-            <select asp-for="Status" name="RequisitionItems[@index].Status"  asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemStatus>()" class="formcontrol2">
+            <select asp-for="Status" name="RequisitionItems[@index].Status" asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemStatus>()" class="formcontrol2">
                 <option value="">Select Status</option>
             </select>
             <span asp-validation-for="Status" class="text-danger"></span>
         </div>
+
         <div class="form-group mb-1">
             <div class="form-check form-check-flat form-check-primary">
                 <label class="form-check-label" style="font-size:1rem">
@@ -53,6 +64,7 @@
                     <i class="input-helper"></i>
                 </label>
             </div>
+
         </div>
         <div class="mb-0">
             <a class="table" data-bs-toggle="modal" data-bs-target="#inventoryModal_@index">
@@ -62,78 +74,72 @@
         </div>
         <div id="badgeContainer_@index" class="@(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
             <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory_@index">
-                Category: @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? Model.Material.MaterialCategoryId.ToString() : "None")
+                Category: @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name ?? "None" : "None")
             </div>
             <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode_@index">
                 SNo.: @(Model.Material?.Code ?? "None")
             </div>
             <div class="badge badge-active rounded mb-1" id="selectedMaterialVendor_@index">
-                Vendor: @(Model.Material?.VendorId ?? "None")
+                Vendor: @(Model.Material?.VendorId != null ? vendors.FirstOrDefault(v => v.VendorID.ToString() == Model.Material.VendorId)?.Name ?? "None" : "None")
             </div>
         </div>
     </div>
-    <!-- Remove button -->
-    <button type="button" class="btn-close remove-item" data-bs-toggle="tooltip" title="Remove item"
-            style="position:absolute; right:10px; top:10px; z-index:10; filter: invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%);"></button>
-</div>
+ 
 
-<!-- Inventory Modal for this item -->
-<div class="modal fade" id="inventoryModal_@index" tabindex="-1">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
-            <div class="modal-header" style="background-color:#326408">
-                <h5 class="modal-title" style="color:white;">Add Inventory Details</h5>
-                <button type="button" class="btn-close text-white" style="filter: invert(1);" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="row">
-                    <!-- Material Fields -->
-                    <div class="col-md-12">
-                        <div class="form-group">
-                            <label class="control-label">Material Category</label><span class="requiredlabel">*</span>
-                            <select asp-for="Material.MaterialCategoryId" name="RequisitionItems[@index].Material.MaterialCategoryId" class="formcontrol2" id="materialCategoryId_@index">
-                                @foreach (var category in materialCategories)
-                                {
-                                    <option value="@category.Id">@category.Name</option>
-                                }
-                            </select>
-                            <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
-                        </div>
-                        <div class="form-group">
-                            <label class="control-label">Enter Code / Serial No OR Generate Code</label><span class="requiredlabel">*</span>
-                            <div class="input-group">
-                                <input type="text" asp-for="Material.Code" name="RequisitionItems[@index].Material.Code" class="form-control" id="materialCode_@index" value="@Model.Material?.Code" required>
-                                <button type="button" class="btn btn-outline-primary generateCodeBtn" data-index="@index" id="generateCodeBtn_@index">
-                                    Generate Code
-                                </button>
+    <!-- Inventory Modal for this item -->
+    <div class="modal fade" id="inventoryModal_@index" tabindex="-1">
+        <div class="modal-dialog modal-md">
+            <div class="modal-content">
+                <div class="modal-header" style="background-color:#326408">
+                    <h5 class="modal-title" style="color:white;">Add Inventory Details</h5>
+                    <button type="button" class="btn-close text-white" style="filter: invert(1);" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Material Fields -->
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label class="control-label">Material Category</label><span class="requiredlabel">*</span>
+                                <select asp-for="Material.MaterialCategoryId" name="RequisitionItems[@index].Material.MaterialCategoryId" class="formcontrol2 materialCategoryId" data-index="@index">
+                                    <option value="">Select Category</option>
+                                    @foreach (var category in materialCategories)
+                                    {
+                                        <option value="@category.Id">@category.Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Enter Code / Serial No OR Generate Code</label><span class="requiredlabel">*</span>
+                                <div class="input-group">
+                                    <input type="text" asp-for="Material.Code" name="RequisitionItems[@index].Material.Code" class="form-control materialCode" data-index="@index" required>
+                                    <button type="button" class="btn btn-outline-primary generateCodeBtn" data-index="@index">
+                                        Generate Code
+                                    </button>
+                                </div>
+                                <span asp-validation-for="Material.Code" class="text-danger"></span>
+                            </div>
+                            <div class="form-group">
+                                <label class="control-label">Vendor <i>(Optional)</i></label>
+                                <select asp-for="Material.VendorId" name="RequisitionItems[@index].Material.VendorId" class="formcontrol2 materialVendor" data-index="@index">
+                                    <option value="">Select Vendor</option>
+                                    @foreach (var vendor in vendors)
+                                    {
+                                        <option value="@vendor.VendorID">@vendor.Name</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Material.VendorId" class="text-danger"></span>
                             </div>
                         </div>
-                        <div class="form-group">
-                            <label class="control-label">Vendor <i>(Optional)</i></label>
-                            <select asp-for="Material.VendorId" name="RequisitionItems[@index].Material.VendorId" class="formcontrol2" id="materialVendor_@index">
-                                @if (ViewBag.DispatchVendor != null)
-                                {
-                                    <option value="@ViewBag.DispatchVendor">@ViewBag.DispatchVendor</option>
-                                }
-                                <option value="">Select Vendor</option>
-                                @foreach (var vendor in vendors)
-                                {
-                                    <option value="@vendor.VendorID">@vendor.Name</option>
-                                }
-                            </select>
-                            <span asp-validation-for="Material.VendorId" class="text-danger"></span>
-                        </div>
                     </div>
-                    <!-- You can add more inventory-specific fields here -->
                 </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary saveInventoryDetailsBtn" data-index="@index">
-                    Save Material
-                </button>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary saveInventoryDetailsBtn" data-index="@index">
+                        Save Material
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </div>
-
