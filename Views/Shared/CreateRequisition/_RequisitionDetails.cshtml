@@ -102,6 +102,10 @@
             <div class="form-group mb-3">
                 <label class="control-label">Delivery Station</label><span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DeliveryStation" id="deliveryStation" class="formcontrol2">
+                    @if (Model.Requisition.DeliveryStation != null)
+                    {
+                        <option value="@Model.Requisition.DeliveryStation"> @Model.Requisition.DeliveryStation</option>
+                    }
                     <option value="">Select Station</option>
                 </select>
                 <span asp-validation-for="Requisition.DeliveryStation" class="text-danger"></span>

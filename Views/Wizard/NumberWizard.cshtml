@@ -172,65 +172,68 @@
     <!--  Script for the Ticket Search -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            // Only run search-related code if elements exist
             const searchInput = document.getElementById('searchbar');
             const clearButton = document.getElementById('clearSearch');
             const dataTable = document.getElementById('searchResults');
-            let timeoutId;
 
-            // Debounce function to limit AJAX calls
-            function debounce(func, delay) {
-                return function (...args) {
-                    clearTimeout(timeoutId);
-                    timeoutId = setTimeout(() => func.apply(this, args), delay);
-                };
-            }
+            if (searchInput && clearButton && dataTable) {
+                let timeoutId;
 
-            // Handle search input
-            const handleSearch = debounce(function (searchTerm) {
-                fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
-                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                })
-                    .then(response => response.text())
-                    .then(html => {
-                        dataTable.innerHTML = html;
+                // Debounce function to limit AJAX calls
+                function debounce(func, delay) {
+                    return function (...args) {
+                        clearTimeout(timeoutId);
+                        timeoutId = setTimeout(() => func.apply(this, args), delay);
+                    };
+                }
+
+                // Handle search input
+                const handleSearch = debounce(function (searchTerm) {
+                    fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
                     })
-                    .catch(error => console.error('Error:', error));
-            }, 300);
+                        .then(response => response.text())
+                        .then(html => {
+                            dataTable.innerHTML = html;
+                        })
+                        .catch(error => console.error('Error:', error));
+                }, 300);
 
-            // Show/Hide clear button & handle search
-            searchInput.addEventListener('input', function (e) {
-                const searchTerm = e.target.value.trim();
+                // Show/Hide clear button & handle search
+                searchInput.addEventListener('input', function (e) {
+                    const searchTerm = e.target.value.trim();
 
-                // Show "X" button if there's input, otherwise hide it
-                if (searchTerm.length > 0) {
-                    clearButton.classList.remove('d-none');
-                } else {
-                    clearButton.classList.add('d-none');
-                }
+                    if (searchTerm.length > 0) {
+                        clearButton.classList.remove('d-none');
+                    } else {
+                        clearButton.classList.add('d-none');
+                    }
 
-                // Trigger search when input length is 2 or more
-                if (searchTerm.length >= 2 || searchTerm.length === 0) {
-                    handleSearch(searchTerm);
-                }
-            });
-
-            // Clear input on "X" button click
-            clearButton.addEventListener('click', function () {
-                searchInput.value = '';
-                clearButton.classList.add('d-none'); // Hide the "X" button
-                handleSearch(''); // Perform empty search to reset results
-            });
-
-            // Prevent form submission (if inside a form)
-            const searchForm = document.getElementById('searchForm');
-            if (searchForm) {
-                searchForm.addEventListener('submit', function (e) {
-                    e.preventDefault();
-                    handleSearch(searchInput.value.trim());
+                    if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                        handleSearch(searchTerm);
+                    }
                 });
+
+                // Clear input
+                clearButton.addEventListener('click', function () {
+                    searchInput.value = '';
+                    clearButton.classList.add('d-none');
+                    handleSearch('');
+                });
+
+                // Form prevention
+                const searchForm = document.getElementById('searchForm');
+                if (searchForm) {
+                    searchForm.addEventListener('submit', function (e) {
+                        e.preventDefault();
+                        handleSearch(searchInput.value.trim());
+                    });
+                }
+            } else {
+                console.log('Search elements not found - skipping search initialization');
             }
         });
-
     </script>
 
     <!-- Load The requistion Locations Script -->
@@ -341,10 +344,16 @@
             const dispatchType = document.getElementById('dispatchType');
             const dispatchPayrollNo = document.getElementById('dispatchPayrollNo');
             const dispatchVendor = document.getElementById('dispatchVendor');
+            // Check if elements exist and have values
+            if (!issueCategory || !deliveryCategory) {
+                console.log('Required elements not found');
+                return false;
+            }
 
             function shouldShowDispatch() {
                 const issueVal = issueCategory.value.toLowerCase();
                 const deliveryVal = deliveryCategory.value.toLowerCase();
+
 
                 return issueVal === 'headoffice' &&
                     (deliveryVal === 'factory' || deliveryVal === 'region' || deliveryVal === 'vendor');
@@ -356,7 +365,7 @@
                 if (shouldShow) {
                     dispatchSection.style.display = 'block';
                     dispatchType.removeAttribute("disabled");
-                    dispatchType.setAttribute("required", "true"); // Add required attribute
+                  //  dispatchType.setAttribute("required", "true"); // Add required attribute
                 } else {
                     dispatchSection.style.display = 'none';
                     dispatchType.removeAttribute("required"); // Remove required attribute

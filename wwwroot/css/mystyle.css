@@ -700,3 +700,129 @@ td.wrapcell {
     font-weight: 400;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
 }
+
+/*------------------------ Responsiveness ----------------------------------------------------------  */
+/* SCreen size under 991px(Tablet) */
+
+@media screen and (max-width: 991px) {
+
+    .sidebar-offcanvas {
+        display: none;
+        position: fixed;
+        max-height: calc(100vh - 97px);
+        top: 0;
+        bottom: 0;
+        overflow: auto;
+        right: -250px;
+        z-index: 9999; /* High z-index to place it on top */
+        /* Adjust the sidebar width accordingly */
+        -webkit-transition: all 0.25s ease-out;
+        -o-transition: all 0.25s ease-out;
+        transition: all 0.25s ease-out;
+    }
+
+        .sidebar-offcanvas.active {
+            right: 0;
+        }
+
+    .main-panel {
+        flex: 1;
+        margin-left: 0px;
+        /* Adjust to match the width of the sidebar */
+        transition: padding-left 0.25s ease-out;
+        width: calc(100% - 0px);
+    }
+
+    .navbar .navbar-brand-wrapper {
+        background: #ffff;
+        transition: width 0.25s ease, background 0.25s ease;
+        -webkit-transition: width 0.25s ease, background 0.25s ease;
+        -moz-transition: width 0.25s ease, background 0.25s ease;
+        -ms-transition: width 0.25s ease, background 0.25s ease;
+        width: 180px;
+        height: 50px;
+        padding: 20px 5px;
+    }
+
+    .navbar .navbar-menu-wrapper {
+        background: #fff;
+        transition: width 0.25s ease;
+        -webkit-transition: width 0.25s ease;
+        -moz-transition: width 0.25s ease;
+        -ms-transition: width 0.25s ease;
+        color: #6C7383;
+        padding-left: 0.5rem;
+        padding-right: 0.187rem;
+        padding-top: 30px;
+        padding-bottom: 25px;
+        width: calc(100% - 180px);
+        height: 50px;
+        box-shadow: none;
+    }
+
+    .contwrapper {
+        border: 1px solid #dee2e6;
+        padding: 1rem;
+        background-color: #ffffff;
+    }
+}
+
+/* Screen size under 576(phone) */
+@media (max-width: 991px) {
+}
+/* Screen size under 576(phone) */
+@media (max-width: 576px) {
+    .sidebar {
+        display: none;
+        right: -255px; /* Hide the sidebar off-screen */
+    }
+
+    .sidebar-offcanvas {
+        display: none;
+        right: 0; /* Show the sidebar when active */
+    }
+
+    .main-panel {
+        margin-left: 0; /* Ensure the main panel takes full width */
+        width: 100%;
+    }
+
+    .contwrapper {
+        border: none;
+        padding: 1rem;
+    }
+
+    .row > .col {
+        flex: 0 0 50%;
+        max-width: 50%;
+        border-bottom: 2px solid #F4F5F7;
+        margin-bottom: 1rem;
+    }
+
+    .home-tab .statistics-details {
+        margin-bottom: 15px;
+    }
+
+    .btn.btn-lg {
+        font-size: 0.75rem !important;
+        padding: 1rem;
+    }
+
+    input.form-control.form-control-sm.search-input {
+        border-radius: 0px;
+        border: 2px solid #b6b6b6;
+        color: #212121;
+        font-weight: 900;
+        text-transform: uppercase;
+        width: 230px;
+        transition: width 0.3s;
+        display: block !important;
+        /* Add a smooth transition effect for width changes */
+    }
+
+        input.form-control.form-control-sm.search-input:hover {
+            border: 2px solid #ffaf00;
+            width: 270px;
+            /* Set the desired width on hover */
+        }
+}

@@ -117,6 +117,7 @@ namespace MRIV.Controllers
             List<MaterialCategory> materialCategories = await _context.MaterialCategories
                  .ToListAsync();
 
+
             return new MaterialRequisitionWizardViewModel
             {
                 Steps = steps,
@@ -453,7 +454,8 @@ namespace MRIV.Controllers
                 Material = new Material(),
                 Status = RequisitionItemStatus.PendingApproval,
                 Condition = RequisitionItemCondition.GoodCondition,
-                Quantity = 1
+                Quantity = 1,
+                SaveToInventory = false
             }
         };
 
@@ -470,64 +472,6 @@ namespace MRIV.Controllers
             return View(WizardViewPath, viewModel);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> AddRequisitionItem(MaterialRequisitionWizardViewModel model)
-        {
-            // Get requisition items from session or initialize
-            var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems") ?? new List<RequisitionItem>();
-            var requisitionJson = JsonSerializer.Serialize(requisitionItems, new JsonSerializerOptions { WriteIndented = true });
-            Console.WriteLine($"From Add Items: {requisitionJson}");
-            // Validate using the model's data annotations
-      
-            // Store model state and form data in TempData
-           
-            // Add a new item with default values
-            requisitionItems.Add(new RequisitionItem
-            {
-                Material = new Material(),
-                Status = RequisitionItemStatus.PendingApproval,
-                Condition = RequisitionItemCondition.GoodCondition,
-                Quantity = 1,
-                CreatedAt = DateTime.Now
-            });
-
-            // Save back to session
-            HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
-
-            // Redirect back to RequisitionItems page
-            return RedirectToAction("RequisitionItems");
-        }
-
-        [HttpPost]
-        public async Task<IActionResult> RemoveRequisitionItem(int itemIndex)
-        {
-            // Get requisition items from session
-            var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems") ?? new List<RequisitionItem>();
-
-            // Remove the item at the specified index if it exists
-            if (itemIndex >= 0 && itemIndex < requisitionItems.Count)
-            {
-                requisitionItems.RemoveAt(itemIndex);
-            }
-
-            // Make sure there's at least one item
-            if (requisitionItems.Count == 0)
-            {
-                requisitionItems.Add(new RequisitionItem
-                {
-                    Material = new Material(),
-                    Status = RequisitionItemStatus.PendingApproval,
-                    Condition = RequisitionItemCondition.GoodCondition,
-                    Quantity = 1
-                });
-            }
-
-            // Save back to session
-            HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
-
-            // Redirect back to RequisitionItems page
-            return RedirectToAction("RequisitionItems");
-        }
         [HttpPost]
         public async Task<IActionResult> GenerateCode(int categoryId, int itemIndex)
         {
@@ -580,31 +524,7 @@ namespace MRIV.Controllers
 
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
 
-            // 1. Validate the model before processing
-            if (!ModelState.IsValid)
-            {
-                var viewModel = await GetWizardViewModelAsync(currentStep: 3);
-                viewModel.RequisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
-
-                // Initialize Material for each RequisitionItem if it's null
-                foreach (var item in viewModel.RequisitionItems)
-                {
-                    item.Material ??= new Material();
-                }
-
-                // Log validation errors for debugging
-                var errors = ModelState.Where(m => m.Value.Errors.Any())
-                    .Select(m => new { Field = m.Key, Errors = m.Value.Errors.Select(e => e.ErrorMessage) })
-                    .ToList();
-
-                var errorsJson = JsonSerializer.Serialize(errors, new JsonSerializerOptions { WriteIndented = true });
-                Console.WriteLine($"Validation Errors:\n{errorsJson}");
-
-                TempData["ErrorMessage"] = "Please correct the validation errors below.";
-                return View(WizardViewPath, viewModel);
-            }
-
-            // 2. Process and format the requisition items
+            // Process the requisition items
             var requisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
 
             foreach (var item in requisitionItems)
@@ -614,7 +534,7 @@ namespace MRIV.Controllers
                 {
                     item.Material.Name = item.Name;
                     item.Material.Description = item.Description;
-                    item.Material.CurrentLocationId = requisition.IssueStation;
+                    item.Material.CurrentLocationId = requisition?.IssueStation;
                 }
                 else
                 {
@@ -629,11 +549,13 @@ namespace MRIV.Controllers
                 }
             }
 
-            // 3. Save to session
+            // Save to session
             HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
+            var requisitionItemsJson = JsonSerializer.Serialize(requisitionItems, new JsonSerializerOptions { WriteIndented = true });
+            Console.WriteLine($"Saving to session: {requisitionItemsJson}");
             TempData["SuccessMessage"] = "Requisition items saved successfully.";
 
-            // 4. Move to the next step
+            // Move to the next step
             return RedirectToAction("ApproversReceivers");
         }
 

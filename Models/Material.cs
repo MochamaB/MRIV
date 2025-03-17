@@ -1,6 +1,7 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel;
 
 namespace MRIV.Models
 {
@@ -10,10 +11,12 @@ namespace MRIV.Models
         public int Id { get; set; }
 
         [Required]
+        [DisplayName("Category")]
         public int MaterialCategoryId { get; set; }
 
        
         [StringLength(50)]
+        [DisplayName("Code/SNo")]
         public string? Code { get; set; }
 
        
@@ -23,10 +26,11 @@ namespace MRIV.Models
         [StringLength(500)]
         public string? Description { get; set; }
 
-       
+        [DisplayName("Current Location")]
         public string? CurrentLocationId { get; set; }
 
         [StringLength(50)]
+        [DisplayName("Vendor/Supplier")]
         public string? VendorId { get; set; }
 
         public string? Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 

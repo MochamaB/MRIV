@@ -1,416 +1,492 @@
-﻿document.addEventListener('DOMContentLoaded', function () {
-    const itemsContainer = document.getElementById('itemsContainer');
-    const addNewItemBtn = document.getElementById('addNewItemBtn');
-    const materialSearch = document.getElementById('materialSearch');
-    const clearMaterialSearch = document.getElementById('clearMaterialSearch');
-    const searchResultsContainer = document.getElementById('searchResultsContainer');
+$(document).ready(function () {
+    // Initial setup
+    updateRowIndexes();
+    setupModalEvents();
 
-    // 1. Add new item button click
-    addNewItemBtn.addEventListener('click', function () {
-        // Submit the form to add a new item
-        const form = document.createElement('form');
-        form.method = 'post';
-        form.action = '/MaterialRequisition/AddRequisitionItem';
-        document.body.appendChild(form);
-        form.submit();
-    });
-
-    // 2. Remove item button click
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('remove-item') || e.target.closest('.remove-item')) {
-            const btn = e.target.classList.contains('remove-item') ? e.target : e.target.closest('.remove-item');
-            const index = btn.getAttribute('data-index');
-
-            if (confirm('Are you sure you want to remove this item?')) {
-                document.getElementById(`removeForm_${index}`).submit();
-            }
+    // Add new item button click handler
+    $('#addNewItemBtn').on('click', function () {
+        if (!validateCurrentItems()) {
+            return; // Stop if validation fails
         }
+
+        // Clone the first row (template)
+        const $firstRow = $('.item-row').first();
+        const $newRow = $firstRow.clone(true);
+        const newIndex = $('.item-row').length;
+
+        // Update all indices and IDs in the cloned row
+        updateRowContent($newRow, newIndex);
+
+        // Reset form values but keep default dropdowns
+        resetFormValues($newRow);
+
+        // Add the remove button (only for non-first items)
+        addRemoveButton($newRow, newIndex);
+
+        // Hide the badge container initially
+        $newRow.find(`#badgeContainer_${newIndex}`).addClass('d-none');
+
+        // Append to container
+        $('#itemsContainer').append($newRow);
+
+        // Setup events for the new row
+        setupModalEvents();
+        updateRowIndexes();
     });
 
-    // 3. Generate code button click
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('generateCodeBtn')) {
-            const index = e.target.getAttribute('data-index');
-            const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
-            const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
+    // Function to update all row indexes after adding/removing rows
+    function updateRowIndexes() {
+        $('.item-row').each(function (index) {
+            const $row = $(this);
+            updateRowContent($row, index);
 
-            if (categorySelect.value) {
-                fetch('/MaterialRequisition/GenerateCode', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({
-                        categoryId: parseInt(categorySelect.value),
-                        itemIndex: parseInt(index)
-                    })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        codeInput.value = data.code;
-                    })
-                    .catch(error => console.error('Error generating code:', error));
+            // Only show remove button for non-first rows
+            if (index === 0) {
+                $row.find('.remove-item').remove();
             } else {
-                alert('Please select a material category first');
+                addRemoveButton($row, index);
             }
+        });
+    }
+
+    // Function to update a row's content with new index
+    // Function to update a row's content with new index - this needs to be more thorough
+    function updateRowContent($row, newIndex) {
+        // Update data-index attribute on the row
+        $row.attr('data-index', newIndex).data('index', newIndex);
+
+        // Update form element names and IDs
+        $row.find('input, select, textarea').each(function () {
+            const $input = $(this);
+
+            // Update name attribute (for form submission)
+            const name = $input.attr('name');
+            if (name && name.includes('RequisitionItems[')) {
+                const newName = name.replace(/RequisitionItems\[\d+\]/g, `RequisitionItems[${newIndex}]`);
+                $input.attr('name', newName);
+            }
+
+            // Update id attribute 
+            const id = $input.attr('id');
+            if (id && id.includes('_')) {
+                const baseName = id.split('_')[0];
+                $input.attr('id', `${baseName}_${newIndex}`);
+            }
+
+            // Update data-index attribute
+            $input.attr('data-index', newIndex);
+        });
+
+        // Update button data-index attributes
+        $row.find('button').each(function () {
+            $(this).attr('data-index', newIndex);
+        });
+
+        // Update modal ID and related attributes
+        const $modal = $row.find('.modal');
+        $modal.attr('id', `inventoryModal_${newIndex}`);
+
+        // Update modal trigger button data-bs-target
+        $row.find('[data-bs-target]').attr('data-bs-target', `#inventoryModal_${newIndex}`);
+
+        // Update badge container and badges with consistent ID format
+        $row.find('[id^=badgeContainer_]').attr('id', `badgeContainer_${newIndex}`);
+        $row.find('[id^=selectedMaterialCategory_]').attr('id', `selectedMaterialCategory_${newIndex}`);
+        $row.find('[id^=selectedMaterialCode_]').attr('id', `selectedMaterialCode_${newIndex}`);
+        $row.find('[id^=selectedMaterialVendor_]').attr('id', `selectedMaterialVendor_${newIndex}`);
+    }
+
+    // Reset form values but keep default selections
+    function resetFormValues($row) {
+        // Clear text inputs
+        $row.find('input[type="text"]').val('');
+
+        // Reset number input to default value
+        $row.find('input[type="number"]').val(1);
+
+        // Reset textarea
+        $row.find('textarea').val('');
+
+        // Don't reset dropdowns (keep default Status and Condition)
+
+        // Disable SaveToInventory checkbox and ensure it's visible
+        $row.find('input[type="checkbox"]').prop('disabled', true).prop('checked', false);
+        $row.find('.form-check-label').css('display', 'block');
+
+        // Hide badge container
+        $row.find('[id^=badgeContainer_]').addClass('d-none');
+
+        // Reset badges
+        $row.find('[id^=selectedMaterialCategory_]').text('Category: None');
+        $row.find('[id^=selectedMaterialCode_]').text('SNo.: None');
+        $row.find('[id^=selectedMaterialVendor_]').text('Vendor: None');
+
+        // Reset modal inputs
+        $row.find('.materialCode').val('');
+        $row.find('.materialCategoryId').val(''); // Empty by default
+        $row.find('.materialVendor').val('');
+    }
+
+    // Add remove button to row
+    function addRemoveButton($row, index) {
+        // Remove any existing button first
+        $row.find('.remove-item').remove();
+
+        // Create new button
+        const $removeBtn = $('<button>', {
+            type: 'button',
+            class: 'btn-close remove-item',
+            'data-index': index,
+            title: 'Remove item',
+            css: {
+                position: 'absolute',
+                right: '10px',
+                top: '10px',
+                zIndex: 10,
+                filter: 'invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%)'
+            }
+        });
+
+        // Add click handler
+        $removeBtn.on('click', function () {
+            removeRow(index);
+        });
+
+        // Append to row
+        $row.append($removeBtn);
+    }
+
+    // Remove a row
+    function removeRow(index) {
+        if (confirm('Are you sure you want to remove this item?')) {
+            $(`.item-row[data-index="${index}"]`).remove();
+            updateRowIndexes();
         }
-    });
+    }
 
-    // 4. Save inventory details button click
-    document.addEventListener('click', function (e) {
-        if (e.target.classList.contains('saveInventoryDetailsBtn')) {
-            const index = e.target.getAttribute('data-index');
-            const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
-            const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
-            const vendorSelect = document.querySelector(`.materialVendor[data-index="${index}"]`);
+    // Setup modal events (save button, generate code)
+    function setupModalEvents() {
+        // Use event delegation for modal buttons
+        $('#itemsContainer').off('click', '.saveInventoryDetailsBtn').on('click', '.saveInventoryDetailsBtn', function () {
+            // Get the button and its container
+            const $button = $(this);
+            const $modal = $button.closest('.modal');
+            const $row = $button.closest('.item-row');
 
-            // Basic validation
-            if (!categorySelect.value || !codeInput.value) {
-                alert('Please fill in all required fields');
+            // Get index from the row data attribute
+            const index = $row.data('index');
+
+            // Get form elements within this specific modal
+            const $categorySelect = $modal.find('.materialCategoryId');
+            const $codeInput = $modal.find('.materialCode');
+            const $vendorSelect = $modal.find('.materialVendor');
+
+            // Find the corresponding row
+         //   const $row = $(`.item-row[data-index="${index}"]`);
+            // Clear any previous validation messages
+            $modal.find('.text-danger').text('');
+
+            // Validate required fields
+            let isValid = true;
+
+            if (!$categorySelect.val()) {
+                $categorySelect.closest('.form-group').find('.text-danger')
+                    .text('Category is required');
+                isValid = false;
+            }
+
+            if (!$codeInput.val()) {
+                $codeInput.closest('.form-group').find('.text-danger')
+                    .text('Code is required');
+                isValid = false;
+            }
+
+            if (!isValid) {
                 return;
             }
 
             // Update badge container visibility
-            const badgeContainer = document.getElementById(`badgeContainer_${index}`);
-            badgeContainer.classList.remove('d-none');
+            const $badgeContainer = $row.find('[id^="badgeContainer_"]');
+            $badgeContainer.removeClass('d-none');
 
             // Update badge content
-            const categoryBadge = document.getElementById(`selectedMaterialCategory_${index}`);
-            const codeBadge = document.getElementById(`selectedMaterialCode_${index}`);
-            const vendorBadge = document.getElementById(`selectedMaterialVendor_${index}`);
-
-            categoryBadge.textContent = `Category: ${categorySelect.options[categorySelect.selectedIndex].text}`;
-            codeBadge.textContent = `SNo.: ${codeInput.value}`;
-            vendorBadge.textContent = `Vendor: ${vendorSelect.options[vendorSelect.selectedIndex].text || 'None'}`;
+            $row.find('[id^="selectedMaterialCategory_"]').text(`Category: ${$categorySelect.find('option:selected').text()}`);
+            $row.find('[id^="selectedMaterialCode_"]').text(`SNo.: ${$codeInput.val()}`);
+            $row.find('[id^="selectedMaterialVendor_"]').text(`Vendor: ${$vendorSelect.find('option:selected').text() || 'None'}`);
 
             // Enable SaveToInventory checkbox
-            // First try with ID
-            let saveToInventory = document.getElementById(`saveToInventory_${index}`);
+            let $checkbox = $row.find('input[type="checkbox"]');
 
-            // If not found, try with name attribute (which contains the index)
-            if (!saveToInventory) {
-                saveToInventory = document.querySelector(`input[name$="[${index}].SaveToInventory"]`);
-            }
-            // If we found the checkbox, enable and check it
-            if (saveToInventory) {
-                saveToInventory.disabled = false;
-                saveToInventory.checked = true;
-                console.log(`Checkbox found and enabled: ${saveToInventory.id}`);
+            // Enable the checkbox if found
+            if ($checkbox.length > 0) {
+                $checkbox.prop('disabled', false).prop('checked', true);
+                $checkbox.closest('.form-check-label').css('display', 'block');
+                console.log('Checkbox enabled:', $checkbox.attr('id'));
             } else {
-                console.error(`SaveToInventory checkbox not found for index ${index}`);
+                console.warn(`Checkbox not found for row ${index}`);
             }
 
-            // Close modal
-            const modalElement = document.getElementById(`inventoryModal_${index}`);
-            const modal = bootstrap.Modal.getInstance(modalElement);
-            if (modal) {
-                modal.hide();
-            } else {
-                // If modal instance is not found, create one and hide it
-                new bootstrap.Modal(modalElement).hide();
-            }
-            setTimeout(() => {
-                const modalBackdrops = document.querySelectorAll('.modal-backdrop');
-                modalBackdrops.forEach(backdrop => {
-                    backdrop.remove();
+            // Close modal using Bootstrap's API
+            try {
+                const bsModal = bootstrap.Modal.getInstance($modal[0]);
+                if (bsModal) {
+                    bsModal.hide();
+                } else {
+                    // Fallback if modal instance isn't found
+                    new bootstrap.Modal($modal[0]).hide();
+                }
+            } catch (error) {
+                console.warn('Error closing modal with Bootstrap API:', error);
+
+                // jQuery fallback
+                $modal.modal('hide');
+
+                // Manual DOM cleanup
+                $modal.removeClass('show').css('display', 'none');
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open').css({
+                    'overflow': '',
+                    'padding-right': ''
                 });
-                // Also restore the body classes
-                document.body.classList.remove('modal-open');
-                document.body.style.overflow = '';
-                document.body.style.paddingRight = '';
-            }, 150);
-        }
-    });
-
-    // 5. Material search functionality
-    let searchTimeout;
-    materialSearch.addEventListener('input', function () {
-        clearTimeout(searchTimeout);
-        const searchTerm = this.value.trim();
-
-        if (searchTerm.length > 0) {
-            clearMaterialSearch.classList.remove('d-none');
-        } else {
-            clearMaterialSearch.classList.add('d-none');
-            searchResultsContainer.style.display = 'none';
-            return;
-        }
-
-        // Only search when user has stopped typing for 300ms
-        searchTimeout = setTimeout(() => {
-            if (searchTerm.length >= 2) {
-                fetch('/MaterialRequisition/SearchMaterials', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
-                    },
-                    body: JSON.stringify({ searchTerm })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        searchResultsContainer.innerHTML = '';
-
-                        if (data.length === 0) {
-                            searchResultsContainer.innerHTML = '<div class="dropdown-item">No materials found</div>';
-                        } else {
-                            data.forEach(material => {
-                                const item = document.createElement('div');
-                                item.className = 'dropdown-item';
-                                item.style.cursor = 'pointer';
-                                item.innerHTML = `<strong>${material.code}</strong> - ${material.name}`;
-                                item.addEventListener('click', () => selectMaterial(material));
-                                searchResultsContainer.appendChild(item);
-                            });
-                        }
-
-                        searchResultsContainer.style.display = 'block';
-                    })
-                    .catch(error => console.error('Error searching materials:', error));
-            } else {
-                searchResultsContainer.style.display = 'none';
             }
-        }, 300);
-    });
+            // Clean up modal backdrop and body classes - ensure this runs regardless of above methods
+            setTimeout(() => {
+                $('.modal-backdrop').remove();
+                $('body')
+                    .removeClass('modal-open')
+                    .css({
+                        'overflow': '',
+                        'padding-right': ''
+                    });
+            }, 100);
+       
+        });
 
-    // Clear search
-    clearMaterialSearch.addEventListener('click', function () {
-        materialSearch.value = '';
-        this.classList.add('d-none');
-        searchResultsContainer.style.display = 'none';
-    });
+        // Use event delegation for generate code button too
+        // Use event delegation for generate code button
+        // Use event delegation for generate code button
+        $('#itemsContainer').off('click', '.generateCodeBtn').on('click', '.generateCodeBtn', function () {
+            // Get the button and its container
+            const $button = $(this);
+            const $modal = $button.closest('.modal');
+            const $row = $button.closest('.item-row');
 
-    // Select material from search results
-    function selectMaterial(material) {
-        // Find first empty item or add new one
-        let emptyItemFound = false;
-        const items = document.querySelectorAll('.item-row');
+            // Get index from the row data attribute (more reliable)
+            const index = $row.data('index');
 
-        for (let i = 0; i < items.length; i++) {
-            const nameInput = items[i].querySelector('input[name^="RequisitionItems"][name$="Name"]');
+            // Get form elements
+            const $categorySelect = $modal.find('.materialCategoryId');
+            const $codeInput = $modal.find('.materialCode');
 
-            if (!nameInput.value) {
-                fillItemWithMaterial(i, material);
-                emptyItemFound = true;
-                break;
+            // Clear any previous validation messages
+            $modal.find('.text-danger').text('');
+
+            // Validate category selection
+            if (!$categorySelect.val()) {
+                // Display error in the validation span
+                $categorySelect.closest('.form-group').find('.text-danger')
+                    .text('Please select a category first');
+                return;
             }
-        }
 
-        if (!emptyItemFound) {
-            // Submit form to add new item, then fill it with the material details
-            sessionStorage.setItem('selectedMaterial', JSON.stringify(material));
-            addNewItemBtn.click();
-        }
+            // Get category ID from the select
+            const categoryId = $categorySelect.val();
 
-        // Close search results
-        searchResultsContainer.style.display = 'none';
-        materialSearch.value = '';
-        clearMaterialSearch.classList.add('d-none');
+            console.log('Generate code for:', { index, categoryId, rowIndex: $row.index() });
+
+            // Anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            // Call server with correct data
+            $.ajax({
+                url: '/MaterialRequisition/GenerateCode',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    categoryId: parseInt(categoryId),
+                    itemIndex: parseInt(index)
+                }),
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function (response) {
+                    console.log('Code generated:', response);
+                    if (response && response.code) {
+                        $codeInput.val(response.code);
+                    }
+                },
+                error: function (error) {
+                    console.error('Error generating code:', error);
+                    $codeInput.closest('.form-group').find('.text-danger')
+                        .text('Error generating code. Please try again.');
+                }
+            });
+        });
+
     }
 
-    function fillItemWithMaterial(index, material) {
-        // Fill in form fields
-        const nameInput = document.querySelector(`input[name="RequisitionItems[${index}].Name"]`);
-        const descInput = document.querySelector(`textarea[name="RequisitionItems[${index}].Description"]`);
-        const categorySelect = document.querySelector(`.materialCategoryId[data-index="${index}"]`);
-        const codeInput = document.querySelector(`.materialCode[data-index="${index}"]`);
-        const vendorSelect = document.querySelector(`.materialVendor[data-index="${index}"]`);
+    // Validate all current items before adding a new one
+    function validateCurrentItems() {
+         console.log('--- Starting validation ---');
+        let isValid = true;
 
-        nameInput.value = material.name;
-        descInput.value = material.description || '';
-        categorySelect.value = material.categoryId;
-        codeInput.value = material.code;
-        vendorSelect.value = material.vendorId || '';
+        // First, clear any existing validation messages
+        $('.item-row').find('.text-danger').text('');
 
-        // Update badges
-        const badgeContainer = document.getElementById(`badgeContainer_${index}`);
-        badgeContainer.classList.remove('d-none');
+        // Get all item rows
+        const $rows = $('.item-row');
 
-        const categoryBadge = document.getElementById(`selectedMaterialCategory_${index}`);
-        const codeBadge = document.getElementById(`selectedMaterialCode_${index}`);
-        const vendorBadge = document.getElementById(`selectedMaterialVendor_${index}`);
+        // Loop through each row
+        $rows.each(function () {
+            const $row = $(this);
+            const index = $row.data('index');
 
-        categoryBadge.textContent = `Category: ${material.categoryName}`;
-        codeBadge.textContent = `SNo.: ${material.code}`;
+            // Get the input elements
+            const $nameInput = $row.find(`[name$="].Name"]`);
+            const $quantityInput = $row.find(`[name$="].Quantity"]`);
+            const $conditionInput = $row.find(`[name$="].Condition"]`);
+            const $statusInput = $row.find(`[name$="].Status"]`);
 
-        if (material.vendorId) {
-            // Find vendor name from selected option
-            const vendorName = vendorSelect.options[vendorSelect.selectedIndex]?.text || 'None';
-            vendorBadge.textContent = `Vendor: ${vendorName}`;
-        } else {
-            vendorBadge.textContent = 'Vendor: None';
+            // Check name
+            if (!$nameInput.val()) {
+                // Find the validation span that follows this input
+                $nameInput.closest('.form-group').find('.text-danger').text('Name is required');
+                isValid = false;
+            }
+
+            // Check quantity
+            if (!$quantityInput.val() || parseInt($quantityInput.val()) < 1) {
+                $quantityInput.closest('.form-group').find('.text-danger').text('Quantity must be at least 1');
+                isValid = false;
+            }
+
+            // Check condition
+            if (!$conditionInput.val()) {
+                $conditionInput.closest('.form-group').find('.text-danger').text('Condition is required');
+                isValid = false;
+            }
+
+            // Check status
+            if (!$statusInput.val()) {
+                $statusInput.closest('.form-group').find('.text-danger').text('Status is required');
+                isValid = false;
+            }
+        });
+
+        return isValid;
+    }
+
+
+    // Handle form submission
+    $('#wizardRequisitionItems').off('submit').on('submit', function (e) {
+      
+        if (!validateCurrentItems()) {
+           
+            e.preventDefault(); // Only prevent if validation fails
+            console.log('Validation failed');
+            return false;
         }
+        // If valid, allow default form submission
+        console.log('Validation passed - submitting');
+        $(this).submit();
+        return true;
+    });
 
-        // Enable SaveToInventory checkbox
-        const saveToInventory = document.getElementById(`saveToInventory_${index}`);
-        saveToInventory.disabled = false;
-        saveToInventory.checked = true;
-    }
-
-    // Check for stored material after page load (for new items)
-    const storedMaterial = sessionStorage.getItem('selectedMaterial');
-    if (storedMaterial) {
-        const material = JSON.parse(storedMaterial);
-        const items = document.querySelectorAll('.item-row');
-        const lastIndex = items.length - 1;
-
-        fillItemWithMaterial(lastIndex, material);
-        sessionStorage.removeItem('selectedMaterial');
-    }
+    // Add event handlers for the "Add Inventory Details" link
+    $('.item-row').each(function() {
+        const index = $(this).data('index');
+        const $inventoryLink = $(this).find(`a[data-bs-target="#inventoryModal_${index}"]`);
+        
+        $inventoryLink.on('click', function() {
+            // Ensure the checkbox is visible when clicking the link
+            const $checkboxLabel = $(this).closest('.item-row').find('.form-check-label');
+            $checkboxLabel.css('display', 'block');
+        });
+    });
 });
 
 /////  VALIDATION OF REQUISITION ITEMS
 
 
-
-///SEARCH INPUT
-document.addEventListener('DOMContentLoaded', function () {
-    const searchInput = document.getElementById('searchbar');
-    const searchResults = document.getElementById('searchResults');
-
-    // Initially hide the results
-    searchResults.classList.remove('show');
-
-    // Show results when input is focused or clicked
-    searchInput.addEventListener('focus', function () {
-        searchResults.classList.add('show');
-    });
-
-    searchInput.addEventListener('click', function () {
-        searchResults.classList.add('show');
-    });
-
-    // Hide results when clicking outside
-    document.addEventListener('click', function (event) {
-        const isClickInsideSearch = searchInput.contains(event.target);
-        const isClickInsideResults = searchResults.contains(event.target);
-
-        // If click is outside both the search input and results
-        if (!isClickInsideSearch && !isClickInsideResults) {
-            searchResults.classList.remove('show');
-        }
-    });
-
-    // Prevent hiding results when clicking inside the results div
-    searchResults.addEventListener('click', function (event) {
-        // If clicking a select button, hide the results
-        if (event.target.tagName === 'BUTTON') {
-            searchResults.classList.remove('show');
-        }
-        // For other clicks inside results (like links), prevent propagation
-        event.stopPropagation();
-    });
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const selects = document.querySelectorAll('.formcontrol2');
-
-    // Add event listeners to dynamically check if value is empty
-    selects.forEach(select => {
-        select.addEventListener('change', function () {
-            if (!select.value) {
-                select.style.borderColor = "#fcb900"; // Yellow
-            } else {
-                select.style.borderColor = "#dee2e6"; // Default border color
-            }
-        });
-    });
-});
-
-
-document.addEventListener('DOMContentLoaded', function () {
+$(document).ready(function () {
     const form = document.querySelector('.myForm');
+    if (form) {
+        const elements = form.querySelectorAll('input, select, textarea');
 
-    if (!form) {
-        console.error('Form not found');
-        return;
-    }
-
-    form.addEventListener('submit', function (e) {
-        let isValid = true;
-        const requiredInputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-
-        // Clear previous errors
-        document.querySelectorAll('.validation-error').forEach(el => el.remove());
-        requiredInputs.forEach(input => input.classList.remove('is-invalid'));
-
-        requiredInputs.forEach(input => {
-            const value = input.value.trim();
-            const isCheckbox = input.type === 'checkbox';
-            const isRadio = input.type === 'radio';
-            const isSelect = input.tagName === 'SELECT';
-
-            if ((isCheckbox && !input.checked) ||
-                (isRadio && !form.querySelector(`input[name="${input.name}"]:checked`)) ||
-                (!isCheckbox && !isRadio && !value)) {
-
-                isValid = false;
-                input.classList.add('is-invalid');
-                const label = form.querySelector(`label[for="${input.id}"]`);
-                const fieldName = label ? label.textContent.replace('*', '').trim() : 'This field';
-                showValidationError(input, `${fieldName} is required`);
+        // Function to show validation error
+        function showValidationError(input, message) {
+            // Clear existing error messages
+            const existingError = input.parentElement.querySelector('.validation-error');
+            if (existingError) {
+                existingError.remove();
             }
-        });
 
-        if (!isValid) {
-            e.preventDefault();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
+            // Create and append error message
+            const errorElement = document.createElement('div');
+            errorElement.className = 'validation-error text-danger';
+            errorElement.textContent = message;
+            input.parentElement.appendChild(errorElement);
+
+            // Add error class to input
+            input.classList.add('is-invalid');
         }
-    });
 
-    function showValidationError(input, message) {
-        const errorSpan = document.createElement('span');
-        errorSpan.classList.add('text-danger', 'validation-error', 'd-block', 'mt-1');
-        errorSpan.textContent = message;
-
-        // Insert after the input element
-        input.parentNode.insertBefore(errorSpan, input.nextElementSibling);
-    }
-});
-
-
-document.addEventListener('DOMContentLoaded', function () {
-    // Target select, input (text and number), and textarea elements
-    const elements = document.querySelectorAll('select, input[type="text"], input[type="number"], textarea');
-
-    // Function to update background based on the element type and value
-    function updateBackground(element) {
-        const tag = element.tagName.toLowerCase();
-        if (tag === 'select') {
-            // For select elements, check if a non-default option is selected
-            if (element.selectedIndex > 0) {
-                element.style.backgroundColor = '#f8f9fa'; // Light blue background
-            } else {
-                element.style.backgroundColor = ''; // Reset to default
-            }
-        } else if (tag === 'input' || tag === 'textarea') {
-            // For input and textarea, check if the value is not empty
-            if (element.value.trim() !== '') {
-                element.style.backgroundColor = '#f8f9fa';
-            } else {
-                element.style.backgroundColor = '';
+        // Function to update background based on the element type and value
+        function updateBackground(element) {
+            if (element.tagName === 'SELECT') {
+                if (element.value) {
+                    element.style.backgroundColor = '#f0f7e9'; // Light green for valid select
+                } else {
+                    element.style.backgroundColor = '#fff'; // White for empty select
+                }
+            } else if (element.type === 'text' || element.tagName === 'TEXTAREA') {
+                if (element.value.trim()) {
+                    element.style.backgroundColor = '#f0f7e9'; // Light green for valid text
+                } else {
+                    element.style.backgroundColor = '#fff'; // White for empty text
+                }
+            } else if (element.type === 'number') {
+                if (element.value && parseInt(element.value) > 0) {
+                    element.style.backgroundColor = '#f0f7e9'; // Light green for valid number
+                } else {
+                    element.style.backgroundColor = '#fff'; // White for invalid number
+                }
             }
         }
+
+        // Apply the function to each element and add event listeners for changes
+        elements.forEach(element => {
+            // Initial background update
+            updateBackground(element);
+
+            // Add event listeners for input changes
+            element.addEventListener('change', function () {
+                updateBackground(this);
+            });
+
+            element.addEventListener('input', function () {
+                updateBackground(this);
+            });
+        });
+
+        // Form submission validation
+        form.addEventListener('submit', function (event) {
+            let hasErrors = false;
+
+            // Check each required element
+            elements.forEach(element => {
+                if (element.required && !element.value.trim()) {
+                    showValidationError(element, 'This field is required');
+                    hasErrors = true;
+                }
+            });
+
+            // Prevent form submission if there are errors
+            if (hasErrors) {
+                event.preventDefault();
+            }
+        });
+    }else {
+        console.log('No .myForm found - skipping validation');
     }
-
-    // Apply the function to each element and add event listeners for changes
-    elements.forEach(element => {
-        // Initial background update
-        updateBackground(element);
-
-        // Listen for change events
-        element.addEventListener('change', function () {
-            updateBackground(this);
-        });
-
-        // For inputs and textareas, also update on input event for immediate feedback
-        element.addEventListener('input', function () {
-            updateBackground(this);
-        });
-    });
 });
-
-
-
-
