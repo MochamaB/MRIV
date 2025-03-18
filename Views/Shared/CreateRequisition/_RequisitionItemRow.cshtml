@@ -9,15 +9,18 @@
 }
 
 
-<div class="row item-row mb-5" data-index="@index" style="border:1px solid #f3ca6e; border-left:5px solid #fcb900; margin:0.1rem; padding:1rem">
+<div class="row item-row mb-5" data-index="@index" style="border:1px solid #f3ca6e; border-left:5px solid #fcb900; margin:0.1rem; padding:1rem;position: relative">
     <!-- Hidden form for removing this item -->
-    
+    <input type="hidden" name="itemIndex" value="@index" />
+
+    @if (index > 0)
+    {
         <button type="button" class="btn-close remove-item"
                 style="position:absolute; right:10px; top:10px; z-index:10; filter: invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%);"
                 data-index="@index" title="Remove item">
         </button>
-    
-    <input type="hidden" name="itemIndex" value="@index" />
+    }
+   
 
     <div class="col-md-6">
         <div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -55,11 +58,14 @@
         <div class="form-group mb-1">
             <div class="form-check form-check-flat form-check-primary">
                 <label class="form-check-label" style="font-size:1rem">
-                    <input  name="RequisitionItems[@index].SaveToInventory" type="checkbox" class="form-check-input" id="saveToInventory_@index"
-                          />
+                    <input  name="RequisitionItems[@index].SaveToInventory" type="checkbox" class="form-check-input" 
+                    id="saveToInventory_@index"
+                           value="true" />
                     Add this Item to Inventoryy
                     <i class="input-helper"></i>
                 </label>
+                <!-- Add a hidden field to ensure false values are submitted -->
+                <input type="hidden" name="RequisitionItems[@index].SaveToInventory" value="false" />
             </div>
            
         </div>

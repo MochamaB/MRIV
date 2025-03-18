@@ -132,28 +132,49 @@ $(document).ready(function () {
         // Remove any existing button first
         $row.find('.remove-item').remove();
 
-        // Create new button
-        const $removeBtn = $('<button>', {
-            type: 'button',
-            class: 'btn-close remove-item',
-            'data-index': index,
-            title: 'Remove item',
-            css: {
-                position: 'absolute',
-                right: '10px',
-                top: '10px',
-                zIndex: 10,
-                filter: 'invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%)'
-            }
-        });
+        // Only add remove button if index > 0
+        if (index > 0) {
+            // Create new button
+            const $removeBtn = $('<button>', {
+                type: 'button',
+        class: 'remove-item',
+        'data-index': index,
+        title: 'Remove item',
+        html: '&times;', // Add "×" symbol for a close button
+        css: {
+            position: 'absolute',
+            right: '10px',
+            top: '10px',
+            zIndex: 10,
+            width: '28px',
+            height: '28px',
+            borderRadius: '50%',
+            padding: '5px',
+            fontSize: '18px', // Make the '×' symbol bigger
+            fontWeight: 'bold',
+            textAlign: 'center',
+            lineHeight: '18px', // Aligns text inside button
+            backgroundColor: '#dc3545', // Red background
+            color: '#ffffff', // White icon/text
+            border: 'none',
+            cursor: 'pointer',
+            opacity: '0.9',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }
+            });
 
-        // Add click handler
-        $removeBtn.on('click', function () {
-            removeRow(index);
-        });
+            // Add click handler
+            $removeBtn.on('click', function () {
+                removeRow(index);
+            });
 
-        // Append to row
-        $row.append($removeBtn);
+            // Append to row
+            $row.append($removeBtn);
+
+            console.log(`Added remove button to row ${index}`);
+        } else {
+            console.log(`Not adding remove button to first row (index ${index})`);
+        }
     }
 
     // Remove a row
@@ -272,7 +293,7 @@ $(document).ready(function () {
             const $row = $button.closest('.item-row');
 
             // Get index from the row data attribute (more reliable)
-            const index = $row.data('index');
+            const index = parseInt($row.data('index'));
 
             // Get form elements
             const $categorySelect = $modal.find('.materialCategoryId');
@@ -293,6 +314,8 @@ $(document).ready(function () {
             const categoryId = $categorySelect.val();
 
             console.log('Generate code for:', { index, categoryId, rowIndex: $row.index() });
+            // Debug log what we're sending
+            console.log(`Generating code with categoryId=${categoryId}, itemIndex=${index}`);
 
             // Anti-forgery token
             const token = $('input[name="__RequestVerificationToken"]').val();
@@ -379,16 +402,14 @@ $(document).ready(function () {
 
     // Handle form submission
     $('#wizardRequisitionItems').off('submit').on('submit', function (e) {
-      
         if (!validateCurrentItems()) {
-           
-            e.preventDefault(); // Only prevent if validation fails
+            e.preventDefault(); // Block submission
             console.log('Validation failed');
             return false;
         }
-        // If valid, allow default form submission
-        console.log('Validation passed - submitting');
-        $(this).submit();
+        // If valid, LET DEFAULT SUBMISSION PROCEED
+        console.log('Validation passed - allowing submission');
+        // Remove $(this).submit() - this causes infinite recursion
         return true;
     });
 

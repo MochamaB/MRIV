@@ -475,8 +475,16 @@ namespace MRIV.Controllers
         [HttpPost]
         public async Task<IActionResult> GenerateCode(int categoryId, int itemIndex)
         {
-            // Get the next available code for this category
-            int nextId = _context.Materials.Count() + 1;
+            // Get the latest ID for this category
+            var latestMaterial = await _context.Materials
+                .Where(m => m.MaterialCategoryId == categoryId)
+                .OrderByDescending(m => m.Id)
+                .FirstOrDefaultAsync();
+
+            // Get the next ID
+            int nextId = (latestMaterial?.Id ?? 0) + 1;
+
+            // Generate base code
             string baseCode = $"MAT-{nextId:D3}-{categoryId:D3}";
 
             if (itemIndex > 0)
@@ -484,7 +492,13 @@ namespace MRIV.Controllers
                 baseCode += $"-{itemIndex}";
             }
 
-            return Json(new { code = baseCode });
+            // Add a unique component to ensure no collisions
+            string uniqueCode = $"{baseCode}-{DateTime.Now.Ticks % 10000}";
+
+            // Log what we're generating
+            Console.WriteLine($"Generating code with categoryId={categoryId}, itemIndex={itemIndex}, result={uniqueCode}");
+
+            return Json(new { code = uniqueCode });
         }
         [HttpPost]
         public async Task<IActionResult> SearchMaterials(string searchTerm)
