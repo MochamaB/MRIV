@@ -8,7 +8,7 @@ namespace MRIV.Services
 {
     public interface IStationCategoryService
     {
-        Task<List<StationCategory>> GetAllCategoriesAsync();
+      
         Task<SelectList> GetLocationsForCategoryAsync(string categoryCode, string selectedValue = null);
         Task<SelectList> GetStationCategoriesSelectListAsync(string stationPoint);
         Task InitializeUserLocationAsync(Requisition requisition, EmployeeBkp employee, Department department, Station station);
@@ -32,17 +32,7 @@ namespace MRIV.Services
             _vendorService = vendorService;
         }
 
-        public async Task<List<StationCategory>> GetAllCategoriesAsync()
-        {
-            // Return predefined list or from database
-            return new List<StationCategory>
-        {
-            new StationCategory { Id = 1, Code = "headoffice", StationName = "Head Office", DataSource = "Department" },
-            new StationCategory { Id = 2, Code = "factory", StationName = "Factory", DataSource = "Station", FilterCriteria = "{\"exclude\": [\"region\", \"zonal\"]}" },
-            new StationCategory { Id = 3, Code = "region", StationName = "Region", DataSource = "Station", FilterCriteria = "{\"include\": [\"region\"]}" },
-            new StationCategory { Id = 4, Code = "vendor", StationName = "Vendor", DataSource = "Vendor" }
-        };
-        }
+    
         public async Task<SelectList> GetStationCategoriesSelectListAsync(string stationPoint)
         {
             // Default to an empty SelectList if no data is found

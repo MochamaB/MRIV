@@ -65,6 +65,12 @@ namespace MRIV.Services
                         // Handle vendor case specially
                         approver = requisition.DispatchVendor;
                     }
+                    else if (stepConfig.ApproverRole.ToLower() == "dispatchadmin" && requisition.DispatchType == "admin")
+                    {
+                        // Handle admin dispatch case specially
+                        approver = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
+                        _logger.LogInformation($"Using admin dispatch approver: {requisition.DispatchPayrollNo}");
+                    }
                     else
                     {
                         // Use new employee service method for dynamic role-based lookup
@@ -109,33 +115,50 @@ namespace MRIV.Services
             return approvalSteps;
         }
 
-        private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)
+       private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)
+{
+    _logger.LogInformation($"Checking conditions for step: {stepConfig.StepName}");
+    
+    // If no conditions are present, always include the step
+    if (stepConfig.Conditions == null || !stepConfig.Conditions.Any())
+    {
+        _logger.LogInformation($"Step {stepConfig.StepName} has no conditions, including it");
+        return true;
+    }
+
+    // Check each condition
+    foreach (var condition in stepConfig.Conditions)
+    {
+        var propertyName = condition.Key;
+        var expectedValue = condition.Value;
+
+        _logger.LogInformation($"Checking condition: {propertyName} = {expectedValue}");
+        
+        // Use reflection to get the property value - CASE INSENSITIVE
+        var propertyInfo = requisition.GetType().GetProperties()
+            .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
+            
+        if (propertyInfo == null)
         {
-            // If no conditions are present, always include the step
-            if (stepConfig.Conditions == null || !stepConfig.Conditions.Any())
-                return true;
-
-            // Check each condition
-            foreach (var condition in stepConfig.Conditions)
-            {
-                var propertyName = condition.Key;
-                var expectedValue = condition.Value;
-
-                // Use reflection to get the property value
-                var propertyInfo = requisition.GetType().GetProperty(propertyName);
-                if (propertyInfo == null)
-                    continue;
-
-                var actualValue = propertyInfo.GetValue(requisition)?.ToString();
-
-                // If the condition doesn't match, skip this step
-                if (actualValue != expectedValue)
-                    return false;
-            }
-
-            // All conditions match
-            return true;
+            _logger.LogWarning($"Property {propertyName} not found on requisition");
+            continue;
         }
+
+        var actualValue = propertyInfo.GetValue(requisition)?.ToString();
+        _logger.LogInformation($"Actual value: {actualValue}");
+
+        // If the condition doesn't match, skip this step
+        if (actualValue != expectedValue)
+        {
+            _logger.LogInformation($"Condition not matched, excluding step {stepConfig.StepName}");
+            return false;
+        }
+    }
+
+    // All conditions match
+    _logger.LogInformation($"All conditions matched, including step {stepConfig.StepName}");
+    return true;
+}
         // GET APPROVAl STEPS IN VIEW
         public async Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors)
         {
@@ -204,7 +227,9 @@ namespace MRIV.Services
             return "Invalid Vendor ID";
         }
 
-        public async Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition, List<Approval> approvalSteps)
+        public async Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(
+     Requisition requisition,
+     List<Approval> approvalSteps)
         {
             var departmentEmployees = new Dictionary<string, SelectList>();
 
@@ -214,6 +239,25 @@ namespace MRIV.Services
             {
                 // Get appropriate employees for this step
                 var employees = await GetAppropriateEmployeesForStepAsync(step, requisition);
+
+                // Filter by roles if the step has a StepConfigId
+                if (step.StepConfigId.HasValue)
+                {
+                    // Fetch the step config directly
+                    var stepConfig = await _context.WorkflowStepConfigs
+                        .FirstOrDefaultAsync(s => s.Id == step.StepConfigId.Value);
+
+                    if (stepConfig != null &&
+                        stepConfig.RoleParameters != null &&
+                        stepConfig.RoleParameters.TryGetValue("roles", out var rolesString))
+                    {
+                        var allowedRoles = rolesString.Split(',').Select(r => r.Trim()).ToList();
+                        employees = employees.Where(e =>
+                            e.Role != null &&
+                            allowedRoles.Contains(e.Role, StringComparer.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+                }
 
                 // Create SelectList if we have valid employees
                 if (employees != null && employees.Any())

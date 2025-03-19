@@ -115,7 +115,15 @@ namespace MRIV.Controllers
                 .OrderBy(e => e.Fullname)
                 .ToListAsync();
             List<MaterialCategory> materialCategories = await _context.MaterialCategories
-                 .ToListAsync();
+     .Select(m => new MaterialCategory
+     {
+         Id = m.Id,
+         Name = m.Name,
+         Description = m.Description,
+         UnitOfMeasure = m.UnitOfMeasure
+         // Don't include CreatedAt and UpdatedAt
+     })
+     .ToListAsync();
 
 
             return new MaterialRequisitionWizardViewModel
@@ -549,6 +557,7 @@ namespace MRIV.Controllers
                     item.Material.Name = item.Name;
                     item.Material.Description = item.Description;
                     item.Material.CurrentLocationId = requisition?.IssueStation;
+                    item.Material.Status = (MaterialStatus)(int)item.Condition;
                 }
                 else
                 {
@@ -608,15 +617,20 @@ namespace MRIV.Controllers
         }
 
         [HttpPost]
-    public async Task<IActionResult> CreateApprovals(IFormCollection form)
-    {
+    public async Task<IActionResult> CreateApprovals(IFormCollection form, string direction = null)
+        {
+            // Handle Previous button
+            if (direction?.ToLower() == "previous")
+            {
+                return RedirectToAction("RequisitionItems");
+            }
             // 1. Retrieve session data
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
             var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
 
             if (requisition == null || approvalSteps == null)
             {
-                return RedirectToAction("Index"); // Handle missing session data
+                return RedirectToAction("RequisitionDetails"); // Handle missing session data
             }
 
             // 2. Update collector information
@@ -754,17 +768,59 @@ namespace MRIV.Controllers
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
             var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems");
             var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
-            if (requisition == null || approvalSteps == null || approvalSteps ==null)
+            if (requisition == null || requisitionItems == null || approvalSteps ==null)
             {
                 return RedirectToAction("Ticket"); // Handle missing session data
             }
-            // Save the requisition
+            //1. Save the requisition
             requisition.Status = RequisitionStatus.PendingApproval;
             _context.Requisitions.Add(requisition);
             await _context.SaveChangesAsync();
 
-            // Redirect to the Requisition Index action
-            TempData["SuccessMessage"] = "Material Requisition has been created successfully.Go to approvals to track progress";
+            // 2. Process requisition items
+            foreach (var item in requisitionItems)
+            {
+                // Link to parent requisition
+                item.RequisitionId = requisition.Id;
+
+                // Handle material creation
+                if (item.SaveToInventory && item.Material != null)
+                {
+                    // Check if material already exists
+                    var existingMaterial = await _context.Materials
+                        .FirstOrDefaultAsync(m => m.Code == item.Material.Code);
+
+                    if (existingMaterial != null)
+                    {
+                        // Use existing material
+                        item.MaterialId = existingMaterial.Id;
+                        item.Material = null; // Prevent duplicate creation
+                    }
+                    else
+                    {
+                        // Create new material
+                        _context.Materials.Add(item.Material);
+                        await _context.SaveChangesAsync(); // Generate MaterialId
+                        item.MaterialId = item.Material.Id;
+                    }
+                }
+
+                // 2. Add requisition item
+                _context.RequisitionItems.Add(item);
+            }
+
+                // 3. Save approval steps
+                foreach (var step in approvalSteps)
+                {
+                    step.RequisitionId = requisition.Id; // Link to parent
+                    step.CreatedAt = DateTime.Now;      // Add timestamp
+                }
+
+                _context.Approvals.AddRange(approvalSteps); // Add all steps at once
+                await _context.SaveChangesAsync();
+
+                // Redirect to the Requisition Index action
+                TempData["SuccessMessage"] = "Material Requisition has been created successfully.Go to approvals to track progress";
             return RedirectToAction("Index", "Requisitions");
         }
 

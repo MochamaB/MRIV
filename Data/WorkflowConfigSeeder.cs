@@ -29,14 +29,22 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,HR" } // Multiple allowed roles
+                                         // Additional filter parameter
+                            }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
                             ApproverRole = "user",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                // Additional filter parameter
+                            }
                         }
                     }
                 },
@@ -53,13 +61,22 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,HR" } // Multiple allowed roles
+                                // Additional filter parameter
+                            }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
                             ApproverRole = "dispatchAdmin",
+                             RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,HR" } // Multiple allowed roles
+                                // Additional filter parameter
+                            },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "admin" }
@@ -70,6 +87,11 @@ namespace MRIV.Data
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
                             ApproverRole = "vendor",
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                 { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                 // Additional filter parameter
+                             },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "vendor" }
@@ -80,7 +102,10 @@ namespace MRIV.Data
                             StepOrder = 3,
                             StepName = "Factory Employee Receipt",
                             ApproverRole = "FieldUser",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { 
+                                { "roles", "Hod,supervisor,Admin,FieldSupervisor" }
+                            }
                         }
                     }
                 },
@@ -97,13 +122,19 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor" }, { "station", "HQ" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
                             ApproverRole = "dispatchAdmin",
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                 { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                 
+                             },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "admin" }
@@ -114,6 +145,11 @@ namespace MRIV.Data
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
                             ApproverRole = "vendor",
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                 { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                 
+                             },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "vendor" }
@@ -124,7 +160,10 @@ namespace MRIV.Data
                             StepOrder = 3,
                             StepName = "Region Employee Receipt",
                             ApproverRole = "FieldSupervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                { "roles", "Hod,supervisor,Admin,FieldSupervisor" }
+                            }
                         }
                     }
                 },
@@ -141,13 +180,19 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor,HR" }, { "station", "HQ" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
                             ApproverRole = "dispatchAdmin",
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                 { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                  // Additional filter parameter
+                             },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "admin" }
@@ -158,6 +203,11 @@ namespace MRIV.Data
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
                             ApproverRole = "vendor",
+                            RoleParameters = new Dictionary<string, string>
+                             {
+                                 { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                                
+                             },
                             Conditions = new Dictionary<string, string>
                             {
                                 { "dispatchType", "vendor" }
@@ -178,14 +228,19 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
                             ApproverRole = "user",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,HR,user" } // Multiple allowed roles
+                               
+                            }
                         }
                     }
                 },
@@ -202,14 +257,22 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } // Multiple allowed roles
+                               
+                            }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Factory Employee Receipt",
                             ApproverRole = "FieldUser",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            {
+                                { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" }// Multiple allowed roles
+                           
+                            }
                         }
                     }
                 },
@@ -226,14 +289,16 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Region Employee Receipt",
                             ApproverRole = "FieldSupervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
                         }
                     }
                 },
@@ -250,7 +315,8 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
                         }
                     }
                 },
@@ -267,14 +333,16 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
                             ApproverRole = "user",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         }
                     }
                 },
@@ -291,14 +359,16 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Factory Employee Receipt",
                             ApproverRole = "FieldUser",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
                         }
                     }
                 },
@@ -315,14 +385,16 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         },
                         new WorkflowStepConfig
                         {
                             StepOrder = 2,
                             StepName = "Region Employee Receipt",
                             ApproverRole = "FieldSupervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
                         }
                     }
                 },
@@ -339,7 +411,8 @@ namespace MRIV.Data
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
-                            RoleParameters = new Dictionary<string, string>()
+                            RoleParameters = new Dictionary<string, string>
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
                         }
                     }
                 }

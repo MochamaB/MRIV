@@ -2,6 +2,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel;
+using MRIV.Enums;
 
 namespace MRIV.Models
 {
@@ -33,7 +34,9 @@ namespace MRIV.Models
         [DisplayName("Vendor/Supplier")]
         public string? VendorId { get; set; }
 
-        public string? Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 
+        public MaterialStatus? Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 
+
+
 
         // Navigation properties
         [ForeignKey("MaterialCategoryId")]

@@ -7,16 +7,16 @@
 
 }
 
-<div class="row">
+<div class="row" data-view="approvers-receivers">
     <!-- Personal Details Section -->
     <div class="col-md-10">
         <h4 class="ml-1"><b>Select Approvers and Receivers</b></h4>
         <hr style="border:2px solid black" />
     </div>
 </div>
-<form asp-controller="MaterialRequisition" asp-action="CreateApprovals" class="myForm">
+<form id="wizardApprovers"  asp-controller="MaterialRequisition" asp-action="CreateApprovals" class="myForm">
 <div class="row">
-    <div class="col-md-12" style="padding:2.0rem 4.0rem">
+    <div class="col-md-12" style="padding:2.0rem 4.0rem 0.1rem">
         <ul class="bullet-line-list">
             @foreach (var step in Model.ApprovalSteps)
             {
@@ -77,15 +77,15 @@
                                 <b>Collectors Information</b>
                             </h5>
                             <hr />
-                            <div class="col-md-9">
+                            <div class="col-md-10">
                                     <div class="form-group">
                                         <label class="control-label"> Collected By</label>  <span class="requiredlabel">*</span>
-                                        <input type="text" asp-for="Requisition.CollectorName" class="form-control " placeholder="Full Name" value="" required />
+                                        <input type="text" asp-for="Requisition.CollectorName" class="form-control " placeholder="Full Name" value="" />
                                         <span asp-validation-for="Requisition.CollectorName" class="text-danger"></span>
                                     </div>
                                     <div class="form-group">
                                         <label class="control-label"> Collectors ID No</label>  <span class="requiredlabel">*</span>
-                                        <input type="number" asp-for="Requisition.CollectorId" class="form-control " placeholder="ID Number" value="" required />
+                                        <input type="number" asp-for="Requisition.CollectorId" class="form-control " placeholder="ID Number" value="" />
                                         <span asp-validation-for="Requisition.CollectorId" class="text-danger"></span>
                                     </div>
                             </div>

@@ -30,13 +30,15 @@
                 <label class="control-label"> Ticket ID</label>  <span class="requiredlabel">*</span>
                 <input type="text" class="form-control form-control-sm " placeholder="" value="@Model.Requisition.TicketId" hidden />
                 <select class="formcontrol2" readonly>
-                    <option value=""> @Model.Requisition.TicketId</option>
+                    <option value="">
+                        @(Model.Requisition.TicketId == 0 ? "Inter Factory Borrowing" : Model.Requisition.TicketId.ToString())
+                    </option>
                 </select>
                 <span asp-validation-for="Requisition.TicketId" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label  class="control-label"> Department</label>  <span class="requiredlabel">*</span>
-                <select asp-for="Requisition.DepartmentId" class="formcontrol2"  readonly>
+                <select asp-for="Requisition.DepartmentId" class="formcontrol2"  readonly style="background-color:#fff">
                     @if (Model.LoggedInUserDepartment != null)
                     {
                         <option value="@Model.LoggedInUserDepartment.DepartmentId">@Model.LoggedInUserDepartment.DepartmentName</option>

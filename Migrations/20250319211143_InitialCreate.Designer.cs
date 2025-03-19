@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    [Migration("20250225181930_AddWorkflowConfig")]
-    partial class AddWorkflowConfig
+    [Migration("20250319211143_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -160,8 +160,8 @@ namespace MRIV.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Status")
-                        .HasColumnType("nvarchar(max)");
+                    b.Property<int?>("Status")
+                        .HasColumnType("int");
 
                     b.Property<string>("VendorId")
                         .HasMaxLength(50)
@@ -333,6 +333,76 @@ namespace MRIV.Migrations
                     b.HasIndex("RequisitionId");
 
                     b.ToTable("RequisitionItems");
+                });
+
+            modelBuilder.Entity("MRIV.Models.StationCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("DataSource")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("FilterCriteria")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("StationName")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("StationPoint")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("nvarchar(10)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("StationCategories");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Code = "headoffice",
+                            DataSource = "Department",
+                            StationName = "Head Office",
+                            StationPoint = "both"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Code = "factory",
+                            DataSource = "Station",
+                            FilterCriteria = "{\"exclude\": [\"region\", \"zonal\"]}",
+                            StationName = "Factory",
+                            StationPoint = "both"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Code = "region",
+                            DataSource = "Station",
+                            FilterCriteria = "{\"include\": [\"region\"]}",
+                            StationName = "Region",
+                            StationPoint = "both"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Code = "vendor",
+                            DataSource = "Vendor",
+                            StationName = "Vendor",
+                            StationPoint = "delivery"
+                        });
                 });
 
             modelBuilder.Entity("MRIV.Models.Tbrequisition", b =>

@@ -402,6 +402,9 @@ $(document).ready(function () {
 
     // Handle form submission
     $('#wizardRequisitionItems').off('submit').on('submit', function (e) {
+        if ($('input[name="direction"]').val() === 'previous') {
+            return true;
+        }
         if (!validateCurrentItems()) {
             e.preventDefault(); // Block submission
             console.log('Validation failed');
@@ -511,3 +514,5 @@ $(document).ready(function () {
         console.log('No .myForm found - skipping validation');
     }
 });
+
+

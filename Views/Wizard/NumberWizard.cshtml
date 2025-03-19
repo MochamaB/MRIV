@@ -172,67 +172,7 @@
     <!--  Script for the Ticket Search -->
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            // Only run search-related code if elements exist
-            const searchInput = document.getElementById('searchbar');
-            const clearButton = document.getElementById('clearSearch');
-            const dataTable = document.getElementById('searchResults');
-
-            if (searchInput && clearButton && dataTable) {
-                let timeoutId;
-
-                // Debounce function to limit AJAX calls
-                function debounce(func, delay) {
-                    return function (...args) {
-                        clearTimeout(timeoutId);
-                        timeoutId = setTimeout(() => func.apply(this, args), delay);
-                    };
-                }
-
-                // Handle search input
-                const handleSearch = debounce(function (searchTerm) {
-                    fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
-                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                    })
-                        .then(response => response.text())
-                        .then(html => {
-                            dataTable.innerHTML = html;
-                        })
-                        .catch(error => console.error('Error:', error));
-                }, 300);
-
-                // Show/Hide clear button & handle search
-                searchInput.addEventListener('input', function (e) {
-                    const searchTerm = e.target.value.trim();
-
-                    if (searchTerm.length > 0) {
-                        clearButton.classList.remove('d-none');
-                    } else {
-                        clearButton.classList.add('d-none');
-                    }
-
-                    if (searchTerm.length >= 2 || searchTerm.length === 0) {
-                        handleSearch(searchTerm);
-                    }
-                });
-
-                // Clear input
-                clearButton.addEventListener('click', function () {
-                    searchInput.value = '';
-                    clearButton.classList.add('d-none');
-                    handleSearch('');
-                });
-
-                // Form prevention
-                const searchForm = document.getElementById('searchForm');
-                if (searchForm) {
-                    searchForm.addEventListener('submit', function (e) {
-                        e.preventDefault();
-                        handleSearch(searchInput.value.trim());
-                    });
-                }
-            } else {
-                console.log('Search elements not found - skipping search initialization');
-            }
+           
         });
     </script>
 
@@ -408,6 +348,132 @@
             dispatchType.addEventListener('change', toggleDispatchSubFields);
         });
 
+    </script>
+    <!-- Scripts For Select Tickets View-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if the select-ticket view is loaded
+            if (document.querySelector('[data-view="select-ticket"]')) {
+                // This code only runs when the approvers-receivers partial is loaded
+                console.log('Select Ticket view detected');
+
+                // Only run search-related code if elements exist
+                const searchInput = document.getElementById('searchbar');
+                const clearButton = document.getElementById('clearSearch');
+                const dataTable = document.getElementById('searchResults');
+
+                if (searchInput && clearButton && dataTable) {
+                    let timeoutId;
+
+                    // Debounce function to limit AJAX calls
+                    function debounce(func, delay) {
+                        return function (...args) {
+                            clearTimeout(timeoutId);
+                            timeoutId = setTimeout(() => func.apply(this, args), delay);
+                        };
+                    }
+
+                    // Handle search input
+                    const handleSearch = debounce(function (searchTerm) {
+                        fetch(`/MaterialRequisition/Ticket?search=${encodeURIComponent(searchTerm)}`, {
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                            .then(response => response.text())
+                            .then(html => {
+                                dataTable.innerHTML = html;
+                            })
+                            .catch(error => console.error('Error:', error));
+                    }, 300);
+
+                    // Show/Hide clear button & handle search
+                    searchInput.addEventListener('input', function (e) {
+                        const searchTerm = e.target.value.trim();
+
+                        if (searchTerm.length > 0) {
+                            clearButton.classList.remove('d-none');
+                        } else {
+                            clearButton.classList.add('d-none');
+                        }
+
+                        if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                            handleSearch(searchTerm);
+                        }
+                    });
+
+                    // Clear input
+                    clearButton.addEventListener('click', function () {
+                        searchInput.value = '';
+                        clearButton.classList.add('d-none');
+                        handleSearch('');
+                    });
+
+                    // Form prevention
+                    const searchForm = document.getElementById('searchForm');
+                    if (searchForm) {
+                        searchForm.addEventListener('submit', function (e) {
+                            e.preventDefault();
+                            handleSearch(searchInput.value.trim());
+                        });
+                    }
+                } else {
+                    console.log('Search elements not found - skipping search initialization');
+                }
+            }
+        });
+    </script>
+                <!-- Scripts For Approvers Receivers View-->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if the approvers-receivers view is loaded
+            if (document.querySelector('[data-view="approvers-receivers"]')) {
+                // This code only runs when the approvers-receivers partial is loaded
+                console.log('ApproversReceivers view detected');
+
+                // Function to validate collector inputs
+                function validateCollectorInputs() {
+                    console.log('--- Validating collector inputs ---');
+                    let isValid = true;
+
+                    // Clear existing error messages
+                    $('.form-group').find('.text-danger').text('');
+
+                    // Get the input elements
+                    const $nameInput = $('[name$=".CollectorName"]');
+                    const $idInput = $('[name$=".CollectorId"]');
+
+                    // Validate name
+                    if (!$nameInput.val()) {
+                        $nameInput.closest('.form-group').find('.text-danger').text('Collector name is required');
+                        isValid = false;
+                    } else if ($nameInput.val().trim().length < 3 || !/^[a-zA-Z\s'-]+$/.test($nameInput.val())) {
+                        $nameInput.closest('.form-group').find('.text-danger').text('Please enter a valid name (at least 3 characters, letters only)');
+                        isValid = false;
+                    }
+
+                    // Validate ID
+                    if (!$idInput.val()) {
+                        $idInput.closest('.form-group').find('.text-danger').text('Collector ID is required');
+                        isValid = false;
+                    } else if ($idInput.val().trim().length < 6 || !/^\d+$/.test($idInput.val())) {
+                        $idInput.closest('.form-group').find('.text-danger').text('Please enter a valid ID number (at least 6 digits)');
+                        isValid = false;
+                    }
+
+                    return isValid;
+                }
+                $('#wizardApprovers').off('submit').on('submit', function (e) {
+                    if (!validateCollectorInputs()) {
+                        e.preventDefault(); // Block submission
+                        console.log('Validation failed');
+                        return false;
+                    }
+                    // If valid, LET DEFAULT SUBMISSION PROCEED
+                    console.log('Validation passed - allowing submission');
+                    // Remove $(this).submit() - this causes infinite recursion
+                    return true;
+                });
+            }
+        });
     </script>
       
   

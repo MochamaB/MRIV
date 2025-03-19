@@ -63,6 +63,37 @@
      
         
     </script>
+
+    <<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const elements = document.querySelectorAll('input, select, textarea');
+
+            // Function to update background color based on value
+            function updateBackground(element) {
+                if (element.tagName === 'SELECT') {
+                    element.style.backgroundColor = element.value ? '#f8f9fa' : '#fff'; // Light grey if value exists, white if empty
+                } else if (element.type === 'text' || element.tagName === 'TEXTAREA') {
+                    element.style.backgroundColor = element.value.trim() ? '#f8f9fa' : '#fff'; // Light grey if text is entered
+                } else if (element.type === 'number') {
+                    element.style.backgroundColor = (element.value && parseInt(element.value) > 0) ? '#f8f9fa' : '#fff';
+                }
+            }
+
+            // Apply background color initially
+            elements.forEach(element => updateBackground(element));
+
+            // Listen for changes to update background dynamically
+            elements.forEach(element => {
+                element.addEventListener('change', function () {
+                    updateBackground(this);
+                });
+
+                element.addEventListener('input', function () {
+                    updateBackground(this);
+                });
+            });
+        });
+    </script>
     <script>
         if (typeof jQuery == 'undefined') {
             console.log('jQuery is not loaded');
