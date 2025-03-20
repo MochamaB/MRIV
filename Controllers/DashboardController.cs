@@ -2,7 +2,7 @@
 
 namespace MRIV.Controllers
 {
-    public class SummaryController : Controller
+    public class DashboardController : Controller
     {
         public IActionResult Index()
         {

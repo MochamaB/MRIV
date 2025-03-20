@@ -19,8 +19,10 @@ namespace MRIV.Helpers
             return new SelectList(values, "Value", "Text");
         }
 
-        private static string GetEnumDescription<TEnum>(TEnum value)
+        public static string GetEnumDescription<TEnum>(TEnum value)
         {
+            if (value == null) return string.Empty; // Handle null
+
             return value.GetType()
                        .GetMember(value.ToString())
                        .FirstOrDefault()

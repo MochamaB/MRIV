@@ -30,10 +30,9 @@ namespace MRIV.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ApprovalStatus")
-                        .IsRequired()
+                    b.Property<int>("ApprovalStatus")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("int");
 
                     b.Property<string>("ApprovalStep")
                         .IsRequired()

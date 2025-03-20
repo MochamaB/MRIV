@@ -174,7 +174,7 @@ input.form-control.form-control-lg.border-left-0:focus {
 .table > thead {
     vertical-align: bottom;
     background-color: #326408;
-    text-align: center;
+    text-align: left;
 }
     .table > thead th {
         color: #fff; /* Change this color to whatever you want */
@@ -543,6 +543,12 @@ a .badge:hover {
 }
 
 .badge-active {
+    color: #038d21 !important;
+    border: 1px solid #038d21 !important;
+    background-color: #c0e4c3;
+}
+
+.badge-success {
     color: #038d21 !important;
     border: 1px solid #038d21 !important;
     background-color: #c0e4c3;

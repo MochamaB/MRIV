@@ -6,6 +6,8 @@ namespace MRIV.Services
     public interface IDepartmentService  // Changed from class to interface
     {
         // In IDepartmentService
+        // Add this new method
+        Task<string> GetLocationNameAsync(string locationKey);
         Task<Department> GetDepartmentByIdAsync(int departmentId);
         Task<Department> GetDepartmentByNameAsync(string deliveryStation);
         Task<Station> GetStationByStationNameAsync(string employeeStation);
@@ -18,7 +20,26 @@ namespace MRIV.Services
             {
                 _context = context;
             }
-            public async Task<Department> GetDepartmentByIdAsync(int departmentId)
+
+        public async Task<string> GetLocationNameAsync(string locationKey)
+        {
+            if (string.IsNullOrEmpty(locationKey))
+                return "Unknown";
+
+            // Try to get station
+            var station = await GetStationByStationNameAsync(locationKey);
+            if (station != null)
+                return station.StationName;
+
+            // Try to get department
+            var department = await GetDepartmentByNameAsync(locationKey);
+            if (department != null)
+                return department.DepartmentName;
+
+            // Return the original key if not found
+            return locationKey;
+        }
+        public async Task<Department> GetDepartmentByIdAsync(int departmentId)
             {
 
                 return await _context.Departments

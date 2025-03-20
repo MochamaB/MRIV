@@ -67,8 +67,8 @@ namespace MRIV.Controllers.Auth
                 }
                 else
                 {
-                    Console.WriteLine("Redirecting to Summary Index");
-                    return RedirectToAction("Index", "Summary");
+                    Console.WriteLine("Redirecting to Dashboard Index");
+                    return RedirectToAction("Index", "Dashboard");
                 }
             }
             else

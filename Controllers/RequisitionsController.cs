@@ -5,23 +5,98 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MRIV.Enums;
 using MRIV.Models;
+using MRIV.Services;
+using MRIV.ViewModels;
 
 namespace MRIV.Controllers
 {
     public class RequisitionsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly IEmployeeService _employeeService;
+        private readonly IDepartmentService _departmentService;
+        private readonly IApprovalService _approvalService;
 
-        public RequisitionsController(RequisitionContext context)
+        public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService, IApprovalService approvalService)
         {
             _context = context;
+            _employeeService = employeeService;
+            _departmentService = departmentService;
+            _approvalService = approvalService;
         }
 
         // GET: Requisitions
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Requisitions.ToListAsync());
+            // Get all requisitions
+            var requisitions = await _context.Requisitions
+                .OrderByDescending(r => r.Id)
+                .ToListAsync();
+
+            // Create view models
+            var viewModels = new List<RequisitionViewModel>();
+
+            foreach (var requisition in requisitions)
+            {
+                // Get department and employee details
+                var department = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId);
+                var employee = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo);
+
+                // Get location names
+                var issueLocationName = requisition.IssueStation;
+                var deliveryLocationName = requisition.DeliveryStation;
+
+                // Calculate days pending
+                var daysPending = requisition.CompleteDate.HasValue ? 0 :
+                    (DateTime.Now - (requisition.CreatedAt ?? DateTime.Now)).Days;
+                // Use the service to get the most significant approval
+                var currentApproval = await _approvalService.GetMostSignificantApprovalAsync(requisition.Id);
+
+                // Get approver details if we found a current approval
+                string approverName = "Unknown";
+                string approverDesignation = "";
+
+                if (currentApproval != null && !string.IsNullOrEmpty(currentApproval.PayrollNo))
+                {
+                    var approver = await _employeeService.GetEmployeeByPayrollAsync(currentApproval.PayrollNo);
+                    if (approver != null)
+                    {
+                        approverName = approver.Fullname;
+                        approverDesignation = approver.Designation ?? "";
+                    }
+                }
+
+                // Create view model
+                viewModels.Add(new RequisitionViewModel
+                {
+                    Id = requisition.Id,
+                    TicketId = requisition.TicketId,
+                    IssueStationCategory = requisition.IssueStationCategory,
+                    IssueStation = requisition.IssueStation,
+                    DeliveryStationCategory = requisition.DeliveryStationCategory,
+                    DeliveryStation = requisition.DeliveryStation,
+                    CreatedAt = requisition.CreatedAt,
+                    CompleteDate = requisition.CompleteDate,
+                    Status = requisition.Status,
+
+                    DepartmentName = department?.DepartmentName ?? "Unknown",
+                    EmployeeName = employee?.Fullname ?? "Unknown",
+                    IssueLocationName = issueLocationName,
+                    DeliveryLocationName = deliveryLocationName,
+                    DaysPending = daysPending,
+
+                    // Set approval properties
+                    CurrentApprovalStepNumber = currentApproval?.StepNumber,
+                    CurrentApprovalStepName = currentApproval?.ApprovalStep,
+                    CurrentApproverName = approverName,
+                    CurrentApproverDesignation = approverDesignation,
+                    CurrentApprovalStatus = currentApproval?.ApprovalStatus ?? ApprovalStatus.NotStarted
+                });
+            }
+
+            return View(viewModels);
         }
 
         // GET: Requisitions/Details/5

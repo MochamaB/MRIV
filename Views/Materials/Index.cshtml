@@ -1,8 +1,13 @@
-﻿@model IEnumerable<MRIV.Models.Material>
+﻿@using MRIV.Enums
+@using MRIV.Helpers
+@model IEnumerable<MRIV.Models.Material>
+
 
 @{
     ViewData["Title"] = "Index";
+    var vendorNames = ViewBag.VendorNames as Dictionary<string, string>;
 }
+
 
 <a asp-action="Create" class="btn btn-primary text-white mb-3 me-0  float-end">
     <div style="display: flex; align-items: center;">
@@ -34,7 +39,7 @@
     <thead>
         <tr>
             <th>
-                @Html.DisplayNameFor(model => model.MaterialCategory)
+                Material Category
             </th>
             <th>
                 @Html.DisplayNameFor(model => model.Code)
@@ -61,9 +66,9 @@
     <tbody>
 @foreach (var item in Model) {
         <tr>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
-                        </td>
+            <td>
+                @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
+            </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Code)
             </td>
@@ -76,11 +81,22 @@
             <td>
                 @Html.DisplayFor(modelItem => item.CurrentLocationId)
             </td>
+                        <td>
+                            @{
+                                var vendorName = "None";
+                                if (!string.IsNullOrEmpty(item.VendorId) && vendorNames.TryGetValue(item.VendorId, out string name))
+                                {
+                                    vendorName = name;
+                                }
+                            }
+                            @vendorName
+                        </td>
             <td>
-                @Html.DisplayFor(modelItem => item.VendorId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
+                           
+                            <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
+                                @EnumHelper.GetEnumDescription(item.Status)
+                            </span>
+
             </td>
             
             <td>

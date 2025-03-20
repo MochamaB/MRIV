@@ -4,17 +4,17 @@ namespace MRIV.Enums
 {
     public enum RequisitionStatus
     {
-        [Description("Pending Approval")]
-        PendingApproval = 1,
+        [Description("Not Started")]
+        NotStarted = 1,
 
-        [Description("Pending Dispatch")]
+        [Description("In Dispatch")]
         PendingDispatch = 2,
 
-        [Description("Pending Receipt")]
+        [Description("Receiving")]
         PendingReceipt = 3,
 
-        [Description("Receiving")]
-        Receiving = 4,
+        [Description("Cancelled")]
+        Cancelled = 4,
 
         [Description("Completed")]
         Completed = 5

@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    [Migration("20250319211143_InitialCreate")]
+    [Migration("20250320194445_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -33,10 +33,9 @@ namespace MRIV.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
-                    b.Property<string>("ApprovalStatus")
-                        .IsRequired()
+                    b.Property<int>("ApprovalStatus")
                         .HasMaxLength(20)
-                        .HasColumnType("nvarchar(20)");
+                        .HasColumnType("int");
 
                     b.Property<string>("ApprovalStep")
                         .IsRequired()

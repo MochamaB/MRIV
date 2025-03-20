@@ -66,6 +66,9 @@ public partial class RequisitionContext : DbContext
                   .OnDelete(DeleteBehavior.Cascade);
 
             entity.Ignore(r => r.Department);
+
+            entity.Property(e => e.ApprovalStatus)
+                  .HasConversion<int>(); // Store enum as an integer
         });
 
     

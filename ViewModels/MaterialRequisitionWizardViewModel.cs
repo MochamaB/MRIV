@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using MRIV.Enums;
 using MRIV.Models;
 using System.Net.Sockets;
 
@@ -69,7 +70,7 @@ namespace MRIV.ViewModels
         public string EmployeeName { get; set; }
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }
-        public string ApprovalStatus { get; set; }
+        public ApprovalStatus ApprovalStatus { get; set; }
         public DateTime CreatedAt { get; set; }
 
         // New properties for selection

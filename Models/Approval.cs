@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using MRIV.Enums;
 
 namespace MRIV.Models
 {
@@ -28,7 +29,7 @@ namespace MRIV.Models
 
         [Required]
         [StringLength(20)]
-        public string ApprovalStatus { get; set; }
+        public ApprovalStatus ApprovalStatus { get; set; }
 
         [StringLength(500)]
         public string? Comments { get; set; }

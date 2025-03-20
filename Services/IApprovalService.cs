@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MRIV.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
+using MRIV.Enums;
 
 namespace MRIV.Services
 {
@@ -11,6 +12,8 @@ namespace MRIV.Services
         Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee);
         Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors);
         Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition, List<Approval> approvalSteps);
+
+        Task<Approval> GetMostSignificantApprovalAsync(int requisitionId);
     }
     public class ApprovalService : IApprovalService
     {
@@ -106,7 +109,7 @@ namespace MRIV.Services
             for (int i = 0; i < approvalSteps.Count; i++)
             {
                 approvalSteps[i].StepNumber = i + 1;
-                approvalSteps[i].ApprovalStatus = i == 0 ? "Pending Approval" : "Not Started";
+                approvalSteps[i].ApprovalStatus = i == 0? ApprovalStatus.PendingApproval: ApprovalStatus.NotStarted;
                 approvalSteps[i].RequisitionId = requisition.Id;
                 approvalSteps[i].CreatedAt = DateTime.Now;
                 approvalSteps[i].UpdatedAt = i == 0 ? DateTime.Now : null;
@@ -312,6 +315,44 @@ namespace MRIV.Services
 
             // Return empty list for other cases
             return new List<EmployeeBkp>();
+        }
+
+        public async Task<Approval> GetMostSignificantApprovalAsync(int requisitionId)
+        {
+            // Get all approvals for this requisition
+            var approvals = await _context.Approvals
+                .Where(a => a.RequisitionId == requisitionId)
+                .OrderBy(a => a.StepNumber)
+                .ToListAsync();
+
+            return GetMostSignificantApproval(approvals);
+        }
+
+        // Helper method for internal use
+        private Approval GetMostSignificantApproval(List<Approval> approvals)
+        {
+            if (approvals == null || !approvals.Any())
+                return null;
+
+            // Priority order: PendingApproval, Completed, Rejected, Forwarded
+            var pendingApproval = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.PendingApproval);
+            if (pendingApproval != null)
+                return pendingApproval;
+
+            var completed = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Completed);
+            if (completed != null)
+                return completed;
+
+            var rejected = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Rejected);
+            if (rejected != null)
+                return rejected;
+
+            var forwarded = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Forwarded);
+            if (forwarded != null)
+                return forwarded;
+
+            // If none of the specific statuses are found, return the first approval
+            return approvals.FirstOrDefault();
         }
 
     }

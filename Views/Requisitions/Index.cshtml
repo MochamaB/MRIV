@@ -1,4 +1,7 @@
-﻿@model IEnumerable<MRIV.Models.Requisition>
+﻿
+@using MRIV.Enums
+@using MRIV.Helpers
+@model IEnumerable<MRIV.ViewModels.RequisitionViewModel>
 
 @{
     ViewData["Title"] = "Index";
@@ -31,135 +34,104 @@
            data-show-export="true"
            class="table">
     <thead>
-        <tr>
-            <th>
-                @Html.DisplayNameFor(model => model.TicketId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DepartmentId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.PayrollNo)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IssueStationCategory)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IssueStation)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DeliveryStationCategory)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DeliveryStation)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Remarks)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DispatchType)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DispatchPayrollNo)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.DispatchVendor)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CollectorName)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CollectorId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CompleteDate)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CreatedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.UpdatedAt)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.IsExternal)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.ForwardToAdmin)
-            </th>
-            <th></th>
+                <tr>
+                    <th>Id</th>
+                    <th>Ticket ID</th>
+                    <th>Issue Point</th>
+                    <th>Delivery Point</th>
+                    <th>Issue Date</th>
+                    <th>Issued By</th>
+                    <th>Status</th>
+                    <th>Approvals & Receipts</th> 
+                    <th></th>
+                </tr>
         </tr>
     </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-            <td>
-                @Html.DisplayFor(modelItem => item.TicketId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DepartmentId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.PayrollNo)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IssueStationCategory)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IssueStation)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DeliveryStationCategory)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DeliveryStation)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Remarks)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DispatchType)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DispatchPayrollNo)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.DispatchVendor)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CollectorName)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CollectorId)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Status)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CompleteDate)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CreatedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.UpdatedAt)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.IsExternal)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.ForwardToAdmin)
-            </td>
-            <td>
-                <a asp-action="Edit" asp-route-id="@item.Id">Edit</a> |
-                <a asp-action="Details" asp-route-id="@item.Id">Details</a> |
-                <a asp-action="Delete" asp-route-id="@item.Id">Delete</a>
-            </td>
-        </tr>
-}
-    </tbody>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>
+                            @(item.TicketId == 0 ? "Inter Factory Borrowing" : item.TicketId.ToString())
+                        </td>
+                        <td>
+                            <div class="font-weight-bold pb-2">
+                                @(item.IssueStationCategory?.ToLower() == "headoffice" ? "Head Office" :
+                                    item.IssueStationCategory?.ToLower() == "factory" ? "Factory" :
+                                    item.IssueStationCategory?.ToLower() == "region" ? "Region" :
+                                    item.IssueStationCategory)
+                            </div>
+                            <div class="text-muted">
+                                @item.IssueLocationName
+                            </div>
+                        </td>
+                        <td>
+                            <div class="font-weight-bold pb-2">
+                                @(item.DeliveryStationCategory?.ToLower() == "headoffice" ? "Head Office" :
+                                    item.DeliveryStationCategory?.ToLower() == "factory" ? "Factory" :
+                                    item.DeliveryStationCategory?.ToLower() == "region" ? "Region" :
+                                    item.DeliveryStationCategory?.ToLower() == "vendor" ? "Vendor" :
+                                    item.DeliveryStationCategory)
+                            </div>
+                            <div class="text-muted">
+                                @item.DeliveryLocationName
+                            </div>
+                        </td>
+                        <td>
+                            <div>@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
+                            @if (!item.CompleteDate.HasValue && item.DaysPending > 0)
+                            {
+                                <div class="@(item.DaysPending > 7 ? "text-danger" : "text-muted")">
+                                    <small>@item.DaysPending days pending</small>
+                                </div>
+                            }
+                        </td>
+                        <td>
+                            <div class="pb-2">@item.DepartmentName</div>
+                            <div class="text-muted">@item.EmployeeName</div>
+                        </td>
+                        <td>
+                            @if (item.Status != null)
+                            {
+                                <span class="badge @BadgeHelper.GetRequisitionStatusBadgeClass(item.Status.Value)">
+                                    @EnumHelper.GetEnumDescription(item.Status)
+                                </span>
+                            }
+                        </td>
+                        <td>
+
+                            @if (item.CurrentApprovalStepNumber.HasValue)
+                            {
+                                <div class="pb-2">
+                                    <span class="text-bold" style="font-weight:700"> AT STAGE:  @item.CurrentApprovalStepName</span> -
+                                    <span>@item.CurrentApproverName</span>
+                                    @if (!string.IsNullOrEmpty(item.CurrentApproverDesignation))
+                                    {
+                                        <span class="text-muted"> - @item.CurrentApproverDesignation</span>
+                                    }
+                                </div>
+                                <div>
+                                    <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.CurrentApprovalStatus)">
+                                        @EnumHelper.GetEnumDescription(item.CurrentApprovalStatus)
+                                    </span>
+                                </div>
+                            }
+                            else
+                            {
+                                <span class="text-muted">No approvals</span>
+                            }
+                        </td>
+                      
+                        <td>
+
+                            <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                            <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                            <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
 </table>
 </div>
 </div>

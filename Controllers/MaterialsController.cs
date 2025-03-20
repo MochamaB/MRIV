@@ -6,23 +6,41 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
+using MRIV.Services;
 
 namespace MRIV.Controllers
 {
     public class MaterialsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly VendorService _vendorService;
 
-        public MaterialsController(RequisitionContext context)
+        public MaterialsController(RequisitionContext context, VendorService vendorService)
         {
             _context = context;
+            _vendorService = vendorService;
         }
 
         // GET: Materials
         public async Task<IActionResult> Index()
         {
-            var requisitionContext = _context.Materials.Include(m => m.MaterialCategory);
-            return View(await requisitionContext.ToListAsync());
+            var materials = await _context.Materials
+       .Include(m => m.MaterialCategory)
+       .ToListAsync();
+
+            // Get all vendors in one batch
+            var allVendors = await _vendorService.GetVendorsAsync();
+
+            // Create a dictionary of vendor IDs to names
+            var vendorNames = allVendors.ToDictionary(
+                v => v.VendorID.ToString(),
+                v => v.Name
+            );
+
+            // Pass the dictionary to the view
+            ViewBag.VendorNames = vendorNames;
+
+            return View(materials);
         }
 
         // GET: Materials/Details/5

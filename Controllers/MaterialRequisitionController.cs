@@ -783,7 +783,7 @@ namespace MRIV.Controllers
                 try
                 {
                     // 1. Save the requisition
-                    requisition.Status = RequisitionStatus.PendingApproval;
+                    requisition.Status = RequisitionStatus.NotStarted;
                     requisition.UpdatedAt = DateTime.Now; // Set updated timestamp
                     _context.Requisitions.Add(requisition);
                     await _context.SaveChangesAsync();
