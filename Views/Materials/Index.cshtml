@@ -34,6 +34,9 @@
     <thead>
         <tr>
             <th>
+                @Html.DisplayNameFor(model => model.MaterialCategory)
+            </th>
+            <th>
                 @Html.DisplayNameFor(model => model.Code)
             </th>
             <th>
@@ -51,15 +54,16 @@
             <th>
                 @Html.DisplayNameFor(model => model.Status)
             </th>
-            <th>
-                @Html.DisplayNameFor(model => model.MaterialCategory)
-            </th>
+            
             <th></th>
         </tr>
     </thead>
     <tbody>
 @foreach (var item in Model) {
         <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
+                        </td>
             <td>
                 @Html.DisplayFor(modelItem => item.Code)
             </td>
@@ -78,9 +82,7 @@
             <td>
                 @Html.DisplayFor(modelItem => item.Status)
             </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
-            </td>
+            
             <td>
                             <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
                             <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>

@@ -762,67 +762,112 @@ namespace MRIV.Controllers
 
         }
         [HttpPost]
+        [HttpPost]
         public async Task<IActionResult> CompleteWizard()
         {
-            // Retrieve the requisition object from the session
-            var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
-            var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems");
-            var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
-            if (requisition == null || requisitionItems == null || approvalSteps ==null)
+            try
             {
-                return RedirectToAction("Ticket"); // Handle missing session data
-            }
-            //1. Save the requisition
-            requisition.Status = RequisitionStatus.PendingApproval;
-            _context.Requisitions.Add(requisition);
-            await _context.SaveChangesAsync();
+                // Retrieve the requisition object from the session
+                var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+                var requisitionItems = HttpContext.Session.GetObject<List<RequisitionItem>>("WizardRequisitionItems");
+                var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
 
-            // 2. Process requisition items
-            foreach (var item in requisitionItems)
-            {
-                // Link to parent requisition
-                item.RequisitionId = requisition.Id;
-
-                // Handle material creation
-                if (item.SaveToInventory && item.Material != null)
+                if (requisition == null || requisitionItems == null || approvalSteps == null)
                 {
-                    // Check if material already exists
-                    var existingMaterial = await _context.Materials
-                        .FirstOrDefaultAsync(m => m.Code == item.Material.Code);
-
-                    if (existingMaterial != null)
-                    {
-                        // Use existing material
-                        item.MaterialId = existingMaterial.Id;
-                        item.Material = null; // Prevent duplicate creation
-                    }
-                    else
-                    {
-                        // Create new material
-                        _context.Materials.Add(item.Material);
-                        await _context.SaveChangesAsync(); // Generate MaterialId
-                        item.MaterialId = item.Material.Id;
-                    }
+                    TempData["ErrorMessage"] = "Session data is missing. Please start the requisition process again.";
+                    return RedirectToAction("Ticket");
                 }
 
-                // 2. Add requisition item
-                _context.RequisitionItems.Add(item);
-            }
-
-                // 3. Save approval steps
-                foreach (var step in approvalSteps)
+                // Use a transaction to ensure all operations succeed or fail together
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    step.RequisitionId = requisition.Id; // Link to parent
-                    step.CreatedAt = DateTime.Now;      // Add timestamp
+                    // 1. Save the requisition
+                    requisition.Status = RequisitionStatus.PendingApproval;
+                    requisition.UpdatedAt = DateTime.Now; // Set updated timestamp
+                    _context.Requisitions.Add(requisition);
+                    await _context.SaveChangesAsync();
+
+                    // 2. Process requisition items
+                    foreach (var item in requisitionItems)
+                    {
+                        // Link to parent requisition
+                        item.RequisitionId = requisition.Id;
+
+                        // Handle material creation
+                        if (item.SaveToInventory && item.Material != null)
+                        {
+                            // Check if material already exists by code
+                            var existingMaterial = await _context.Materials
+                                .FirstOrDefaultAsync(m => m.Code == item.Material.Code);
+
+                            if (existingMaterial != null)
+                            {
+                                // Use existing material
+                                item.MaterialId = existingMaterial.Id;
+                                item.Material = null; // Prevent duplicate creation
+                            }
+                            else
+                            {
+                                // Create new material
+                                _context.Materials.Add(item.Material);
+                                await _context.SaveChangesAsync(); // Generate MaterialId
+                                item.MaterialId = item.Material.Id;
+                            }
+                        }
+                        else
+                        {
+                            // Ensure material is null if not saving to inventory
+                            item.Material = null;
+                            item.MaterialId = null;
+                        }
+
+                        // Add requisition item
+                        _context.RequisitionItems.Add(item);
+                    }
+                    await _context.SaveChangesAsync();
+
+                    // 3. Save approval steps
+                    foreach (var step in approvalSteps)
+                    {
+                        step.RequisitionId = requisition.Id; // Link to parent
+                        step.CreatedAt = DateTime.Now;      // Add timestamp
+                    }
+
+                    _context.Approvals.AddRange(approvalSteps); // Add all steps at once
+                    await _context.SaveChangesAsync();
+
+                    // Commit the transaction
+                    await transaction.CommitAsync();
+
+                    // Clear session data to prevent duplicate submissions
+                    HttpContext.Session.Remove("WizardRequisition");
+                    HttpContext.Session.Remove("WizardRequisitionItems");
+                    HttpContext.Session.Remove("WizardApprovalSteps");
+
+                    // Set success message
+                    TempData["SuccessMessage"] = "Material Requisition has been created successfully. Go to approvals to track progress.";
+
+                    // Redirect to the Requisition Index action
+                    return RedirectToAction("Index", "Requisitions");
                 }
+                catch (Exception ex)
+                {
+                    // Roll back the transaction on error
+                    await transaction.RollbackAsync();
+                    throw; // Re-throw to be caught by outer try-catch
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error completing requisition: {ex.Message}");
+                Console.WriteLine(ex.StackTrace);
 
-                _context.Approvals.AddRange(approvalSteps); // Add all steps at once
-                await _context.SaveChangesAsync();
-
-                // Redirect to the Requisition Index action
-                TempData["SuccessMessage"] = "Material Requisition has been created successfully.Go to approvals to track progress";
-            return RedirectToAction("Index", "Requisitions");
+                TempData["ErrorMessage"] = "An error occurred while saving the requisition. Please try again.";
+                return RedirectToAction("WizardSummary");
+            }
         }
 
-        }
+    }
     }
