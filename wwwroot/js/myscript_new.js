@@ -60,9 +60,7 @@ $(document).ready(function () {
             updateRowContent($row, index);
 
             // Update accordion header title
-            $row.find('.accordion-header .accordion-button').contents().filter(function() {
-                return this.nodeType === 3; // Text nodes only
-            }).first().replaceWith(`Item ${index + 1}`);
+            $row.find('.accordion-header .accordion-button').text(`Item ${index + 1}`);
 
             // Only show remove button for non-first rows
             if (index === 0) {
@@ -180,11 +178,9 @@ $(document).ready(function () {
                 'data-index': index,
                 title: 'Remove item',
                 css: {
-                    position: 'absolute',
-                    right: '10px',
-                    top: '10px',
-                    zIndex: 10,
-                    filter: 'invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%)'
+                    'margin-right': '15px',
+                    'z-index': 10,
+                    'filter': 'invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%)'
                 }
             });
 
@@ -194,8 +190,8 @@ $(document).ready(function () {
                 removeRow(index);
             });
 
-            // Append to accordion header button
-            $row.find('.accordion-header .accordion-button').append($removeBtn);
+            // Append to the flex container after the accordion button
+            $row.find('.accordion-header .d-flex').append($removeBtn);
         }
     }
 

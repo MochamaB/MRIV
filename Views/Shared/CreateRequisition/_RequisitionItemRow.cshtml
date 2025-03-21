@@ -8,82 +8,95 @@
     var materialCategories = ViewData["MaterialCategories"] as List<MRIV.Models.MaterialCategory> ?? new List<MRIV.Models.MaterialCategory>();
 }
 
-
-<div class="row item-row mb-5" data-index="@index" style="border:1px solid #f3ca6e; border-left:5px solid #fcb900; margin:0.1rem; padding:1rem;position: relative">
+<div class="accordion-item item-row" data-index="@index">
     <!-- Hidden form for removing this item -->
     <input type="hidden" name="itemIndex" value="@index" />
 
-    @if (index > 0)
-    {
-        <button type="button" class="btn-close remove-item"
-                style="position:absolute; right:10px; top:10px; z-index:10; filter: invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%);"
-                data-index="@index" title="Remove item">
-        </button>
-    }
-   
-
-    <div class="col-md-6">
-        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-        <div class="form-group">
-            <label class="control-label">Name</label> <span class="requiredlabel">*</span>
-            <input type="text" asp-for="Name" name="RequisitionItems[@index].Name" class="form-control" placeholder="Brand or Title" />
-            <span asp-validation-for="Name" class="text-danger"></span>
+    <h2 class="accordion-header" id="heading_@index">
+        <div class="d-flex justify-content-between align-items-center w-100">
+            <button class="accordion-button @(index == 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" 
+                    data-bs-target="#collapse_@index" aria-expanded="@(index == 0 ? "true" : "false")" 
+                    aria-controls="collapse_@index" style="flex: 1;">
+                Item @(index + 1)
+            </button>
+            @if (index > 0)
+            {
+                <button type="button" class="btn-close remove-item"
+                        style="margin-right: 15px; z-index:10; filter: invert(17%) sepia(100%) saturate(7480%) hue-rotate(357deg) brightness(92%) contrast(118%);"
+                        data-index="@index" title="Remove item">
+                </button>
+            }
         </div>
-        <div class="form-group">
-            <label class="control-label">Description (optional)</label>
-            <textarea asp-for="Description" name="RequisitionItems[@index].Description" class="auto-resize-textarea form-control" rows="1" placeholder="Enter Description..."></textarea>
-            <span asp-validation-for="Description" class="text-danger"></span>
-        </div>
-        <div class="form-group">
-            <label class="control-label">Quantity</label> <span class="requiredlabel">*</span>
-            <input type="number" asp-for="Quantity" name="RequisitionItems[@index].Quantity" class="form-control" value="1" />
-            <span asp-validation-for="Quantity" class="text-danger"></span>
-        </div>
-    </div>
-    <div class="col-md-6">
-        <div class="form-group">
-            <label class="control-label">Item Condition</label> <span class="requiredlabel">*</span>
-            <select asp-for="Condition" name="RequisitionItems[@index].Condition" asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemCondition>()" class="formcontrol2">
-                <option value="">Select Condition</option>
-            </select>
-            <span asp-validation-for="Condition" class="text-danger"></span>
-        </div>
-        <div class="form-group mb-2">
-            <label class="control-label">Status</label> <span class="requiredlabel">*</span>
-            <select asp-for="Status" name="RequisitionItems[@index].Status" asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemStatus>()" class="formcontrol2">
-                <option value="">Select Status</option>
-            </select>
-            <span asp-validation-for="Status" class="text-danger"></span>
-        </div>
-        <div class="form-group mb-1">
-            <div class="form-check form-check-flat form-check-primary">
-                <label class="form-check-label" style="font-size:1rem">
-                    <input  name="RequisitionItems[@index].SaveToInventory" type="checkbox" class="form-check-input" 
-                    id="saveToInventory_@index"
-                           value="true" />
-                    Add this Item to Inventoryy
-                    <i class="input-helper"></i>
-                </label>
-                <!-- Add a hidden field to ensure false values are submitted -->
-                <input type="hidden" name="RequisitionItems[@index].SaveToInventory" value="false" />
-            </div>
-           
-        </div>
-        <div class="mb-0">
-            <a class="table" data-bs-toggle="modal" data-bs-target="#inventoryModal_@index">
-                <i class="mdi mdi-plus-circle-outline mr-2" style="vertical-align: middle; font-size: 1.4rem;"></i>
-                Add Inventory Details
-            </a>
-        </div>
-        <div id="badgeContainer_@index" class="@(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
-            <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory_@index">
-                Category: @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name ?? "None" : "None")
-            </div>
-            <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode_@index">
-                SNo.: @(Model.Material?.Code ?? "None")
-            </div>
-            <div class="badge badge-active rounded mb-1" id="selectedMaterialVendor_@index">
-                Vendor: @(Model.Material?.VendorId != null ? vendors.FirstOrDefault(v => v.VendorID.ToString() == Model.Material.VendorId)?.Name ?? "None" : "None")
+    </h2>
+    <div id="collapse_@index" class="accordion-collapse collapse @(index == 0 ? "show" : "")" 
+         aria-labelledby="heading_@index" data-bs-parent="#itemsAccordion">
+        <div class="accordion-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <div class="form-group">
+                        <label class="control-label">Name</label> <span class="requiredlabel">*</span>
+                        <input type="text" asp-for="Name" name="RequisitionItems[@index].Name" class="form-control" placeholder="Brand or Title" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Description (optional)</label>
+                        <textarea asp-for="Description" name="RequisitionItems[@index].Description" class="auto-resize-textarea form-control" rows="1" placeholder="Enter Description..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger"></span>
+                    </div>
+                    <div class="form-group">
+                        <label class="control-label">Quantity</label> <span class="requiredlabel">*</span>
+                        <input type="number" asp-for="Quantity" name="RequisitionItems[@index].Quantity" class="form-control" value="1" />
+                        <span asp-validation-for="Quantity" class="text-danger"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="control-label">Item Condition</label> <span class="requiredlabel">*</span>
+                        <select asp-for="Condition" name="RequisitionItems[@index].Condition" asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemCondition>()" class="formcontrol2">
+                            <option value="">Select Condition</option>
+                        </select>
+                        <span asp-validation-for="Condition" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-2">
+                        <label class="control-label">Status</label> <span class="requiredlabel">*</span>
+                        <select asp-for="Status" name="RequisitionItems[@index].Status" asp-items="EnumHelper.GetEnumDescriptionSelectList<MRIV.Enums.RequisitionItemStatus>()" class="formcontrol2">
+                            <option value="">Select Status</option>
+                        </select>
+                        <span asp-validation-for="Status" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-1">
+                        <div class="form-check form-check-flat form-check-primary">
+                            <label class="form-check-label" style="font-size:1rem">
+                                <input  name="RequisitionItems[@index].SaveToInventory" type="checkbox" class="form-check-input" 
+                                id="saveToInventory_@index"
+                                    value="true" />
+                                Add this Item to Inventoryy
+                                <i class="input-helper"></i>
+                            </label>
+                            <!-- Add a hidden field to ensure false values are submitted -->
+                            <input type="hidden" name="RequisitionItems[@index].SaveToInventory" value="false" />
+                        </div>
+                    
+                    </div>
+                    <div class="mb-0">
+                        <a class="table" data-bs-toggle="modal" data-bs-target="#inventoryModal_@index">
+                            <i class="mdi mdi-plus-circle-outline mr-2" style="vertical-align: middle; font-size: 1.4rem;"></i>
+                            Add Inventory Details
+                        </a>
+                    </div>
+                    <div id="badgeContainer_@index" class="@(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
+                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory_@index">
+                            Category: @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name ?? "None" : "None")
+                        </div>
+                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode_@index">
+                            SNo.: @(Model.Material?.Code ?? "None")
+                        </div>
+                        <div class="badge badge-active rounded mb-1" id="selectedMaterialVendor_@index">
+                            Vendor: @(Model.Material?.VendorId != null ? vendors.FirstOrDefault(v => v.VendorID.ToString() == Model.Material.VendorId)?.Name ?? "None" : "None")
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
