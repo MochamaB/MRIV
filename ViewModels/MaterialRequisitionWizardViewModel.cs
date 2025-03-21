@@ -1,10 +1,13 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.Rendering;
+using MRIV.Attributes;
 using MRIV.Enums;
 using MRIV.Models;
+using System.ComponentModel.DataAnnotations;
 using System.Net.Sockets;
 
 namespace MRIV.ViewModels
 {
+    [InterFactoryBorrowingValidator]
     public class MaterialRequisitionWizardViewModel
     {
         public List<WizardStepViewModel> Steps { get; set; } = new();
@@ -87,5 +90,3 @@ namespace MRIV.ViewModels
 
 
 }
-
-

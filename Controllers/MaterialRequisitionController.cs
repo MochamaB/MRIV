@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -338,6 +338,34 @@ namespace MRIV.Controllers
             }
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition") ?? new Requisition();
           
+            // Server-side validation for Inter-factory Borrowing
+            if (requisition.TicketId == 0) // Inter-factory Borrowing
+            {
+                // Check if both station categories are set to 'factory'
+                if (model.Requisition != null && 
+                    (model.Requisition.IssueStationCategory != "factory" || 
+                     model.Requisition.DeliveryStationCategory != "factory"))
+                {
+                    ModelState.AddModelError("", "For Inter-factory Borrowing, both Issue and Delivery Station Categories must be set to 'Factory'.");
+                    ModelState.AddModelError("Requisition.IssueStationCategory", "Must be 'Factory' for Inter-factory Borrowing");
+                    ModelState.AddModelError("Requisition.DeliveryStationCategory", "Must be 'Factory' for Inter-factory Borrowing");
+                    
+                    // Store the errors in TempData
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .ToDictionary(
+                            kvp => kvp.Key,
+                            kvp => kvp.Value.Errors.Select(e => e.ErrorMessage).ToArray()
+                        );
+
+                    TempData["ValidationErrors"] = JsonSerializer.Serialize(errors);
+                    TempData["ErrorMessage"] = "For Inter-factory Borrowing, both Issue and Delivery Station Categories must be set to 'Factory'.";
+                    
+                    // Redirect back to the GET action
+                    return RedirectToAction("RequisitionDetails");
+                }
+            }
+
             if (model.Requisition != null)
             {
                 // Map properties

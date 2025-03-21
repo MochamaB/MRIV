@@ -466,6 +466,11 @@ select[readonly] {
     background-color: #7ee581;
     border-color: #326408;
 }
+.alert-info {
+    color: #006e9b;
+    background-color: #dcf5ff;
+    border-color: #006e9b;
+}
 
 /* === BULLET LIST === */
 .bullet-line-list {
