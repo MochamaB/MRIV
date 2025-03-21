@@ -64,6 +64,11 @@ namespace MRIV.ViewModels
 
     public class ApprovalStepViewModel
     {
+        public int Id { get; set; }  // Add this
+        public int RequisitionId { get; set; }  // Add this
+        public string EmployeeDesignation { get; set; }  // Add this
+
+
         public int? StepNumber { get; set; }
         public string ApprovalStep { get; set; }
         public string PayrollNo { get; set; }

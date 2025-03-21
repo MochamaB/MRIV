@@ -79,13 +79,12 @@
                             </div>
                         </td>
                         <td>
-                            <div>@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
-                            @if (!item.CompleteDate.HasValue && item.DaysPending > 0)
-                            {
+                            <div class="pb-2">@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
+                           
                                 <div class="@(item.DaysPending > 7 ? "text-danger" : "text-muted")">
-                                    <small>@item.DaysPending days pending</small>
-                                </div>
-                            }
+                                    <small>Days Pending: @item.DaysPending </small>
+                               </div>
+                            
                         </td>
                         <td>
                             <div class="pb-2">@item.DepartmentName</div>
