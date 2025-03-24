@@ -12,6 +12,10 @@ namespace MRIV.Attributes
     {
         protected override ValidationResult IsValid(object value, ValidationContext validationContext)
         {
+            // Always return success to disable this validator
+            return ValidationResult.Success;
+            
+            /* Original validation logic - commented out
             var model = validationContext.ObjectInstance as MaterialRequisitionWizardViewModel;
             
             if (model?.Requisition == null)
@@ -30,14 +34,18 @@ namespace MRIV.Attributes
             }
 
             return ValidationResult.Success;
+            */
         }
 
         public void AddValidation(ClientModelValidationContext context)
         {
+            // Do nothing to disable client-side validation
+            /* Original client-side validation - commented out
             // Add client-side validation attributes
             context.Attributes["data-val"] = "true";
             context.Attributes["data-val-interfactoryborrowing"] = 
                 "For Inter-factory Borrowing, both Issue and Delivery Station Categories must be set to 'Factory'.";
+            */
         }
     }
 }

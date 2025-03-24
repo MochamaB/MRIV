@@ -8,6 +8,32 @@
     var materialCategories = ViewData["MaterialCategories"] as List<MRIV.Models.MaterialCategory> ?? new List<MRIV.Models.MaterialCategory>();
 }
 
+<style>
+    .accordion-button {
+        background-color: white !important; /* Inactive state color */
+        transition: background-color 0.3s ease; /* Optional smooth transition */
+    }
+
+        .accordion-button:not(.collapsed) {
+            background-color: #f8f9fa !important; /* Active state color (grey) */
+            box-shadow: none !important; /* Remove default Bootstrap focus shadow */
+        }
+
+        /* Optional: Change text color if needed */
+        .accordion-button:not(.collapsed) {
+            color: #000000 !important; /* Text color when active */
+        }
+
+    .remove-item {
+        width: 20px;
+        height: 20px;
+        font-size: 15px;
+        padding: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+        </style>
 <div class="accordion-item item-row" data-index="@index">
     <!-- Hidden form for removing this item -->
     <input type="hidden" name="itemIndex" value="@index" />
@@ -38,6 +64,13 @@
                         <label class="control-label">Name</label> <span class="requiredlabel">*</span>
                         <input type="text" asp-for="Name" name="RequisitionItems[@index].Name" class="form-control" placeholder="Brand or Title" />
                         <span asp-validation-for="Name" class="text-danger"></span>
+                        
+                       
+                        
+                        <!-- Hidden fields for material data -->
+                        <input type="hidden" asp-for="Material.Code" name="RequisitionItems[@index].Material.Code" />
+                        <input type="hidden" asp-for="Material.MaterialCategoryId" name="RequisitionItems[@index].Material.MaterialCategoryId" />
+                        <input type="hidden" asp-for="Material.VendorId" name="RequisitionItems[@index].Material.VendorId" />
                     </div>
                     <div class="form-group">
                         <label class="control-label">Description (optional)</label>
@@ -71,7 +104,7 @@
                                 <input  name="RequisitionItems[@index].SaveToInventory" type="checkbox" class="form-check-input" 
                                 id="saveToInventory_@index"
                                     value="true" />
-                                Add this Item to Inventoryy
+                                Add this Item to Inventory
                                 <i class="input-helper"></i>
                             </label>
                             <!-- Add a hidden field to ensure false values are submitted -->
@@ -85,16 +118,17 @@
                             Add Inventory Details
                         </a>
                     </div>
-                    <div id="badgeContainer_@index" class="@(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
-                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCategory_@index">
-                            Category: @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name ?? "None" : "None")
-                        </div>
-                        <div class="badge badge-active rounded mb-1 me-1" id="selectedMaterialCode_@index">
-                            SNo.: @(Model.Material?.Code ?? "None")
-                        </div>
-                        <div class="badge badge-active rounded mb-1" id="selectedMaterialVendor_@index">
-                            Vendor: @(Model.Material?.VendorId != null ? vendors.FirstOrDefault(v => v.VendorID.ToString() == Model.Material.VendorId)?.Name ?? "None" : "None")
-                        </div>
+                    <!-- Material info badges -->
+                    <div id="badgeContainer_@index" class="mt-2 @(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
+                        <span id="selectedMaterialCategory_@index" class="badge bg-warning text-dark me-2">
+                            @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name : "")
+                        </span>
+                        <span id="selectedMaterialCode_@index" class="badge bg-warning text-dark me-2">
+                            @(Model.Material?.Code ?? "")
+                        </span>
+                        <span id="selectedMaterialVendor_@index" class="badge bg-warning text-dark me-2">
+                            @(Model.Material?.VendorId != null ? vendors.FirstOrDefault(v => v.VendorID.ToString() == Model.Material.VendorId)?.Name : "")
+                        </span>
                     </div>
                 </div>
             </div>

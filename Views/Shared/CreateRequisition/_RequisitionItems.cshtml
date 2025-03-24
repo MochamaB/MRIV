@@ -16,18 +16,20 @@
 
 <div class="col-md-10 mb-2 mt-2">
     <div class="row g-2 align-items-center">
-        <div class="col-md-8">
-            <div class="input-group">
-                <span class="input-group-text" style="background: white; border-right: none;">
-                    <i class="mdi mdi-magnify" style="font-size: 1.6rem; color: #326408;"></i>
-                </span>
-                <input type="text" id="materialSearch" class="form-control" style="border-left: none;"
-                       placeholder="Search materials by code or name..." />
-                <span class="input-group-text" style="cursor: pointer; background: white; border-left: none;border-left: none;">
-                    <i class="mdi mdi-close-circle d-none" id="clearMaterialSearch" style="font-size: 1.4rem; color: #dc3545;"></i>
-                </span>
-            </div>
-            <div id="searchResultsContainer" class="dropdown-menu w-100" style="max-height: 300px; overflow-y: auto; display: none;">
+        <div class="col-md-9">
+            <form id="materialSearchForm" class="mb-0">
+                <div class="input-group">
+                    <span class="input-group-text" style="background: white; border-right: none;">
+                        <i class="mdi mdi-magnify" style="font-size: 1.6rem; color: #326408;"></i>
+                    </span>
+                    <input type="text" id="materialSearch" class="form-control" style="border-left: none;border-right:none"
+                           placeholder="Search materials by code or name..." />
+                    <span class="input-group-text" style="cursor: pointer; background: white; border-left: none;">
+                        <i class="mdi mdi-close-circle d-none" id="clearMaterialSearch" style="font-size: 1.4rem; color: #dc3545;"></i>
+                    </span>
+                </div>
+            </form>
+            <div id="searchResultsContainer" class="dropdown-menu" style="max-height: 300px; overflow-y: auto; display: none;">
                 <!-- Search results will be populated here -->
             </div>
         </div>
@@ -53,3 +55,25 @@
     <!-- Add the wizard buttons -->
     <partial name="_WizardNavigation" />
 </form>
+
+    <script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("materialSearch");
+        const searchResultsContainer = document.getElementById("searchResultsContainer");
+        const searchForm = document.getElementById("materialSearchForm");
+
+        function updateSearchResultsWidth() {
+            if (searchInput && searchResultsContainer) {
+                const inputWidth = searchForm.querySelector('.input-group').offsetWidth;
+                searchResultsContainer.style.width = inputWidth + "px";
+            }
+        }
+
+        // Adjust width on page load
+        updateSearchResultsWidth();
+
+        // Adjust width if the window resizes
+        window.addEventListener("resize", updateSearchResultsWidth);
+    });
+
+</script>

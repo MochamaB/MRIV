@@ -2,6 +2,7 @@ $(document).ready(function () {
     // Initial setup
     updateRowIndexes();
     setupModalEvents();
+    setupMaterialSearch();
 
     // Add new item button click handler
     $('#addNewItemBtn').on('click', function () {
@@ -356,6 +357,181 @@ $(document).ready(function () {
                 }
             });
         });
+    }
+
+    // Material search functionality
+    function setupMaterialSearch() {
+        // Elements
+        const $searchInput = $('#materialSearch');
+        const $clearButton = $('#clearMaterialSearch');
+        const $resultsContainer = $('#searchResultsContainer');
+        const $searchForm = $('#materialSearchForm');
+        
+        if (!$searchInput.length || !$resultsContainer.length) {
+            console.log('Material search elements not found - skipping search initialization');
+            return;
+        }
+        
+        let timeoutId;
+        
+        // Debounce function to limit AJAX calls
+        function debounce(func, delay) {
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+        
+        // Handle search input
+        const handleSearch = debounce(function(searchTerm) {
+            if (searchTerm.length < 2 && searchTerm.length > 0) {
+                return; // Don't search for very short terms
+            }
+            
+            if (searchTerm.length === 0) {
+                $resultsContainer.hide();
+                return;
+            }
+            
+            // Show loading indicator
+            $resultsContainer.html('<div class="p-3 text-center"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+            $resultsContainer.show();
+            
+            // Get anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            
+            // Call the search API
+            $.ajax({
+                url: `/MaterialRequisition/SearchMaterials?searchTerm=${encodeURIComponent(searchTerm)}`,
+                type: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(html) {
+                    $resultsContainer.html(html);
+                    $resultsContainer.show();
+                    
+                    // Attach event handlers to the search results
+                    attachMaterialSelectionHandlers();
+                },
+                error: function() {
+                    $resultsContainer.html('<div class="p-3 text-danger">Error searching materials</div>');
+                }
+            });
+        }, 300);
+        
+        // Show/Hide clear button & handle search
+        $searchInput.on('input', function() {
+            const searchTerm = $(this).val().trim();
+            
+            if (searchTerm.length > 0) {
+                $clearButton.removeClass('d-none');
+            } else {
+                $clearButton.addClass('d-none');
+                $resultsContainer.hide();
+            }
+            
+            if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                handleSearch(searchTerm);
+            }
+        });
+        
+        // Clear input
+        $clearButton.on('click', function() {
+            $searchInput.val('');
+            $clearButton.addClass('d-none');
+            $resultsContainer.hide();
+        });
+        
+        // Form prevention
+        $searchForm.on('submit', function(e) {
+            e.preventDefault();
+            handleSearch($searchInput.val().trim());
+        });
+        
+        // Close dropdown when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#materialSearchForm').length && 
+                !$(e.target).closest('#searchResultsContainer').length) {
+                $resultsContainer.hide();
+            }
+        });
+        
+        // Function to attach event handlers to material selection buttons
+        function attachMaterialSelectionHandlers() {
+            $('.material-result, .select-material').off('click').on('click', function(e) {
+                e.preventDefault();
+                
+                const $this = $(this);
+                const materialId = $this.data('id');
+                const materialName = $this.data('name');
+                const materialCode = $this.data('code');
+                const materialDescription = $this.data('description');
+                const categoryId = $this.data('category-id');
+                const categoryName = $this.data('category-name');
+                const vendorId = $this.data('vendor-id');
+                
+                // Find the currently open accordion
+                const $openAccordion = $('.accordion-collapse.show');
+                const $currentRow = $openAccordion.closest('.item-row');
+                const index = $currentRow.data('index');
+                
+                // Check if the current row is already populated
+                const currentName = $openAccordion.find(`[name="RequisitionItems[${index}].Name"]`).val();
+                
+                // If the current row is already populated, create a new row
+                if (currentName && currentName.trim() !== '') {
+                    // Trigger the add new item button click
+                    $('#addNewItemBtn').click();
+                    
+                    // Now get the newly created row (which should be open)
+                    const $newOpenAccordion = $('.accordion-collapse.show');
+                    const $newRow = $newOpenAccordion.closest('.item-row');
+                    const newIndex = $newRow.data('index');
+                    
+                    // Fill in the material details for the new row
+                    populateMaterialDetails($newOpenAccordion, newIndex, materialName, materialId, materialCode, 
+                        materialDescription, categoryName, vendorId);
+                } else {
+                    // Use the current row
+                    populateMaterialDetails($openAccordion, index, materialName, materialId, materialCode, 
+                        materialDescription, categoryName, vendorId);
+                }
+                
+                // Close the dropdown
+                $resultsContainer.hide();
+                $clearButton.addClass('d-none');
+                $searchInput.val('');
+            });
+        }
+        
+        // Helper function to populate material details in a row
+        function populateMaterialDetails($accordion, index, name, id, code, description, categoryName, vendorId) {
+            // Fill in the material details
+            $accordion.find(`[name="RequisitionItems[${index}].Name"]`).val(name);
+            $accordion.find(`[name="RequisitionItems[${index}].MaterialId"]`).val(id);
+            $accordion.find(`[name="RequisitionItems[${index}].MaterialCode"]`).val(code);
+            
+            // Set the description if available
+            if (description) {
+                $accordion.find(`[name="RequisitionItems[${index}].Description"]`).val(description);
+            }
+            
+            // Update hidden fields for material data
+            $accordion.find(`[name="RequisitionItems[${index}].Material.Code"]`).val(code);
+            $accordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
+            $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
+            
+            // Update badges
+            const $badgeContainer = $accordion.find(`#badgeContainer_${index}`);
+            $badgeContainer.removeClass('d-none');
+            $accordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName}`);
+            $accordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${code}`);
+            
+            if (vendorId) {
+                $accordion.find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${vendorId}`);
+            }
+        }
     }
 
     // Validate all current items before adding a new one

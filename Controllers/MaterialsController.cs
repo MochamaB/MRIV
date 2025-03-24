@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 using MRIV.Services;
+using MRIV.Enums;
+using MRIV.ViewModels;
 
 namespace MRIV.Controllers
 {
@@ -14,11 +16,19 @@ namespace MRIV.Controllers
     {
         private readonly RequisitionContext _context;
         private readonly VendorService _vendorService;
+        private readonly IStationCategoryService _stationCategoryService;
+        private readonly IEmployeeService _employeeService;
 
-        public MaterialsController(RequisitionContext context, VendorService vendorService)
+        public MaterialsController(
+            RequisitionContext context, 
+            VendorService vendorService,
+            IStationCategoryService stationCategoryService,
+            IEmployeeService employeeService)
         {
             _context = context;
             _vendorService = vendorService;
+            _stationCategoryService = stationCategoryService;
+            _employeeService = employeeService;
         }
 
         // GET: Materials
@@ -63,10 +73,30 @@ namespace MRIV.Controllers
         }
 
         // GET: Materials/Create
-        public IActionResult Create()
+        public async Task<IActionResult> Create()
         {
-            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name");
-            return View();
+            var viewModel = new CreateMaterialViewModel();
+            
+            // Get the user's current location/station for context
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (!string.IsNullOrEmpty(payrollNo))
+            {
+                var (employee, department, userStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+            }
+            
+            // Load material categories
+            viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name");
+            
+            // Load vendors
+            viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name");
+            
+            // Load station categories for location selection
+            viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            // Set default status
+            viewModel.Material.Status = MaterialStatus.GoodCondition;
+            
+            return View(viewModel);
         }
 
         [HttpGet]
@@ -90,21 +120,65 @@ namespace MRIV.Controllers
             return Json(baseCode);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetLocationsForCategory(string category, string selectedValue = null)
+        {
+            if (string.IsNullOrEmpty(category))
+            {
+                return Json(new List<object>());
+            }
+
+            // Use a different approach - return formatted data directly
+            var result = await _stationCategoryService.GetLocationItemsForJsonAsync(category, selectedValue);
+            return Json(result);
+        }
+
         // POST: Materials/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,MaterialCategoryId,Code,Name,Description,CurrentLocationId,VendorId,Status")] Material material)
+        public async Task<IActionResult> Create(CreateMaterialViewModel viewModel)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(material);
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
+                try
+                {
+                    // Generate a unique code if not provided
+                    if (string.IsNullOrEmpty(viewModel.Material.Code))
+                    {
+                        // Format: MC-{CategoryId}-{Timestamp}
+                        viewModel.Material.Code = $"MC-{viewModel.Material.MaterialCategoryId}-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+                    }
+                    
+                    // Save the material to the database
+                    _context.Add(viewModel.Material);
+                    await _context.SaveChangesAsync();
+                    
+                    // Set success message
+                    TempData["SuccessMessage"] = $"Material '{viewModel.Material.Name}' created successfully.";
+                    
+                    return RedirectToAction(nameof(Index));
+                }
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Error creating material: {ex.Message}");
+                }
             }
-            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", material.MaterialCategoryId);
-            return View(material);
+            
+            // If we got this far, something failed, redisplay form
+            // Reload dropdown lists
+            viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", viewModel.Material.MaterialCategoryId);
+            viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", viewModel.Material.VendorId);
+            viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
+            {
+                viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
+                    viewModel.SelectedLocationCategory, viewModel.Material.CurrentLocationId);
+            }
+            
+            return View(viewModel);
         }
 
         // GET: Materials/Edit/5

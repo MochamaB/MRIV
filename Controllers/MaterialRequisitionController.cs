@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.ViewFeatures;
+
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Mono.TextTemplating;
@@ -68,7 +70,7 @@ namespace MRIV.Controllers
             model.LoggedInUserDepartment = loggedInUserDepartment ?? new Department();
             model.LoggedInUserStation = loggedInUserStation ?? new Station();
             model.Requisition ??= new Requisition();
-            // ✅ Preserve existing RequisitionItems (DO NOT overwrite)
+            // Preserve existing RequisitionItems (DO NOT overwrite)
             var existingRequisitionItems = model.RequisitionItems ?? new List<RequisitionItem>();
 
             using var ktdaContext = new KtdaleaveContext();
@@ -85,7 +87,7 @@ namespace MRIV.Controllers
 
             // Populate Vendors
             model.Vendors = await _vendorService.GetVendorsAsync();
-            // ✅ Restore `RequisitionItems`
+            // Restore `RequisitionItems`
             model.RequisitionItems = existingRequisitionItems;
 
             // Set common paths
@@ -343,8 +345,8 @@ namespace MRIV.Controllers
             {
                 // Check if both station categories are set to 'factory'
                 if (model.Requisition != null && 
-                    (model.Requisition.IssueStationCategory != "factory" || 
-                     model.Requisition.DeliveryStationCategory != "factory"))
+                    (model.Requisition.IssueStationCategory?.ToLower() != "factory" || 
+                     model.Requisition.DeliveryStationCategory?.ToLower() != "factory"))
                 {
                     ModelState.AddModelError("", "For Inter-factory Borrowing, both Issue and Delivery Station Categories must be set to 'Factory'.");
                     ModelState.AddModelError("Requisition.IssueStationCategory", "Must be 'Factory' for Inter-factory Borrowing");
@@ -427,7 +429,7 @@ namespace MRIV.Controllers
             // Save updated requisition back to session
             HttpContext.Session.SetObject("WizardRequisition", requisition);
       
-            // ✅ Retrieve logged-in user 
+            // Retrieve logged-in user 
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) =
                 await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
@@ -536,31 +538,69 @@ namespace MRIV.Controllers
 
             return Json(new { code = uniqueCode });
         }
-        [HttpPost]
+
+        [HttpGet]
         public async Task<IActionResult> SearchMaterials(string searchTerm)
         {
-            if (string.IsNullOrEmpty(searchTerm))
+            try
             {
-                return Json(new List<object>());
-            }
+                if (string.IsNullOrEmpty(searchTerm))
+                {
+                    return PartialView("CreateRequisition/_MaterialSearchResults", new List<Material>());
+                }
 
-            // Search for materials matching the term
-            var materials = await _context.Materials
-                .Include(m => m.MaterialCategory)
-                .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm))
-                .Take(10)
-                .Select(m => new {
+                // Get user's location/station
+                var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+                var (_, _, userStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                
+                // Get requisition from session to check issue station
+                var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
+                var issueStationId = requisition?.IssueStation;
+
+                // Search for materials matching the term and available at the issue station
+                var query = _context.Materials
+                    .Include(m => m.MaterialCategory)
+                    .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));
+                    
+                // Only filter by location if we have a valid issue station
+                if (!string.IsNullOrEmpty(issueStationId))
+                {
+                    query = query.Where(m => m.CurrentLocationId == issueStationId);
+                }
+                
+                var materials = await query.Take(10).ToListAsync();
+
+                // Return partial view for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return PartialView("CreateRequisition/_MaterialSearchResults", materials);
+                }
+
+                // Return JSON for non-AJAX requests (fallback)
+                return Json(materials.Select(m => new {
                     id = m.Id,
                     name = m.Name,
                     code = m.Code,
                     description = m.Description,
                     categoryId = m.MaterialCategoryId,
-                    categoryName = m.MaterialCategory.Name,
+                    categoryName = m.MaterialCategory?.Name,
                     vendorId = m.VendorId
-                })
-                .ToListAsync();
-
-            return Json(materials);
+                }));
+            }
+            catch (Exception ex)
+            {
+                // Log the error
+                Console.WriteLine($"Error in SearchMaterials: {ex.Message}");
+                
+                // Return a specific error message for AJAX requests
+                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
+                {
+                    return PartialView("CreateRequisition/_MaterialSearchResults", new List<Material>());
+                }
+                
+                // Return an empty result for non-AJAX requests
+                return Json(new { error = ex.Message });
+            }
         }
 
         [HttpPost]
@@ -898,4 +938,4 @@ namespace MRIV.Controllers
         }
 
     }
-    }
+}

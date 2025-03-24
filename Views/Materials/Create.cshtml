@@ -1,67 +1,164 @@
-﻿@model MRIV.Models.Material
+@model MRIV.ViewModels.CreateMaterialViewModel
 
 @{
-    ViewData["Title"] = "Create";
+    ViewData["Title"] = "Create Material";
 }
 
-<div class=" contwrapper">
-<div class="row">
+<div class="contwrapper">
+    <div class="row">
         <div class="col-md-10">
-        <h4>Add Material</h4>
-       
-        <hr />
-         </div>
-    <div class="col-md-6 ms-1">
-        <form asp-action="Create">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <div class="form-group">
-                    <label asp-for="MaterialCategoryId" class="control-label"></label><span class="requiredlabel">*</span>
-                <select asp-for="MaterialCategoryId" class ="formcontrol2" asp-items="ViewBag.MaterialCategoryId"></select>
-            </div>
-            <div class="form-group">
+            <h4>Add Material</h4>
+            <hr />
+        </div>
+        <div class="col-md-8 ms-1">
+            <form asp-action="Create" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success">
+                        @TempData["SuccessMessage"]
+                    </div>
+                }
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.MaterialCategoryId" class="control-label">Material Category</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.MaterialCategoryId" class ="formcontrol2" asp-items="Model.MaterialCategories"></select>
+                    <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
                     <label class="control-label">Enter Code / SNo OR Generate Code</label><span class="requiredlabel">*</span>
                     <div class="input-group">
-                        <input type="text" asp-for="Code" name="Material.Code" class="form-control materialCode" data-index="">
+                        <input type="text" asp-for="Material.Code" name="Material.Code" class="form-control materialCode" data-index="">
                         <button type="button" class="btn btn-outline-primary generateCodeBtn" data-index="">
                             Generate Code
                         </button>
                     </div>
-                <span asp-validation-for="Code" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                    <label asp-for="Name" class="control-label"></label><span class="requiredlabel">*</span>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                    <label asp-for="Description" class="control-label"></label><span class="requiredlabel">*</span>
-                    <textarea asp-for="Description" name="Description" class="auto-resize-textarea form-control" rows="1" placeholder="Enter Description..."></textarea>
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CurrentLocationId" class="control-label"></label>
-                <input asp-for="CurrentLocationId" class="form-control" />
-                <span asp-validation-for="CurrentLocationId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="VendorId" class="control-label"></label>
-                <input asp-for="VendorId" class="form-control" />
-                <span asp-validation-for="VendorId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <input asp-for="Status" class="form-control" />
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Create" class="btn btn-primary" />
-            </div>
-        </form>
+                    <span asp-validation-for="Material.Code" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Name" class="control-label">Material Name</label><span class="requiredlabel">*</span>
+                    <input asp-for="Material.Name" class="form-control" />
+                    <span asp-validation-for="Material.Name" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Description" class="control-label"></label><span class="requiredlabel">*</span>
+                    <textarea asp-for="Material.Description" class="auto-resize-textarea form-control" rows="2" placeholder="Enter Description..."></textarea>
+                    <span asp-validation-for="Material.Description" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="control-label">Location Category</label><span class="requiredlabel">*</span>
+                    <select asp-for="SelectedLocationCategory" class="formcontrol2" asp-items="Model.StationCategories"></select>
+                    <span class="text-danger location-category-error"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.CurrentLocationId" class="control-label">Current Location</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.CurrentLocationId" class="formcontrol2" asp-items="Model.LocationOptions"></select>
+                    <span asp-validation-for="Material.CurrentLocationId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.VendorId" class="control-label">Vendor/Supplier</label>
+                    <select asp-for="Material.VendorId" class="formcontrol2" asp-items="Model.Vendors"></select>
+                    <span asp-validation-for="Material.VendorId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Status" class="control-label"></label>
+                    <select asp-for="Material.Status" class="formcontrol2" asp-items="Model.StatusOptions"></select>
+                    <span asp-validation-for="Material.Status" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <input type="submit" value="Create" class="btn btn-primary" />
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
-</div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Handle location category change
+            $('#SelectedLocationCategory').change(function() {
+                var categoryCode = $(this).val();
+                if (categoryCode) {
+                    // Clear any previous errors
+                    $('.location-category-error').text('');
+                    
+                    // Get locations for the selected category
+                    $.ajax({
+                        url: '/Materials/GetLocationsForCategory',
+                        type: 'GET',
+                        data: { category: categoryCode },
+                        success: function(data) {
+                            // Clear and populate the locations dropdown
+                            var locationsDropdown = $('#Material_CurrentLocationId');
+                            locationsDropdown.empty();
+                            
+                            // Add default option
+                            locationsDropdown.append($('<option></option>').val('').text('-- Select Location --'));
+                            
+                            // Add options from the server
+                            $.each(data, function(i, item) {
+                                locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
+                            });
+                        },
+                        error: function() {
+                            $('.location-category-error').text('Error loading locations. Please try again.');
+                        }
+                    });
+                } else {
+                    // Clear the locations dropdown if no category is selected
+                    $('#Material_CurrentLocationId').empty().append($('<option></option>').val('').text('-- Select Location --'));
+                }
+            });
+            
+            // Handle generate code button click
+            $('.generateCodeBtn').click(function() {
+                var categoryId = $('#Material_MaterialCategoryId').val();
+                if (!categoryId) {
+                    // Show error if no category selected
+                    $('span[data-valmsg-for="Material.MaterialCategoryId"]').text('Please select a category first');
+                    return;
+                }
+                
+                // Clear any previous validation messages
+                $('span[data-valmsg-for="Material.MaterialCategoryId"]').text('');
+                
+                // Call the server to generate a code
+                $.ajax({
+                    url: '/Materials/GetNextCode',
+                    type: 'GET',
+                    data: { 
+                        categoryId: categoryId,
+                        rowIndex: ''
+                    },
+                    success: function(response) {
+                        if (response) {
+                            $('.materialCode').val(response);
+                        }
+                    },
+                    error: function() {
+                        $('span[data-valmsg-for="Material.Code"]').text('Error generating code. Please try again.');
+                    }
+                });
+            });
+            
+            // Auto-resize textareas
+            $('.auto-resize-textarea').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+        });
+    </script>
+}

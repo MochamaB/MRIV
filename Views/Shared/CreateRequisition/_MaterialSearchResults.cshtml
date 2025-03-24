@@ -1,0 +1,61 @@
+@model List<MRIV.Models.Material>
+
+<style>
+    .search-result-item {
+        width: 100%;
+    }
+    .search-result-item:hover {
+        background-color: #e9ecef;
+    }
+    .text-truncate {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+</style>
+
+@if (Model.Count == 0)
+{
+    <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item">
+        <div class="d-flex flex-column">
+            <span class="text-muted">No materials found</span>
+        </div>
+    </div>
+}
+else
+{
+    @foreach (var material in Model)
+    {
+        <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item" 
+             style="border-bottom: 1px solid #dee2e6;">
+            <div class="d-flex flex-column" style="width: 80%;">
+                <a href="#" class="text-decoration-none text-dark material-result"
+                   data-id="@material.Id"
+                   data-name="@material.Name"
+                   data-code="@material.Code"
+                   data-description="@material.Description"
+                   data-category-id="@material.MaterialCategoryId"
+                   data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
+                   data-vendor-id="@material.VendorId">
+                    <strong>@material.Code</strong> - @material.Name
+                </a>
+                <small class="text-muted text-truncate">@material.Description</small>
+            </div>
+            <div class="d-flex justify-content-end" style="width: 20%;">
+                       <a href="javascript:void(0);" 
+                           class="select-material table"
+                           data-id="@material.Id"
+                           data-name="@material.Name"
+                           data-code="@material.Code"
+                           data-description="@material.Description"
+                           data-category-id="@material.MaterialCategoryId"
+                           data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
+                           data-vendor-id="@material.VendorId">
+                            Select
+                            <i class="mdi mdi-arrow-right-bold-circle ms-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
+                        </a>
+
+            </div>
+        </div>
+    }
+}

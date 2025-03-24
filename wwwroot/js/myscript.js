@@ -2,6 +2,7 @@ $(document).ready(function () {
     // Initial setup
     updateRowIndexes();
     setupModalEvents();
+    setupMaterialSearch();
 
     // Add new item button click handler
     $('#addNewItemBtn').on('click', function () {
@@ -362,74 +363,145 @@ $(document).ready(function () {
         });
     }
 
-    // Validate all current items before adding a new one
-    function validateCurrentItems() {
-        let isValid = true;
-
-        // First, clear any existing validation messages
-        $('.item-row').find('.text-danger').text('');
-
-        // Get all item rows
-        const $rows = $('.item-row');
-
-        // Loop through each row
-        $rows.each(function () {
-            const $row = $(this);
-            const index = $row.data('index');
-
-            // Get the input elements
-            const $nameInput = $row.find(`[name$="].Name"]`);
-            const $quantityInput = $row.find(`[name$="].Quantity"]`);
-            const $conditionInput = $row.find(`[name$="].Condition"]`);
-            const $statusInput = $row.find(`[name$="].Status"]`);
-
-            // Check name
-            if (!$nameInput.val()) {
-                $nameInput.closest('.form-group').find('.text-danger').text('Name is required');
-                isValid = false;
-            }
-
-            // Check quantity
-            if (!$quantityInput.val() || parseInt($quantityInput.val()) < 1) {  
-                $quantityInput.closest('.form-group').find('.text-danger').text('Quantity must be at least 1');
-                isValid = false;
-            }
-
-            // Check condition
-            if (!$conditionInput.val()) {
-                $conditionInput.closest('.form-group').find('.text-danger').text('Condition is required');
-                isValid = false;
-            }
-
-            // Check status
-            if (!$statusInput.val()) {
-                $statusInput.closest('.form-group').find('.text-danger').text('Status is required');
-                isValid = false;
+    // Material search functionality
+    function setupMaterialSearch() {
+        // Elements
+        const $searchInput = $('#materialSearch');
+        const $clearButton = $('#clearMaterialSearch');
+        const $resultsContainer = $('#searchResultsContainer');
+        const $searchForm = $('#materialSearchForm');
+        
+        if (!$searchInput.length || !$resultsContainer.length) {
+            console.log('Material search elements not found - skipping search initialization');
+            return;
+        }
+        
+        let timeoutId;
+        
+        // Debounce function to limit AJAX calls
+        function debounce(func, delay) {
+            return function(...args) {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => func.apply(this, args), delay);
+            };
+        }
+        
+        // Handle search input
+        const handleSearch = debounce(function(searchTerm) {
+            if (searchTerm.length < 2 && searchTerm.length > 0) {
+                return; // Don't search for very short terms
             }
             
-            // If this row has validation errors, open its accordion
-            if (!isValid && $row.find('.text-danger').text().trim() !== '') {
-                openAccordion(index);
-                // Only open the first invalid accordion
-                return false;
+            if (searchTerm.length === 0) {
+                $resultsContainer.hide();
+                return;
+            }
+            
+            // Show loading indicator
+            $resultsContainer.html('<div class="p-3 text-center"><div class="spinner-border text-success" role="status"><span class="visually-hidden">Loading...</span></div></div>');
+            $resultsContainer.show();
+            
+            // Get anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            
+            // Call the search API
+            $.ajax({
+                url: `/MaterialRequisition/SearchMaterials?searchTerm=${encodeURIComponent(searchTerm)}`,
+                type: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                success: function(html) {
+                    $resultsContainer.html(html);
+                    $resultsContainer.show();
+                    
+                    // Attach event handlers to the search results
+                    attachMaterialSelectionHandlers();
+                },
+                error: function() {
+                    $resultsContainer.html('<div class="p-3 text-danger">Error searching materials</div>');
+                }
+            });
+        }, 300);
+        
+        // Show/Hide clear button & handle search
+        $searchInput.on('input', function() {
+            const searchTerm = $(this).val().trim();
+            
+            if (searchTerm.length > 0) {
+                $clearButton.removeClass('d-none');
+            } else {
+                $clearButton.addClass('d-none');
+                $resultsContainer.hide();
+            }
+            
+            if (searchTerm.length >= 2 || searchTerm.length === 0) {
+                handleSearch(searchTerm);
             }
         });
-
-        return isValid;
+        
+        // Clear input
+        $clearButton.on('click', function() {
+            $searchInput.val('');
+            $clearButton.addClass('d-none');
+            $resultsContainer.hide();
+        });
+        
+        // Form prevention
+        $searchForm.on('submit', function(e) {
+            e.preventDefault();
+            handleSearch($searchInput.val().trim());
+        });
+        
+        // Close dropdown when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#materialSearchForm').length && 
+                !$(e.target).closest('#searchResultsContainer').length) {
+                $resultsContainer.hide();
+            }
+        });
+        
+        // Function to attach event handlers to material selection buttons
+        function attachMaterialSelectionHandlers() {
+            $('.material-result, .select-material').off('click').on('click', function(e) {
+                e.preventDefault();
+                
+                const $this = $(this);
+                const materialId = $this.data('id');
+                const materialName = $this.data('name');
+                const materialCode = $this.data('code');
+                const categoryId = $this.data('category-id');
+                const categoryName = $this.data('category-name');
+                const vendorId = $this.data('vendor-id');
+                
+                // Find the currently open accordion
+                const $openAccordion = $('.accordion-collapse.show');
+                const index = $openAccordion.closest('.item-row').data('index');
+                
+                // Fill in the material details
+                $openAccordion.find(`[name="RequisitionItems[${index}].Name"]`).val(materialName);
+                $openAccordion.find(`[name="RequisitionItems[${index}].Material.Id"]`).val(materialId);
+                $openAccordion.find(`[name="RequisitionItems[${index}].Material.Code"]`).val(materialCode);
+                $openAccordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
+                $openAccordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
+                
+                // Update badges
+                const $badgeContainer = $openAccordion.find(`#badgeContainer_${index}`);
+                $badgeContainer.removeClass('d-none');
+                $openAccordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName}`);
+                $openAccordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${materialCode}`);
+                
+                if (vendorId) {
+                    $openAccordion.find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${vendorId}`);
+                }
+                
+                // Close the dropdown
+                $resultsContainer.hide();
+                $clearButton.addClass('d-none');
+                $searchInput.val('');
+            });
+        }
     }
-
-    // Handle form submission
-    $('#wizardRequisitionItems').off('submit').on('submit', function (e) {      
-        if ($('input[name="direction"]').val() === 'previous') {
-            return true;
-        }
-        if (!validateCurrentItems()) {
-            e.preventDefault(); // Block submission
-            return false;
-        }
-        // If valid, LET DEFAULT SUBMISSION PROCEED
-        return true;
-    });
 
     // Add event handlers for the "Add Inventory Details" link
     $('.item-row').each(function() {
@@ -527,4 +599,73 @@ $(document).ready(function () {
     } else {
         console.log('No .myForm found - skipping validation');
     }
+});
+
+// Validate all current items before adding a new one
+function validateCurrentItems() {
+    let isValid = true;
+
+    // First, clear any existing validation messages
+    $('.item-row').find('.text-danger').text('');
+
+    // Get all item rows
+    const $rows = $('.item-row');
+
+    // Loop through each row
+    $rows.each(function () {
+        const $row = $(this);
+        const index = $row.data('index');
+
+        // Get the input elements
+        const $nameInput = $row.find(`[name$="].Name"]`);
+        const $quantityInput = $row.find(`[name$="].Quantity"]`);
+        const $conditionInput = $row.find(`[name$="].Condition"]`);
+        const $statusInput = $row.find(`[name$="].Status"]`);
+
+        // Check name
+        if (!$nameInput.val()) {
+            $nameInput.closest('.form-group').find('.text-danger').text('Name is required');
+            isValid = false;
+        }
+
+        // Check quantity
+        if (!$quantityInput.val() || parseInt($quantityInput.val()) < 1) {  
+            $quantityInput.closest('.form-group').find('.text-danger').text('Quantity must be at least 1');
+            isValid = false;
+        }
+
+        // Check condition
+        if (!$conditionInput.val()) {
+            $conditionInput.closest('.form-group').find('.text-danger').text('Condition is required');
+            isValid = false;
+        }
+
+        // Check status
+        if (!$statusInput.val()) {
+            $statusInput.closest('.form-group').find('.text-danger').text('Status is required');
+            isValid = false;
+        }
+        
+        // If this row has validation errors, open its accordion
+        if (!isValid && $row.find('.text-danger').text().trim() !== '') {
+            openAccordion(index);
+            // Only open the first invalid accordion
+            return false;
+        }
+    });
+
+    return isValid;
+}
+
+// Handle form submission
+$('#wizardRequisitionItems').off('submit').on('submit', function (e) {      
+    if ($('input[name="direction"]').val() === 'previous') {
+        return true;
+    }
+    if (!validateCurrentItems()) {
+        e.preventDefault(); // Block submission
+        return false;
+    }
+    // If valid, LET DEFAULT SUBMISSION PROCEED
+    return true;
 });
