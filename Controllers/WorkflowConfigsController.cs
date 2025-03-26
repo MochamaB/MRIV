@@ -9,6 +9,7 @@ using MRIV.Data;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
+using System.Text.Json;
 
 namespace MRIV.Controllers
 {
@@ -185,9 +186,6 @@ namespace MRIV.Controllers
                     // Update existing steps and add new ones
                     foreach (var viewModelStep in viewModel.Steps)
                     {
-                        // Process the dynamic parameters from form data
-                        ProcessDynamicParameters(viewModelStep, Request.Form);
-                        
                         if (viewModelStep.Id > 0)
                         {
                             // Update existing step
@@ -197,8 +195,8 @@ namespace MRIV.Controllers
                                 existingStep.StepOrder = viewModelStep.StepOrder;
                                 existingStep.StepName = viewModelStep.StepName;
                                 existingStep.ApproverRole = viewModelStep.ApproverRole;
-                                existingStep.Conditions = viewModelStep.Conditions;
-                                existingStep.RoleParameters = viewModelStep.RoleParameters;
+
+                                // Parameters are handled via AJAX - no changes needed here
                             }
                         }
                         else
@@ -209,8 +207,8 @@ namespace MRIV.Controllers
                                 StepOrder = viewModelStep.StepOrder,
                                 StepName = viewModelStep.StepName,
                                 ApproverRole = viewModelStep.ApproverRole,
-                                Conditions = viewModelStep.Conditions,
-                                RoleParameters = viewModelStep.RoleParameters
+                                Conditions = new Dictionary<string, string>(),
+                                RoleParameters = new Dictionary<string, string>()
                             };
                             workflowConfig.Steps.Add(newStep);
                         }
@@ -405,9 +403,11 @@ namespace MRIV.Controllers
                 roleParameters, conditions
             ));
         }
-        
+
+        // GET: WorkflowConfigs/GetStepParametersJson
         // GET: WorkflowConfigs/GetStepParametersJson
         [HttpGet]
+        [Route("WorkflowConfigs/Edit/{id}/GetStepParametersJson")]
         public IActionResult GetStepParametersJson(int workflowId, int stepIndex)
         {
             var workflow = _context.WorkflowConfigs
@@ -420,15 +420,17 @@ namespace MRIV.Controllers
             }
 
             var step = workflow.Steps.ElementAt(stepIndex);
-            
-            // Return just the parameters as simple dictionaries to avoid circular references
-            return Json(new { 
-                success = true, 
+
+            // Return parameters as simple dictionaries to avoid circular references
+            return Json(new
+            {
+                success = true,
+                stepId = step.Id,
                 roleParameters = step.RoleParameters ?? new Dictionary<string, string>(),
                 conditions = step.Conditions ?? new Dictionary<string, string>()
             });
         }
-        
+
         // POST: WorkflowConfigs/SaveStepParameters
         [HttpPost]
         public IActionResult SaveStepParameters([FromBody] SaveStepParametersRequest request)
@@ -500,37 +502,54 @@ namespace MRIV.Controllers
 
         // POST: WorkflowConfigs/SaveStepParametersJson
         [HttpPost]
+        [Route("WorkflowConfigs/Edit/{id}/SaveStepParametersJson")]
         public IActionResult SaveStepParametersJson([FromBody] SaveStepParametersJsonRequest request)
         {
             try
             {
-                var workflowId = request.WorkflowId;
-                var stepIndex = request.StepIndex;
-                var roleParameters = request.RoleParameters;
-                var conditions = request.Conditions;
-
                 var workflow = _context.WorkflowConfigs
                     .Include(w => w.Steps)
-                    .FirstOrDefault(w => w.Id == workflowId);
+                    .FirstOrDefault(w => w.Id == request.WorkflowId);
 
-                if (workflow == null || stepIndex < 0 || stepIndex >= workflow.Steps.Count)
+                if (workflow == null)
                 {
-                    return Json(new { success = false, message = "Invalid workflow or step index" });
+                    return Json(new { success = false, message = "Workflow not found" });
                 }
 
-                var step = workflow.Steps.ElementAt(stepIndex);
-                
-                // Update role parameters
-                step.RoleParameters = roleParameters ?? new Dictionary<string, string>();
-                
-                // Update conditions
-                step.Conditions = conditions ?? new Dictionary<string, string>();
-                
-                // Save changes
+                // Find the step by ID instead of index for more reliability
+                var step = workflow.Steps.FirstOrDefault(s => s.Id == request.StepId);
+
+                // If step ID is 0 (new step), try finding by index
+                if (step == null && request.StepId == 0)
+                {
+                    if (request.StepIndex < 0 || request.StepIndex >= workflow.Steps.Count)
+                    {
+                        return Json(new { success = false, message = "Invalid step index" });
+                    }
+
+                    step = workflow.Steps.ElementAt(request.StepIndex);
+                }
+
+                if (step == null)
+                {
+                    return Json(new { success = false, message = "Step not found" });
+                }
+
+                // Update parameters
+                step.RoleParameters = request.RoleParameters ?? new Dictionary<string, string>();
+                step.Conditions = request.Conditions ?? new Dictionary<string, string>();
+
                 _context.Update(workflow);
                 _context.SaveChanges();
-                
-                return Json(new { success = true });
+
+                return Json(new
+                {
+                    success = true,
+                    message = "Parameters saved successfully",
+                    stepId = step.Id,
+                    roleParametersJson = JsonSerializer.Serialize(step.RoleParameters),
+                    conditionsJson = JsonSerializer.Serialize(step.Conditions)
+                });
             }
             catch (Exception ex)
             {
@@ -548,6 +567,7 @@ namespace MRIV.Controllers
         public class SaveStepParametersJsonRequest
         {
             public int WorkflowId { get; set; }
+            public int StepId { get; set; }
             public int StepIndex { get; set; }
             public Dictionary<string, string> RoleParameters { get; set; }
             public Dictionary<string, string> Conditions { get; set; }
@@ -558,47 +578,7 @@ namespace MRIV.Controllers
             return _context.Set<WorkflowConfig>().Any(e => e.Id == id);
         }
 
-        private void ProcessDynamicParameters(WorkflowStepConfig step, IFormCollection form)
-        {
-            // Initialize dictionaries if they're null
-            step.RoleParameters ??= new Dictionary<string, string>();
-            step.Conditions ??= new Dictionary<string, string>();
-            
-            // Clear existing dictionaries to prevent stale data
-            step.RoleParameters.Clear();
-            step.Conditions.Clear();
-            
-            // Get the step index (0-based in the form)
-            int stepIndex = step.StepOrder - 1;
-            
-            // Process RoleParameters from the dynamic editor
-            var roleParamKeys = form.Keys.Where(k => k.StartsWith($"Steps[{stepIndex}].RoleParameters_Keys")).ToList();
-            var roleParamValues = form.Keys.Where(k => k.StartsWith($"Steps[{stepIndex}].RoleParameters_Values")).ToList();
-            
-            for (int i = 0; i < roleParamKeys.Count; i++)
-            {
-                string key = form[roleParamKeys[i]].ToString();
-                if (!string.IsNullOrEmpty(key))
-                {
-                    string value = i < roleParamValues.Count ? form[roleParamValues[i]].ToString() : "";
-                    step.RoleParameters[key] = value;
-                }
-            }
-            
-            // Process Conditions from the dynamic editor
-            var conditionKeys = form.Keys.Where(k => k.StartsWith($"Steps[{stepIndex}].Conditions_Keys")).ToList();
-            var conditionValues = form.Keys.Where(k => k.StartsWith($"Steps[{stepIndex}].Conditions_Values")).ToList();
-            
-            for (int i = 0; i < conditionKeys.Count; i++)
-            {
-                string key = form[conditionKeys[i]].ToString();
-                if (!string.IsNullOrEmpty(key))
-                {
-                    string value = i < conditionValues.Count ? form[conditionValues[i]].ToString() : "";
-                    step.Conditions[key] = value;
-                }
-            }
-        }
+    
 
         private SelectList GetApproverRolesSelectList()
         {

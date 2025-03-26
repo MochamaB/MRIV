@@ -115,7 +115,7 @@ input.form-control.form-control-lg.border-left-0:focus {
         background-color: #fcb900 !important;
         border-color: #fcb900 !important;
     }
-
+/* === BTN DANGER === */
 .btn-danger {
     color: #fff;
     background-color: red !important;
@@ -131,7 +131,7 @@ input.form-control.form-control-lg.border-left-0:focus {
     border: 2px solid #FF0000 !important;
     color: #FF0000 !important;
 }
-
+/* === BTN HAZARD === */
 .btn-hazard {
     color: #fff;
     background-color: #fcb900;
@@ -150,6 +150,29 @@ input.form-control.form-control-lg.border-left-0:focus {
 }
 
     .btn-outline-hazard:hover {
+        color: #fff;
+        background-color: #fcb900 !important;
+        border-color: #fcb900 !important;
+    }
+/* === BTN WARNING === */
+.btn-warning {
+    color: #fff;
+    background-color: #fcb900;
+    border-color: #fcb900;
+}
+
+    .btn-warning:hover {
+        color: #fff;
+        background-color: #326408 !important;
+        border-color: #326408 !important;
+    }
+
+.btn-outline-warning {
+    border: 2px solid #fcb900 !important;
+    color: #326408 !important;
+}
+
+    .btn-outline-warning:hover {
         color: #fff;
         background-color: #fcb900 !important;
         border-color: #fcb900 !important;

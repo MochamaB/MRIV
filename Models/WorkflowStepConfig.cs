@@ -1,5 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json;
 
 namespace MRIV.Models
 {
@@ -26,5 +27,27 @@ namespace MRIV.Models
 
         [ForeignKey(nameof(WorkflowConfigId))]
         public virtual WorkflowConfig? WorkflowConfig { get; set; }
+
+        // Add these properties for JSON binding (not mapped to database)
+        [NotMapped]
+        public string? RoleParametersJson
+        {
+            get => RoleParameters != null ? JsonSerializer.Serialize(RoleParameters) : null;
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                    RoleParameters = JsonSerializer.Deserialize<Dictionary<string, string>>(value) ?? new();
+            }
+        }
+        [NotMapped]
+        public string? ConditionsJson
+        {
+            get => Conditions != null ? JsonSerializer.Serialize(Conditions) : null;
+            set
+            {
+                if (!string.IsNullOrEmpty(value))
+                    Conditions = JsonSerializer.Deserialize<Dictionary<string, string>>(value) ?? new();
+            }
+        }
     }
 }

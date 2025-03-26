@@ -35,7 +35,7 @@
             </div>
         </div>
 
-        <div class=" d-flex justify-content-between align-items-center">
+        <div class="d-flex justify-content-between align-items-center">
             <h5>Workflow Steps</h5>
             <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary">
                 <i class="mdi mdi-plus-circle-outline"></i> Add Step
@@ -57,10 +57,13 @@
                         <tbody>
                             @for (var i = 0; i < Model.Steps.Count; i++)
                             {
-                                <tr>
+                                <tr class="step-row" data-step-index="@i" data-step-id="@Model.Steps[i].Id">
                                     <td style="width: 10%">
                                         <input asp-for="Steps[i].Id" type="hidden" />
                                         <input asp-for="Steps[i].StepOrder" class="form-control" readonly />
+                                        <!-- Add hidden fields for storing JSON parameters -->
+                                        <input asp-for="Steps[i].RoleParametersJson" type="hidden" id="role-params-json-@i" />
+                                        <input asp-for="Steps[i].ConditionsJson" type="hidden" id="conditions-json-@i" />
                                     </td>
                                     <td style="width: 40%">
                                         <input asp-for="Steps[i].StepName" class="form-control" />
@@ -74,31 +77,18 @@
                                     </td>
                                     <td style="width: 20%">
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-info btn-sm open-parameters-modal" data-step-index="@i">
+                                            <button type="button" class="btn btn-hazard open-parameters-modal"
+                                                    data-step-index="@i"
+                                                    data-step-id="@Model.Steps[i].Id"
+                                                    data-workflow-id="@Model.WorkflowConfig.Id">
                                                 <i class="mdi mdi-cogs"></i> Parameters
                                             </button>
-                                            <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary btn-sm">
+                                            <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary">
                                                 <i class="mdi mdi-content-copy"></i> Clone
                                             </button>
-                                            <button type="submit" formaction="@Url.Action("RemoveStep", new { stepIndex = i })" class="btn btn-danger btn-sm">
+                                            <button type="submit" formaction="@Url.Action("RemoveStep", new { stepIndex = i })" class="btn btn-danger">
                                                 <i class="mdi mdi-delete"></i>
                                             </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr class="d-none">
-                                    <td colspan="4" class="p-0">
-                                        <div id="parameters-@i" class="collapse">
-                                             <div class="card card-body bg-light">
-                                                 <div class="row">
-                                                     <div class="col-md-6">
-                                                        <partial name="_DynamicParametersEditor" model="@(new Tuple<string, int, Dictionary<string, string>>("RoleParameters", i, Model.Steps[i].RoleParameters))" />
-                                                     </div>
-                                                     <div class="col-md-6">
-                                                        <partial name="_DynamicParametersEditor" model="@(new Tuple<string, int, Dictionary<string, string>>("Conditions", i, Model.Steps[i].Conditions))" />
-                                                     </div>
-                                                 </div>
-                                             </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -147,300 +137,395 @@
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
-    
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('DOM loaded, Bootstrap version:', typeof bootstrap);
+        // Use a single modal instance
+        let parametersModal;
+
+        // Keep track of the current step being edited
+        let currentStepId = 0;
+        let currentStepIndex = 0;
+        let currentWorkflowId = @Model.WorkflowConfig.Id;
+
+        document.addEventListener('DOMContentLoaded', function () {
+            console.log('DOM loaded, initializing workflow editor');
+
+            // Initialize the modal
+            parametersModal = new bootstrap.Modal(document.getElementById('parameters-modal'));
+
+            // Set up event handlers
+            setupParameterEditingHandlers();
         });
-        
-        $(document).ready(function () {
-            // This function will help sort the steps if needed in the future
-            // Currently the controller handles reordering on removal
-            
-            // Test click handler for the parameters button
-            $('.open-parameters-modal').on('click', function() {
-                console.log('Direct click handler triggered');
+
+        function setupParameterEditingHandlers() {
+            // Open parameters modal
+            document.querySelectorAll('.open-parameters-modal').forEach(button => {
+                button.addEventListener('click', openParametersModal);
             });
-        });
-        
-        // Handle adding new parameters
-        $(document).on('click', '.add-parameter-btn', function() {
-            console.log('Add parameter button clicked');
-            const container = $(this).closest('.dynamic-parameters-container').find('.parameters-container');
-            
-            const newRow = $(`
-                <tr class="parameter-row">
-                    <td>
-                        <input type="text" class="form-control param-key" value="" />
-                    </td>
-                    <td>
-                        <input type="text" class="form-control param-value" value="" />
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
-                            <i class="mdi mdi-delete"></i>
-                        </button>
-                    </td>
-                </tr>
-            `);
-            
-            container.append(newRow);
-        });
-        
-        // Handle removing parameters
-        $(document).on('click', '.remove-parameter-btn', function() {
-            console.log('Remove parameter button clicked');
-            $(this).closest('.parameter-row').remove();
-            
-            // If no parameters left, show the alert
-            const container = $(this).closest('.dynamic-parameters-container');
-            if (container.find('.parameter-row').length === 0) {
-                const paramType = container.data('param-type').toLowerCase();
-                container.find('.table-responsive').addClass('d-none');
-                container.find('.card-body').append(
-                    `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`
-                );
-            }
-        });
-        
-        // Open parameters modal
-        $(document).on('click', '.open-parameters-modal', function() {
-            console.log('Parameters button clicked');
-            const stepIndex = $(this).data('step-index');
-            console.log('Step index:', stepIndex);
-            
-            // Update modal content directly
-            const modal = $('#parameters-modal');
-            modal.find('.modal-title').text(`Edit Parameters for Step ${stepIndex + 1}`);
-            modal.data('step-index', stepIndex);
-            
-            // Create empty tables for parameters
-            const container = $('#modal-parameters-container');
-            container.html(`
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="dynamic-parameters-container" data-param-type="RoleParameters" data-step-index="${stepIndex}">
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Role Parameters</h5>
-                                    <button type="button" class="btn btn-sm btn-primary add-parameter-btn">
-                                        <i class="mdi mdi-plus"></i> Add New
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Key</th>
-                                                    <th>Value</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="parameters-container">
-                                                <!-- Parameters will be loaded here -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="dynamic-parameters-container" data-param-type="Conditions" data-step-index="${stepIndex}">
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Conditions</h5>
-                                    <button type="button" class="btn btn-sm btn-primary add-parameter-btn">
-                                        <i class="mdi mdi-plus"></i> Add New
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="table-responsive">
-                                        <table class="table table-sm">
-                                            <thead>
-                                                <tr>
-                                                    <th>Key</th>
-                                                    <th>Value</th>
-                                                    <th>Actions</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody class="parameters-container">
-                                                <!-- Parameters will be loaded here -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            `);
-            
-            // Load parameters via AJAX
-            $.ajax({
-                url: '@Url.Action("GetStepParametersJson", "WorkflowConfigs")',
-                type: 'GET',
-                data: { 
-                    workflowId: '@Model.WorkflowConfig.Id', 
-                    stepIndex: stepIndex 
-                },
-                success: function(data) {
-                    console.log('Parameters loaded successfully:', data);
-                    
-                    // Populate role parameters
-                    const roleParamsContainer = modal.find('[data-param-type="RoleParameters"] .parameters-container');
-                    roleParamsContainer.empty();
-                    
-                    if (data.roleParameters) {
-                        $.each(data.roleParameters, function(key, value) {
-                            const row = $(`
-                                <tr class="parameter-row">
-                                    <td>
-                                        <input type="text" class="form-control param-key" value="${key}" readonly />
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control param-value" value="${value}" />
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
-                                            <i class="mdi mdi-delete"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `);
-                            roleParamsContainer.append(row);
-                        });
-                    }
-                    
-                    // Populate conditions
-                    const conditionsContainer = modal.find('[data-param-type="Conditions"] .parameters-container');
-                    conditionsContainer.empty();
-                    
-                    if (data.conditions) {
-                        $.each(data.conditions, function(key, value) {
-                            const row = $(`
-                                <tr class="parameter-row">
-                                    <td>
-                                        <input type="text" class="form-control param-key" value="${key}" readonly />
-                                    </td>
-                                    <td>
-                                        <input type="text" class="form-control param-value" value="${value}" />
-                                    </td>
-                                    <td>
-                                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
-                                            <i class="mdi mdi-delete"></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            `);
-                            conditionsContainer.append(row);
-                        });
-                    }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Failed to load parameters:', error);
-                    console.error('Status:', status);
-                    console.error('Response:', xhr.responseText);
+
+            // Save parameters
+            document.querySelector('.save-parameters-btn').addEventListener('click', saveParameters);
+
+            // Add parameter button
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('add-parameter-btn') ||
+                    e.target.closest('.add-parameter-btn')) {
+                    addParameter(e);
                 }
             });
-            
-            // Show the modal
-            console.log('Showing modal');
-            const bsModal = new bootstrap.Modal(document.getElementById('parameters-modal'));
-            bsModal.show();
-        });
-        
-        // Save parameters from modal
-        $(document).on('click', '.save-parameters-btn', function() {
-            console.log('Save parameters button clicked');
-            
-            const modal = $('#parameters-modal');
-            const stepIndex = modal.data('step-index');
-            console.log('Saving parameters for step index:', stepIndex);
-            
-            // Collect all parameter data from the modal
-            // Add role parameters
-            const roleParamsContainer = modal.find('[data-param-type="RoleParameters"]');
-            const roleParamRows = roleParamsContainer.find('.parameter-row');
-            
-            // Create dictionaries to match the format received from the server
+
+            // Remove parameter button
+            document.addEventListener('click', function (e) {
+                if (e.target.classList.contains('remove-parameter-btn') ||
+                    e.target.closest('.remove-parameter-btn')) {
+                    removeParameter(e);
+                }
+            });
+        }
+
+        function openParametersModal(e) {
+            const button = e.target.closest('.open-parameters-modal');
+            currentStepIndex = parseInt(button.dataset.stepIndex);
+            currentStepId = parseInt(button.dataset.stepId) || 0;
+            currentWorkflowId = parseInt(button.dataset.workflowId);
+
+            console.log(`Opening parameters modal for step ${currentStepIndex} (ID: ${currentStepId})`);
+
+            // Update modal title
+            const modalTitle = document.querySelector('#parameters-modal-label');
+            modalTitle.textContent = `Edit Parameters for Step ${currentStepIndex + 1}`;
+
+            // Clear previous content
+            const container = document.querySelector('#modal-parameters-container');
+            container.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div><p>Loading parameters...</p></div>';
+
+            // Show the modal while loading
+            parametersModal.show();
+
+            // Load parameters via AJAX
+            fetch(`${window.location.pathname}/GetStepParametersJson?workflowId=${currentWorkflowId}&stepIndex=${currentStepIndex}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        // Store step ID if it was returned
+                        if (data.stepId) {
+                            currentStepId = data.stepId;
+                        }
+
+                        // Render parameter editors
+                        renderParameterEditors(container, data);
+                    } else {
+                        container.innerHTML = `<div class="alert alert-danger">${data.message || 'Failed to load parameters'}</div>`;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading parameters:', error);
+                    container.innerHTML = `<div class="alert alert-danger">Error loading parameters: ${error.message}</div>`;
+                });
+        }
+
+        function renderParameterEditors(container, data) {
+            container.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Role Parameters</h5>
+                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn" data-param-type="roleParameters">
+                                            <i class="mdi mdi-plus"></i> Add New
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="role-parameters-container">
+                                            ${renderParameterTable('roleParameters', data.roleParameters)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">Conditions</h5>
+                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn" data-param-type="conditions">
+                                            <i class="mdi mdi-plus"></i> Add New
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="conditions-container">
+                                            ${renderParameterTable('conditions', data.conditions)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+        }
+
+        function renderParameterTable(paramType, parameters) {
+            if (!parameters || Object.keys(parameters).length === 0) {
+                return `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`;
+            }
+
+            let tableHtml = `
+                        <table class="table table-sm parameter-table" data-param-type="${paramType}">
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                    `;
+
+            for (const [key, value] of Object.entries(parameters)) {
+                tableHtml += `
+                            <tr class="parameter-row">
+                                <td>
+                                    <input type="text" class="form-control param-key" value="${escapeHtml(key)}" readonly />
+                                </td>
+                                <td>
+                                    <input type="text" class="form-control param-value" value="${escapeHtml(value)}" />
+                                </td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                                        <i class="mdi mdi-delete"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        `;
+            }
+
+            tableHtml += `
+                            </tbody>
+                        </table>
+                    `;
+
+            return tableHtml;
+        }
+
+        function addParameter(e) {
+            const button = e.target.closest('.add-parameter-btn');
+            const paramType = button.dataset.paramType;
+            const container = document.querySelector(`#${paramType}-container`);
+
+            // If there's an alert, remove it
+            const alert = container.querySelector('.alert');
+            if (alert) {
+                alert.remove();
+            }
+
+            // If there's no table yet, create one
+            let table = container.querySelector('.parameter-table');
+            if (!table) {
+                table = document.createElement('table');
+                table.className = 'table table-sm parameter-table';
+                table.dataset.paramType = paramType;
+                table.innerHTML = `
+                            <thead>
+                                <tr>
+                                    <th>Key</th>
+                                    <th>Value</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        `;
+                container.appendChild(table);
+            }
+
+            // Create new row with editable key
+            const tbody = table.querySelector('tbody');
+            const newRow = document.createElement('tr');
+            newRow.className = 'parameter-row';
+            newRow.innerHTML = `
+                        <td>
+                            <input type="text" class="form-control param-key" placeholder="Enter key" />
+                        </td>
+                        <td>
+                            <input type="text" class="form-control param-value" placeholder="Enter value" />
+                        </td>
+                        <td>
+                            <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                                <i class="mdi mdi-delete"></i>
+                            </button>
+                        </td>
+                    `;
+
+            tbody.appendChild(newRow);
+        }
+
+        function removeParameter(e) {
+            const button = e.target.closest('.remove-parameter-btn');
+            const row = button.closest('.parameter-row');
+            const table = row.closest('.parameter-table');
+            row.remove();
+
+            // If no rows left, show the alert
+            if (table.querySelectorAll('.parameter-row').length === 0) {
+                const container = table.closest('[id$="-container"]');
+                const paramType = table.dataset.paramType;
+                table.remove();
+
+                container.innerHTML = `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`;
+            }
+        }
+
+        function saveParameters() {
+            console.log('Saving parameters for step index:', currentStepIndex);
+
+            // Collect parameters from the modal
             const roleParameters = {};
             const conditions = {};
-            
+
             // Collect role parameters
-            roleParamRows.each(function() {
-                const key = $(this).find('.param-key').val().trim();
-                const value = $(this).find('.param-value').val().trim();
-                if (key) {
-                    roleParameters[key] = value;
-                }
-            });
-            
-            // Add conditions
-            const conditionsContainer = modal.find('[data-param-type="Conditions"]');
-            const conditionRows = conditionsContainer.find('.parameter-row');
-            
-            // Collect conditions
-            conditionRows.each(function() {
-                const key = $(this).find('.param-key').val().trim();
-                const value = $(this).find('.param-value').val().trim();
-                if (key) {
-                    conditions[key] = value;
-                }
-            });
-            
-            const data = {
-                workflowId: parseInt('@Model.WorkflowConfig.Id'),
-                stepIndex: stepIndex,
-                roleParameters: roleParameters,
-                conditions: conditions
-            };
-            
-            console.log('Saving parameters:', data);
-            alert(data);
-            
-            // Send the data to the server
-            $.ajax({
-                url: '@Url.Action("SaveStepParametersJson", "WorkflowConfigs")',
-                type: 'POST',
-                contentType: 'application/json',
-                data: JSON.stringify(data),
-                success: function(response) {
-                    console.log('Save response:', response);
-                    if (response.success) {
-                        // Close the modal
-                        const bsModal = bootstrap.Modal.getInstance(document.getElementById('parameters-modal'));
-                        bsModal.hide();
-                        
-                        // Show success message
-                        alert('Parameters saved successfully!');
-                        
-                        // Refresh the page to show updated parameters
-                        location.reload();
-                    } else {
-                        alert('Failed to save parameters: ' + response.message);
+            const roleParamTable = document.querySelector('#role-parameters-container .parameter-table');
+            if (roleParamTable) {
+                roleParamTable.querySelectorAll('.parameter-row').forEach(row => {
+                    const key = row.querySelector('.param-key').value.trim();
+                    const value = row.querySelector('.param-value').value.trim();
+                    if (key) {
+                        roleParameters[key] = value;
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.error('Error saving parameters:', error);
-                    console.error('Status:', status);
-                    console.error('Response:', xhr.responseText);
-                    alert('Failed to save parameters. Please try again.');
-                }
-            });
-        });
-        
-        // Initialize any empty tables with the alert message
-        $('.dynamic-parameters-container').each(function() {
-            const container = $(this);
-            if (container.find('.parameter-row').length === 0) {
-                const paramType = container.data('param-type').toLowerCase();
-                container.find('.table-responsive').addClass('d-none');
-                container.find('.card-body').append(
-                    `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`
-                );
+                });
             }
-        });
+
+            // Collect conditions
+            const conditionsTable = document.querySelector('#conditions-container .parameter-table');
+            if (conditionsTable) {
+                conditionsTable.querySelectorAll('.parameter-row').forEach(row => {
+                    const key = row.querySelector('.param-key').value.trim();
+                    const value = row.querySelector('.param-value').value.trim();
+                    if (key) {
+                        conditions[key] = value;
+                    }
+                });
+            }
+
+            const data = {
+                workflowId: currentWorkflowId,
+                stepId: currentStepId,
+                stepIndex: currentStepIndex,
+                roleParameters,
+                conditions
+            };
+
+            console.log('Saving parameters:', data);
+
+            // Show saving indicator
+            const saveButton = document.querySelector('.save-parameters-btn');
+            const originalText = saveButton.innerHTML;
+            saveButton.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...`;
+            saveButton.disabled = true;
+
+            // Send the data to the server
+            fetch(`${window.location.pathname}/SaveStepParametersJson`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'RequestVerificationToken': document.querySelector('input[name="__RequestVerificationToken"]').value
+                },
+                body: JSON.stringify(data)
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(response => {
+                    console.log('Save response:', response);
+
+                    if (response.success) {
+                        // Update the hidden fields in the main form
+                        const roleParamsJsonField = document.querySelector(`#role-params-json-${currentStepIndex}`);
+                        const conditionsJsonField = document.querySelector(`#conditions-json-${currentStepIndex}`);
+
+                        if (roleParamsJsonField) {
+                            roleParamsJsonField.value = response.roleParametersJson || JSON.stringify(roleParameters);
+                        }
+
+                        if (conditionsJsonField) {
+                            conditionsJsonField.value = response.conditionsJson || JSON.stringify(conditions);
+                        }
+
+                        // Close the modal
+                        parametersModal.hide();
+
+                        // Show a success toast or message
+                        showToast('Success', 'Parameters saved successfully!', 'success');
+                    } else {
+                        // Show error message
+                        showToast('Error', response.message || 'Failed to save parameters', 'danger');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error saving parameters:', error);
+                    showToast('Error', `Failed to save parameters: ${error.message}`, 'danger');
+                })
+                .finally(() => {
+                    // Restore save button
+                    saveButton.innerHTML = originalText;
+                    saveButton.disabled = false;
+                });
+        }
+
+        // Helper function to show a toast notification
+        function showToast(title, message, type = 'info') {
+            // You can implement this with your preferred toast library
+            // or create a simple custom implementation
+            console.log(`${title}: ${message}`);
+
+            // Simple implementation using bootstrap toast:
+            const toastContainer = document.getElementById('toast-container') || createToastContainer();
+            const toast = document.createElement('div');
+            toast.className = `toast align-items-center text-white bg-${type} border-0`;
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+
+            toast.innerHTML = `
+                        <div class="d-flex">
+                            <div class="toast-body">
+                                <strong>${title}</strong>: ${message}
+                            </div>
+                            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                        </div>
+                    `;
+
+            toastContainer.appendChild(toast);
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+
+            // Automatically remove toast from DOM after it's hidden
+            toast.addEventListener('hidden.bs.toast', function () {
+                toast.remove();
+            });
+        }
+
+        function createToastContainer() {
+            const container = document.createElement('div');
+            container.id = 'toast-container';
+            container.className = 'position-fixed top-0 end-0 p-3';
+            container.style.zIndex = '1050';
+            document.body.appendChild(container);
+            return container;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
     </script>
 }
