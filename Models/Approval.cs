@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using MRIV.Enums;
 
@@ -28,7 +28,6 @@ namespace MRIV.Models
         public string PayrollNo { get; set; }
 
         [Required]
-        [StringLength(20)]
         public ApprovalStatus ApprovalStatus { get; set; }
 
         [StringLength(500)]

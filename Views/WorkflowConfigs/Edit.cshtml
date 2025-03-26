@@ -1,46 +1,40 @@
-﻿@model MRIV.ViewModels.WorkflowConfigViewModel
+@model MRIV.ViewModels.WorkflowConfigViewModel
 
 @{
     ViewData["Title"] = "Edit Workflow Configuration";
 }
 
-<div class=" contwrapper">
+<div class="contwrapper">
     <h4>Edit Workflow Configuration</h4>
     <hr />
 
-<form asp-action="Edit" method="post">
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-    <input type="hidden" asp-for="WorkflowConfig.Id" />
+    <form asp-action="Edit" method="post">
+        <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+        <input type="hidden" asp-for="WorkflowConfig.Id" />
 
-    
-        
-            <h5>Workflow Details</h5>
-       
-        
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="WorkflowConfig.IssueStationCategory" class="control-label">Issue Station Category</label>
-                        <select asp-for="WorkflowConfig.IssueStationCategory" asp-items="Model.IssueStationCategories" class="formcontrol2">
-                            <option value="">-- Select Issue Station Category --</option>
-                        </select>
-                        <span asp-validation-for="WorkflowConfig.IssueStationCategory" class="text-danger"></span>
-                    </div>
-                </div>
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label asp-for="WorkflowConfig.DeliveryStationCategory" class="control-label">Delivery Station Category</label>
-                        <select asp-for="WorkflowConfig.DeliveryStationCategory" asp-items="Model.DeliveryStationCategories" class="formcontrol2">
-                            <option value="">-- Select Delivery Station Category --</option>
-                        </select>
-                        <span asp-validation-for="WorkflowConfig.DeliveryStationCategory" class="text-danger"></span>
-                    </div>
+        <h5>Workflow Details</h5>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="WorkflowConfig.IssueStationCategory" class="control-label">Issue Station Category</label>
+                    <select asp-for="WorkflowConfig.IssueStationCategory" asp-items="Model.IssueStationCategories" class="formcontrol2">
+                        <option value="">-- Select Issue Station Category --</option>
+                    </select>
+                    <span asp-validation-for="WorkflowConfig.IssueStationCategory" class="text-danger"></span>
                 </div>
             </div>
-        
-    
+            <div class="col-md-6">
+                <div class="form-group">
+                    <label asp-for="WorkflowConfig.DeliveryStationCategory" class="control-label">Delivery Station Category</label>
+                    <select asp-for="WorkflowConfig.DeliveryStationCategory" asp-items="Model.DeliveryStationCategories" class="formcontrol2">
+                        <option value="">-- Select Delivery Station Category --</option>
+                    </select>
+                    <span asp-validation-for="WorkflowConfig.DeliveryStationCategory" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
 
-    
         <div class=" d-flex justify-content-between align-items-center">
             <h5>Workflow Steps</h5>
             <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary">
@@ -80,7 +74,7 @@
                                     </td>
                                     <td style="width: 20%">
                                         <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-info btn-sm" data-toggle="collapse" data-target="#parameters-@i">
+                                            <button type="button" class="btn btn-info btn-sm open-parameters-modal" data-step-index="@i">
                                                 <i class="mdi mdi-cogs"></i> Parameters
                                             </button>
                                             <button type="submit" formaction="@Url.Action("CloneStep", new { stepIndex = i })" class="btn btn-primary btn-sm">
@@ -92,33 +86,19 @@
                                         </div>
                                     </td>
                                 </tr>
-                                <tr>
+                                <tr class="d-none">
                                     <td colspan="4" class="p-0">
                                         <div id="parameters-@i" class="collapse">
-                                            <div class="card card-body bg-light">
-                                                <div class="row">
-                                                    <div class="col-md-6">
-                                                        <h5>Role Parameters</h5>
-                                                        @{
-                    // Here you would handle dynamic parameters - basic implementation
-                                                            <div class="form-group">
-                                                                <label>Department</label>
-                                                                <input type="text" name="Steps[@i].RoleParameters[Department]" value="@(Model.Steps[i].RoleParameters != null && Model.Steps[i].RoleParameters.ContainsKey("Department") ? Model.Steps[i].RoleParameters["Department"] : "")" class="form-control" />
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                    <div class="col-md-6">
-                                                        <h5>Conditions</h5>
-                                                        @{
-                    // Here you would handle dynamic conditions - basic implementation
-                                                            <div class="form-group">
-                                                                <label>Amount Threshold</label>
-                                                                <input type="text" name="Steps[@i].Conditions[AmountThreshold]" value="@(Model.Steps[i].Conditions != null && Model.Steps[i].Conditions.ContainsKey("AmountThreshold") ? Model.Steps[i].Conditions["AmountThreshold"] : "")" class="form-control" />
-                                                            </div>
-                                                        }
-                                                    </div>
-                                                </div>
-                                            </div>
+                                             <div class="card card-body bg-light">
+                                                 <div class="row">
+                                                     <div class="col-md-6">
+                                                        <partial name="_DynamicParametersEditor" model="@(new Tuple<string, int, Dictionary<string, string>>("RoleParameters", i, Model.Steps[i].RoleParameters))" />
+                                                     </div>
+                                                     <div class="col-md-6">
+                                                        <partial name="_DynamicParametersEditor" model="@(new Tuple<string, int, Dictionary<string, string>>("Conditions", i, Model.Steps[i].Conditions))" />
+                                                     </div>
+                                                 </div>
+                                             </div>
                                         </div>
                                     </td>
                                 </tr>
@@ -134,23 +114,333 @@
                 </div>
             }
         </div>
-   
 
-    <div class="form-group">
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+        </div>
+    </form>
+</div>
+
+<!-- Modal template for parameter editing -->
+<div class="modal fade" id="parameters-modal" tabindex="-1" aria-labelledby="parameters-modal-label" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="parameters-modal-label">Edit Step Parameters</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="modal-parameters-container">
+                    <!-- Parameters will be loaded here dynamically -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary save-parameters-btn">Save Changes</button>
+            </div>
+        </div>
     </div>
-</form>
 </div>
 
 @section Scripts {
     @{
         await Html.RenderPartialAsync("_ValidationScriptsPartial");
     }
+    
     <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('DOM loaded, Bootstrap version:', typeof bootstrap);
+        });
+        
         $(document).ready(function () {
             // This function will help sort the steps if needed in the future
             // Currently the controller handles reordering on removal
+            
+            // Test click handler for the parameters button
+            $('.open-parameters-modal').on('click', function() {
+                console.log('Direct click handler triggered');
+            });
+        });
+        
+        // Handle adding new parameters
+        $(document).on('click', '.add-parameter-btn', function() {
+            console.log('Add parameter button clicked');
+            const container = $(this).closest('.dynamic-parameters-container').find('.parameters-container');
+            
+            const newRow = $(`
+                <tr class="parameter-row">
+                    <td>
+                        <input type="text" class="form-control param-key" value="" />
+                    </td>
+                    <td>
+                        <input type="text" class="form-control param-value" value="" />
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                            <i class="mdi mdi-delete"></i>
+                        </button>
+                    </td>
+                </tr>
+            `);
+            
+            container.append(newRow);
+        });
+        
+        // Handle removing parameters
+        $(document).on('click', '.remove-parameter-btn', function() {
+            console.log('Remove parameter button clicked');
+            $(this).closest('.parameter-row').remove();
+            
+            // If no parameters left, show the alert
+            const container = $(this).closest('.dynamic-parameters-container');
+            if (container.find('.parameter-row').length === 0) {
+                const paramType = container.data('param-type').toLowerCase();
+                container.find('.table-responsive').addClass('d-none');
+                container.find('.card-body').append(
+                    `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`
+                );
+            }
+        });
+        
+        // Open parameters modal
+        $(document).on('click', '.open-parameters-modal', function() {
+            console.log('Parameters button clicked');
+            const stepIndex = $(this).data('step-index');
+            console.log('Step index:', stepIndex);
+            
+            // Update modal content directly
+            const modal = $('#parameters-modal');
+            modal.find('.modal-title').text(`Edit Parameters for Step ${stepIndex + 1}`);
+            modal.data('step-index', stepIndex);
+            
+            // Create empty tables for parameters
+            const container = $('#modal-parameters-container');
+            container.html(`
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="dynamic-parameters-container" data-param-type="RoleParameters" data-step-index="${stepIndex}">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Role Parameters</h5>
+                                    <button type="button" class="btn btn-sm btn-primary add-parameter-btn">
+                                        <i class="mdi mdi-plus"></i> Add New
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Key</th>
+                                                    <th>Value</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="parameters-container">
+                                                <!-- Parameters will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="dynamic-parameters-container" data-param-type="Conditions" data-step-index="${stepIndex}">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Conditions</h5>
+                                    <button type="button" class="btn btn-sm btn-primary add-parameter-btn">
+                                        <i class="mdi mdi-plus"></i> Add New
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <thead>
+                                                <tr>
+                                                    <th>Key</th>
+                                                    <th>Value</th>
+                                                    <th>Actions</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody class="parameters-container">
+                                                <!-- Parameters will be loaded here -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `);
+            
+            // Load parameters via AJAX
+            $.ajax({
+                url: '@Url.Action("GetStepParametersJson", "WorkflowConfigs")',
+                type: 'GET',
+                data: { 
+                    workflowId: '@Model.WorkflowConfig.Id', 
+                    stepIndex: stepIndex 
+                },
+                success: function(data) {
+                    console.log('Parameters loaded successfully:', data);
+                    
+                    // Populate role parameters
+                    const roleParamsContainer = modal.find('[data-param-type="RoleParameters"] .parameters-container');
+                    roleParamsContainer.empty();
+                    
+                    if (data.roleParameters) {
+                        $.each(data.roleParameters, function(key, value) {
+                            const row = $(`
+                                <tr class="parameter-row">
+                                    <td>
+                                        <input type="text" class="form-control param-key" value="${key}" readonly />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control param-value" value="${value}" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                                            <i class="mdi mdi-delete"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `);
+                            roleParamsContainer.append(row);
+                        });
+                    }
+                    
+                    // Populate conditions
+                    const conditionsContainer = modal.find('[data-param-type="Conditions"] .parameters-container');
+                    conditionsContainer.empty();
+                    
+                    if (data.conditions) {
+                        $.each(data.conditions, function(key, value) {
+                            const row = $(`
+                                <tr class="parameter-row">
+                                    <td>
+                                        <input type="text" class="form-control param-key" value="${key}" readonly />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control param-value" value="${value}" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                                            <i class="mdi mdi-delete"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            `);
+                            conditionsContainer.append(row);
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Failed to load parameters:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                }
+            });
+            
+            // Show the modal
+            console.log('Showing modal');
+            const bsModal = new bootstrap.Modal(document.getElementById('parameters-modal'));
+            bsModal.show();
+        });
+        
+        // Save parameters from modal
+        $(document).on('click', '.save-parameters-btn', function() {
+            console.log('Save parameters button clicked');
+            
+            const modal = $('#parameters-modal');
+            const stepIndex = modal.data('step-index');
+            console.log('Saving parameters for step index:', stepIndex);
+            
+            // Collect all parameter data from the modal
+            // Add role parameters
+            const roleParamsContainer = modal.find('[data-param-type="RoleParameters"]');
+            const roleParamRows = roleParamsContainer.find('.parameter-row');
+            
+            // Create dictionaries to match the format received from the server
+            const roleParameters = {};
+            const conditions = {};
+            
+            // Collect role parameters
+            roleParamRows.each(function() {
+                const key = $(this).find('.param-key').val().trim();
+                const value = $(this).find('.param-value').val().trim();
+                if (key) {
+                    roleParameters[key] = value;
+                }
+            });
+            
+            // Add conditions
+            const conditionsContainer = modal.find('[data-param-type="Conditions"]');
+            const conditionRows = conditionsContainer.find('.parameter-row');
+            
+            // Collect conditions
+            conditionRows.each(function() {
+                const key = $(this).find('.param-key').val().trim();
+                const value = $(this).find('.param-value').val().trim();
+                if (key) {
+                    conditions[key] = value;
+                }
+            });
+            
+            const data = {
+                workflowId: parseInt('@Model.WorkflowConfig.Id'),
+                stepIndex: stepIndex,
+                roleParameters: roleParameters,
+                conditions: conditions
+            };
+            
+            console.log('Saving parameters:', data);
+            alert(data);
+            
+            // Send the data to the server
+            $.ajax({
+                url: '@Url.Action("SaveStepParametersJson", "WorkflowConfigs")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(data),
+                success: function(response) {
+                    console.log('Save response:', response);
+                    if (response.success) {
+                        // Close the modal
+                        const bsModal = bootstrap.Modal.getInstance(document.getElementById('parameters-modal'));
+                        bsModal.hide();
+                        
+                        // Show success message
+                        alert('Parameters saved successfully!');
+                        
+                        // Refresh the page to show updated parameters
+                        location.reload();
+                    } else {
+                        alert('Failed to save parameters: ' + response.message);
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('Error saving parameters:', error);
+                    console.error('Status:', status);
+                    console.error('Response:', xhr.responseText);
+                    alert('Failed to save parameters. Please try again.');
+                }
+            });
+        });
+        
+        // Initialize any empty tables with the alert message
+        $('.dynamic-parameters-container').each(function() {
+            const container = $(this);
+            if (container.find('.parameter-row').length === 0) {
+                const paramType = container.data('param-type').toLowerCase();
+                container.find('.table-responsive').addClass('d-none');
+                container.find('.card-body').append(
+                    `<div class="alert alert-info">No ${paramType} defined yet. Click "Add New" to create one.</div>`
+                );
+            }
         });
     </script>
 }

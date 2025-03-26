@@ -1,0 +1,83 @@
+@model Tuple<string, int, Dictionary<string, string>>
+
+@{
+    var paramType = Model.Item1;
+    var stepIndex = Model.Item2;
+    var parameters = Model.Item3 ?? new Dictionary<string, string>();
+    var title = paramType == "Conditions" ? "Conditions" : "Role Parameters";
+}
+
+<div class="dynamic-parameters-container" data-param-type="@paramType" data-step-index="@stepIndex">
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">@title</h5>
+            <button type="button" class="btn btn-sm btn-primary add-parameter-btn">
+                <i class="mdi mdi-plus"></i> Add New
+            </button>
+        </div>
+        <div class="card-body">
+            @if (!parameters.Any())
+            {
+                <div class="alert alert-info">
+                    No @(paramType.ToLower()) defined yet. Click "Add New" to create one.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Key</th>
+                                <th>Value</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="parameters-container">
+                            @foreach (var param in parameters)
+                            {
+                                <tr class="parameter-row">
+                                    <td>
+                                        <input type="text" class="form-control param-key" value="@param.Key" readonly />
+                                        @* Use string concatenation to avoid the "Keys" property access *@
+                                        <input type="hidden" name="@("Steps[" + stepIndex + "]." + paramType + "_Keys")" value="@param.Key" />
+                                    </td>
+                                    <td>
+                                        <input type="text" class="form-control param-value" 
+                                               name="@("Steps[" + stepIndex + "]." + paramType + "_Values")" 
+                                               value="@param.Value" />
+                                    </td>
+                                    <td>
+                                        <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                                            <i class="mdi mdi-delete"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Template for new parameter row -->
+<template id="parameter-row-template-@stepIndex-@paramType">
+    <tr class="parameter-row">
+        <td>
+            <input type="text" class="form-control param-key" placeholder="Enter key" />
+        </td>
+        <td>
+            <input type="text" class="form-control param-value" placeholder="Enter value" />
+        </td>
+        <td>
+            <button type="button" class="btn btn-sm btn-danger remove-parameter-btn">
+                <i class="mdi mdi-delete"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-success save-parameter-btn">
+                <i class="mdi mdi-content-save"></i>
+            </button>
+        </td>
+    </tr>
+</template>

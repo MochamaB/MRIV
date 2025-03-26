@@ -1,0 +1,16 @@
+@model Tuple<Tuple<string, int, Dictionary<string, string>>, Tuple<string, int, Dictionary<string, string>>>
+
+@{
+    var roleParameters = Model.Item1;
+    var conditions = Model.Item2;
+    var stepIndex = ViewBag.StepIndex;
+}
+
+<div class="row">
+    <div class="col-md-6">
+        <partial name="_DynamicParametersEditor" model="roleParameters" />
+    </div>
+    <div class="col-md-6">
+        <partial name="_DynamicParametersEditor" model="conditions" />
+    </div>
+</div>
