@@ -1,0 +1,176 @@
+/* Custom theme colors for MRIV
+   Primary: #324721 (Green)
+   Secondary: #ffaf00 (Yellow)
+*/
+
+:root {
+    /* Primary color overrides */
+    --vz-primary: #324721;
+    --vz-primary-rgb: 50, 71, 33;
+    
+    /* Secondary color overrides */
+    --vz-secondary: #ffaf00;
+    --vz-secondary-rgb: 255, 175, 0;
+}
+
+/* Sidebar background color */
+.app-menu {
+    background-color: #324721 !important;
+}
+.navbar-nav .nav-link{
+    color: #ffffff  !important;
+}
+
+/* Active menu item */
+.navbar-nav .nav-link.active {
+    color: #ffaf00 !important;
+    background-color: rgba(255, 175, 0, 0.1) !important;
+}
+
+/* Hover state for menu items */
+.navbar-nav .nav-link:hover {
+    color: #ffaf00 !important;
+}
+
+/* Menu category headers */
+.menu-title {
+    color: #ffffff !important;
+}
+
+/* Button primary color */
+.btn-primary {
+    background-color: #324721 !important;
+    border-color: #324721 !important;
+}
+
+.btn-primary:hover, .btn-primary:focus, .btn-primary:active {
+    background-color: #3d5728 !important;
+    border-color: #3d5728 !important;
+}
+
+/* Button secondary color */
+.btn-secondary {
+    background-color: #ffaf00 !important;
+    border-color: #ffaf00 !important;
+}
+
+.btn-secondary:hover, .btn-secondary:focus, .btn-secondary:active {
+    background-color: #e69e00 !important;
+    border-color: #e69e00 !important;
+}
+
+/* Badge primary color */
+.badge-primary, .bg-primary {
+    background-color: #324721 !important;
+}
+
+/* Badge secondary color */
+.badge-secondary, .bg-secondary {
+    background-color: #ffaf00 !important;
+}
+
+/* Text colors */
+.text-primary {
+    color: #324721 !important;
+}
+
+.text-secondary {
+    color: #ffaf00 !important;
+}
+
+/* Border colors */
+.border-primary {
+    border-color: #324721 !important;
+}
+
+.border-secondary {
+    border-color: #ffaf00 !important;
+}
+
+/* Breadcrumb customization */
+.page-title-box {
+   
+    padding-left: 15px;
+}
+
+/* Navbar customization */
+#page-topbar {
+    background-color: #ffffff;
+    border-bottom: 1px solid rgba(50, 71, 33, 0.1);
+}
+
+/* Footer customization */
+.footer {
+    background-color: #ffffff;
+    border-top: 1px solid rgba(50, 71, 33, 0.1);
+}
+
+/* Sidebar menu icons */
+.navbar-nav .nav-link i {
+    color: #ffffff !important;
+}
+
+.navbar-nav .nav-link.active i {
+    color: #ffaf00 !important;
+}
+
+/* Custom scrollbar colors */
+.simplebar-scrollbar:before {
+    background-color: rgba(255, 175, 0, 0.5) !important;
+}
+
+/* Modify vertical overlay behavior */
+/* .vertical-overlay {
+    background-color: transparent !important; 
+    z-index: 1003;
+} */
+
+/* Only show overlay on mobile devices */
+/* @media (min-width: 992px) {
+    .vertical-overlay {
+        display: none !important;
+    }
+    
+    body.vertical-sidebar-enable {
+        overflow: auto !important;
+    }
+} */
+
+/* Ensure sidebar toggle works properly */
+/* [data-sidebar-size="sm"] .navbar-brand-box {
+    width: 70px;
+}
+
+[data-sidebar-size="sm"] .app-menu {
+    width: 70px !important;
+}
+
+[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-link {
+    padding: 0.625rem 1rem;
+    text-align: center;
+}
+
+[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-link i {
+    font-size: 1.25rem;
+}
+
+[data-sidebar-size="sm"] .navbar-menu .navbar-nav .nav-link span {
+    display: none;
+}
+
+[data-sidebar-size="sm"] .menu-title {
+    text-align: center;
+}
+
+[data-sidebar-size="sm"] .menu-title span {
+    display: none;
+}
+
+[data-sidebar-size="sm"] .menu-title:after {
+    display: none;
+} */
+
+/* Ensure main content adjusts properly */
+/* [data-sidebar-size="sm"] .main-content {
+    margin-left: 70px;
+} */

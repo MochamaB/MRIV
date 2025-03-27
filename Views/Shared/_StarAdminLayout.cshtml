@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+
+<partial name="_StarAdminHeader" />
+<body>
+    <div class="container-scroller">
+        <!-- partial:../../partials/_navbar.html -->
+        <partial name="_StarAdminNavBar" />
+        <!-- partial -->
+        <div class="container-fluid page-body-wrapper">
+            <!-- partial:../../partials/_sidebar.html -->
+            <div id="dynamicSidebar">
+                <partial name="_StarAdminSidebar" ,Model.SidebarViewModel />
+            </div>
+           
+            <!-- partial -->
+            <div class="main-panel">
+                <div class="content-wrapper" >
+                    <div id="progress-container">
+                        <div id="progress-bar"></div>
+                    </div>
+                        <div class="col-12">
+                            <partial name="_StarAdminBreadcrumb" />
+                            <partial name="_Messages" />
+                            <main role="main" class="pb-3">
+                                @RenderBody()
+
+                            </main>
+                        </div>
+                    
+                </div>
+                <!-- content-wrapper ends -->
+                <!-- partial:../../partials/_footer.html -->
+                <footer class="footer" style="background-color:#fff">
+                    <div class="d-sm-flex justify-content-center justify-content-sm-between">
+                        <span class="text-muted text-center text-sm-left d-block d-sm-inline-block">Copyright KTDA ICT Business &copy; @DateTime.Now.Year. All rights reserved</span>
+                    </div>
+                </footer>
+                <!-- partial -->
+            </div>
+            <!-- main-panel ends -->
+        </div>
+        <!-- page-body-wrapper ends -->
+    </div>
+   
+       
+    
+    <!-- container-scroller -->
+    <!-- plugins:js -->
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+  
+    <script src="https://cdn.jsdelivr.net/npm/jquery/dist/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.5/dist/bootstrap-table.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-cookie@3.0.1/dist/js.cookie.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl);
+            });
+        });
+    </script>
+
+    <<script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const elements = document.querySelectorAll('input, select, textarea');
+
+            // Function to update background color based on value
+            function updateBackground(element) {
+                if (element.tagName === 'SELECT') {
+                    element.style.backgroundColor = element.value ? '#f8f9fa' : '#fff'; // Light grey if value exists, white if empty
+                } else if (element.type === 'text' || element.tagName === 'TEXTAREA') {
+                    element.style.backgroundColor = element.value.trim() ? '#f8f9fa' : '#fff'; // Light grey if text is entered
+                } else if (element.type === 'number') {
+                    element.style.backgroundColor = (element.value && parseInt(element.value) > 0) ? '#f8f9fa' : '#fff';
+                }
+            }
+
+            // Apply background color initially
+            elements.forEach(element => updateBackground(element));
+
+            // Listen for changes to update background dynamically
+            elements.forEach(element => {
+                element.addEventListener('change', function () {
+                    updateBackground(this);
+                });
+
+                element.addEventListener('input', function () {
+                    updateBackground(this);
+                });
+            });
+        });
+    </script>
+    <script>
+        if (typeof jQuery == 'undefined') {
+            console.log('jQuery is not loaded');
+        } else {
+            $(document).ready(function () {
+                console.log("Script section loaded");
+
+                //// SCRIPT TO VIEW DOCUMENT /////
+                // Use event delegation to attach event handler
+                $(document).on("click", ".document-link", function (e) {
+                    e.preventDefault();
+                    console.log("Link clicked");
+
+                    var documentName = $(this).data('document-name');
+
+                    // Set the modal title and body content
+                    $('#documentModalLabel').text(documentName);
+
+                    var documentUrl = $(this).data('document-url');
+                    console.log(documentUrl);
+
+                    $('#documentViewer').attr('src', documentUrl);
+                });
+
+                /// SCRIPT TO PRINT PAGE///
+                $(document).on("click", ".printbutton", function (e) {
+                    e.preventDefault();
+                    printDiv('printableArea');
+                    
+                });
+                function printDiv(divClass) {
+                    var printContents = document.querySelector('.' + divClass);
+                    if (printContents) {
+                        var originalContents = document.body.innerHTML;
+                        document.body.innerHTML = printContents.innerHTML;
+                        window.print();
+                        document.body.innerHTML = originalContents;
+                    } else {
+                        console.error('Element with class "' + divClass + '" not found.');
+                    }
+                }
+
+            });
+        }
+    </script>
+ 
+
+    <script src="~/vendors/js/vendor.bundle.base.js"></script>
+    <script src="~/vendors/bootstrap-datepicker/bootstrap-datepicker.min.js"></script>
+    <!-- endinject -->
+    <!-- Plugin js for this page-->
+    <script src="~/vendors/jquery-bar-rating/jquery.barrating.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+    <!-- End plugin js for this page-->
+    <!-- inject:js -->
+    <script src="~/js/Pdfview.js"></script>
+    <script src="~/js/off-canvas.js"></script>
+    <script src="~/js/hoverable-collapse.js"></script>
+    <script src="~/js/template.js"></script>
+    <script src="~/js/settings.js"></script>
+    <script src="~/js/todolist.js"></script>
+    <script src="~/js/Customwizard.js"></script>
+    <script src="~/js/Progress.js"></script>
+    <script src="~/js/modal-demo.js"></script>
+    <script src="~/js/myscript_new.js"></script>
+    <script src="~/js/notification.js"></script>
+    <!-- endinject -->
+    <!-- Custom js for this page-->
+    <script src="~/js/profile-demo.js"></script>
+    <!-- End custom js for this page-->
+    @await RenderSectionAsync("Scripts", required: false)
+   
+</body>
+
+
+</html>

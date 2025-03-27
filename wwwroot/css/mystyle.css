@@ -196,11 +196,11 @@ input.form-control.form-control-lg.border-left-0:focus {
 
 .table > thead {
     vertical-align: bottom;
-    background-color: #326408;
+    background-color: #f3f3f9;
     text-align: left;
 }
     .table > thead th {
-        color: #fff; /* Change this color to whatever you want */
+        color: #495057; /* Change this color to whatever you want */
     }
 
 /* === INPUTS AND TEXT === */

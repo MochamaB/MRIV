@@ -1,0 +1,101 @@
+@{
+    ViewData["Title"] = "Index";
+    // Roles allowed to view admin functions. Add roles below to the roles Array//
+    // Roles available are "Admin","HR", "Hod", "supervisor","user","2_step_mgrs","2_step_secs","FieldUser","FieldSupervisor"
+    var rolesArray = new[] { "Admin", "HR" };
+    var roles = string.Join(",", rolesArray);
+}
+
+<nav class="sidebar sidebar-offcanvas" >
+  <ul class="nav">
+        <li class="nav-item nav-category">MAIN MENU</li>
+        <li class="nav-item">
+            <a class="nav-link" href="/Dashboard/">
+                <i class="mdi mdi-mdi mdi-mdi mdi-grid-large menu-icon"></i>
+                <span class="menu-title" style="text-transform: uppercase;">Dashboard</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="/Requisitions/">
+                <i class="mdi mdi-content-duplicate menu-icon"></i>
+                <span class="menu-title" style="text-transform: uppercase;">My Requisitions</span>
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link" href="/Approvals/">
+                <i class="mdi mdi-mdi mdi-mdi mdi-check-circle menu-icon"></i>
+                <span class="menu-title" style="text-transform: uppercase;">Approvals</span>
+            </a>
+        </li>
+      
+
+        <li class="nav-item">
+            <a class="nav-link" href="/Documents/">
+                <i class="menu-icon mdi mdi-file-document "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Documents</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/Materials/">
+                <i class="menu-icon mdi mdi-television-guide "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Materials</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/MaterialCategories/">
+                <i class="menu-icon mdi mdi-sitemap "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Material Categories</span>
+            </a>
+        </li>
+        
+        <li class="nav-item">
+            <a class="nav-link" href="">
+                <i class="menu-icon mdi mdi-chart-bar "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Reports</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/WorkflowConfigs/">
+                <i class="menu-icon mdi mdi-format-list-bulleted-type "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Approval Config</span>
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="/StationCategories/">
+                <i class="menu-icon mdi mdi mdi-bank "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Station Categories</span>
+            </a>
+        </li>
+        <li asp-authorize-role="Admin" class="nav-item nav-category">Administration</li>
+
+
+        <li class="nav-item" asp-authorize-role="Admin">
+            <a class="nav-link" href="/Settings/">
+                <i class="menu-icon mdi mdi mdi-settings"></i>
+                <span class="menu-title" style="text-transform: uppercase;">Settings</span>
+            </a>
+        </li>
+
+        <li class="nav-item" asp-authorize-role="Admin">
+            <a class="nav-link" href="/Departments/">
+                <i class="menu-icon mdi mdi-account-multiple "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Departments</span>
+            </a>
+        </li>
+        <li class="nav-item" asp-authorize-role="Admin">
+            <a class="nav-link" href="/EmployeeBkps/">
+                <i class="menu-icon mdi mdi-account-card-details "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Employees</span>
+            </a>
+        </li>
+        <li class="nav-item" asp-authorize-role="Admin">
+            <a class="nav-link" href="/Roles/">
+                <i class="menu-icon mdi mdi-account-key "></i>
+                <span class="menu-title" style="text-transform: uppercase;">Roles</span>
+            </a>
+        </li>
+
+  </ul>
+</nav>

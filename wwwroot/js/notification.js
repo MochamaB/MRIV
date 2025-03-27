@@ -1,10 +1,10 @@
-﻿< !--In your layout file or a script section-- >
+﻿
   
         $(document).ready(function() {
             // Function to load notifications
             function loadNotifications() {
                 $.ajax({
-                    url: '@Url.Action("GetUnreadNotifications", "Notifications")',
+                    url: '/Notifications/GetUnreadNotifications',
                     type: 'GET',
                     success: function (data) {
                         $('#notificationDropdownMenu').html(data);
