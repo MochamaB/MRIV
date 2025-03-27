@@ -37,6 +37,19 @@
           <span class="mdi mdi-menu"></span>
         </button>
       </li>
+            <!-- Views/Shared/_Navbar.cshtml -->
+            <li class="nav-item dropdown">
+                <a class="nav-link count-indicator dropdown-toggle" id="notificationDropdown" href="#" data-bs-toggle="dropdown">
+                    <i class="mdi mdi-bell mx-0"></i>
+                    <span class="count notification-count @(ViewBag.UnreadNotifications > 0 ? "" : "d-none")">@ViewBag.UnreadNotifications</span>
+                </a>
+                <div class="dropdown-menu dropdown-menu-right navbar-dropdown preview-list" id="notificationDropdownMenu" aria-labelledby="notificationDropdown">
+                    <!-- This will be populated by AJAX -->
+                    <div class="dropdown-header">
+                        <h6 class="notification-title">Loading notifications...</h6>
+                    </div>
+                </div>
+            </li>
      
        <li class="nav-item d-none d-lg-block">
                 <form asp-action="Logout" asp-controller="Login" method="post" style="display:inline;">

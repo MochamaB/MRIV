@@ -28,6 +28,9 @@ public partial class RequisitionContext : DbContext
     public DbSet<WorkflowConfig> WorkflowConfigs { get; set; }
     public DbSet<WorkflowStepConfig> WorkflowStepConfigs { get; set; }
 
+    public virtual DbSet<Notification> Notifications { get; set; }
+    public virtual DbSet<NotificationTemplate> NotificationTemplates { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.

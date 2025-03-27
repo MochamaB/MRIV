@@ -1,0 +1,106 @@
+﻿<!-- Views/Notifications/Index.cshtml -->
+
+@model List<Notification>
+
+@{
+    ViewData["Title"] = "Notifications";
+}
+
+<div class="row">
+    <div class="col-lg-12 grid-margin stretch-card">
+        <div class="card">
+            <div class="card-body">
+                <h4 class="card-title">Notifications</h4>
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Title</th>
+                                <th>Message</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var notification in Model)
+                            {
+                                <tr class="@(notification.IsRead ? "" : "table-active")">
+                                    <td>
+                                        <div class="badge @(notification.IsRead ? "badge-light" : "badge-warning")">
+                                            @(notification.IsRead ? "Read" : "Unread")
+                                        </div>
+                                    </td>
+                                    <td>@notification.Title</td>
+                                    <td>@notification.Message</td>
+                                    <td>@notification.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(notification.URL))
+                                        {
+                                            <a href="@notification.URL" class="btn btn-outline-primary btn-sm">
+                                                <i class="mdi mdi-eye"></i> View
+                                            </a>
+                                        }
+                                        @if (!notification.IsRead)
+                                        {
+                                            <button type="button" class="btn btn-outline-success btn-sm mark-as-read" data-id="@notification.Id">
+                                                <i class="mdi mdi-check"></i> Mark as Read
+                                            </button>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                            @if (!Model.Any())
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center">No notifications found</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function () {
+            // Mark notification as read
+            $('.mark-as-read').on('click', function () {
+                const id = $(this).data('id');
+                const $row = $(this).closest('tr');
+
+                $.ajax({
+                    url: '@Url.Action("MarkAsRead", "Notifications")',
+                    type: 'POST',
+                    data: { id: id },
+                    success: function (response) {
+                        if (response.success) {
+                            $row.removeClass('table-active');
+                            $row.find('.badge').removeClass('badge-warning').addClass('badge-light').text('Read');
+                            $(this).remove();
+                            updateNotificationCount();
+                        }
+                    }
+                });
+            });
+
+            function updateNotificationCount() {
+                $.ajax({
+                    url: '@Url.Action("GetUnreadCount", "Notifications")',
+                    type: 'GET',
+                    success: function (response) {
+                        $('.notification-count').text(response.count);
+                        if (response.count > 0) {
+                            $('.notification-count').show();
+                        } else {
+                            $('.notification-count').hide();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+}

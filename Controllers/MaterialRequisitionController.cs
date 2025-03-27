@@ -32,8 +32,9 @@ namespace MRIV.Controllers
         private readonly IApprovalService _approvalService;
         private readonly string _connectionString;
         private readonly IStationCategoryService _stationCategoryService;
+        private readonly INotificationService _notificationService;
         public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context, 
-            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, IStationCategoryService stationCategoryService)
+            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, IStationCategoryService stationCategoryService, INotificationService notificationService)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
@@ -42,6 +43,8 @@ namespace MRIV.Controllers
             _connectionString = configuration.GetConnectionString("RequisitionContext");
             _departmentService = departmentService;
             _stationCategoryService = stationCategoryService;
+            _notificationService = notificationService;
+
         }
 
 
@@ -525,11 +528,6 @@ namespace MRIV.Controllers
             // Generate base code
             string baseCode = $"MAT-{nextId:D3}-{categoryId:D3}";
 
-            if (itemIndex > 0)
-            {
-                baseCode += $"-{itemIndex}";
-            }
-
             // Add a unique component to ensure no collisions
             string uniqueCode = $"{baseCode}-{DateTime.Now.Ticks % 10000}";
 
@@ -620,7 +618,7 @@ namespace MRIV.Controllers
             foreach (var item in requisitionItems)
             {
                 // Only create/update material if SaveToInventory is true or Material.Code exists
-                if (item.SaveToInventory && item.Material != null && !string.IsNullOrEmpty(item.Material.Code))
+                if (item.SaveToInventory && !string.IsNullOrEmpty(item.Material?.Code))
                 {
                     item.Material.Name = item.Name;
                     item.Material.Description = item.Description;

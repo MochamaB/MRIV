@@ -21,6 +21,7 @@ builder.Services.AddScoped<IApprovalService, ApprovalService>();
 builder.Services.AddScoped<IDepartmentService ,DepartmentService>();
 builder.Services.AddScoped<IStationCategoryService, StationCategoryService>();
 builder.Services.AddScoped<VendorService>();
+builder.Services.AddScoped<INotificationService, NotificationService>();
 
 builder.Services.AddHttpContextAccessor();
 
@@ -46,6 +47,9 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<RequisitionContext>();
         WorkflowConfigSeeder.SeedWorkflowConfigurations(context);
+
+        // Seed notification templates (new seeder)
+        NotificationTemplateSeeder.SeedNotificationTemplates(context);
     }
     catch (Exception ex)
     {
