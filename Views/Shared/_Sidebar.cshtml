@@ -4,6 +4,9 @@
     // Roles available are "Admin","HR", "Hod", "supervisor","user","2_step_mgrs","2_step_secs","FieldUser","FieldSupervisor"
     var rolesArray = new[] { "Admin", "HR" };
     var roles = string.Join(",", rolesArray);
+    
+    // Get current controller name for active menu highlighting
+    var currentController = ViewContext.RouteData.Values["controller"].ToString();
 }
 
 <div id="scrollbar">
@@ -13,37 +16,37 @@
             <li class="menu-title"><span data-key="t-menu">MAIN MENU</span></li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/Dashboard/">
+                <a class="nav-link menu-link @(currentController == "Dashboard" ? "active" : "")" href="/Dashboard/">
                     <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboard">Dashboard</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/Requisitions/">
+                <a class="nav-link menu-link @(currentController == "Requisitions" ? "active" : "")" href="/Requisitions/">
                     <i class="ri-file-list-3-line"></i> <span data-key="t-requisitions">My Requisitions</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/Approvals/">
+                <a class="nav-link menu-link @(currentController == "Approvals" ? "active" : "")" href="/Approvals/">
                     <i class="ri-check-double-line"></i> <span data-key="t-approvals">Approvals</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/Documents/">
+                <a class="nav-link menu-link @(currentController == "Documents" ? "active" : "")" href="/Documents/">
                     <i class="ri-file-text-line"></i> <span data-key="t-documents">Documents</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/Materials/">
+                <a class="nav-link menu-link @(currentController == "Materials" ? "active" : "")" href="/Materials/">
                     <i class="ri-stack-line"></i> <span data-key="t-materials">Materials</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/MaterialCategories/">
+                <a class="nav-link menu-link @(currentController == "MaterialCategories" ? "active" : "")" href="/MaterialCategories/">
                     <i class="ri-list-check"></i> <span data-key="t-material-categories">Material Categories</span>
                 </a>
             </li>
@@ -55,13 +58,13 @@
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/WorkflowConfigs/">
+                <a class="nav-link menu-link @(currentController == "WorkflowConfigs" ? "active" : "")" href="/WorkflowConfigs/">
                     <i class="ri-flow-chart"></i> <span data-key="t-approval-config">Approval Config</span>
                 </a>
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="/StationCategories/">
+                <a class="nav-link menu-link @(currentController == "StationCategories" ? "active" : "")" href="/StationCategories/">
                     <i class="ri-building-line"></i> <span data-key="t-station-categories">Station Categories</span>
                 </a>
             </li>
@@ -69,25 +72,25 @@
             <li class="menu-title" asp-authorize-role="Admin"><i class="ri-more-fill"></i> <span data-key="t-administration">Administration</span></li>
 
             <li class="nav-item" asp-authorize-role="Admin">
-                <a class="nav-link menu-link" href="/Settings/">
+                <a class="nav-link menu-link @(currentController == "Settings" ? "active" : "")" href="/Settings/">
                     <i class="ri-settings-4-line"></i> <span data-key="t-settings">Settings</span>
                 </a>
             </li>
 
             <li class="nav-item" asp-authorize-role="Admin">
-                <a class="nav-link menu-link" href="/Departments/">
+                <a class="nav-link menu-link @(currentController == "Departments" ? "active" : "")" href="/Departments/">
                     <i class="ri-team-line"></i> <span data-key="t-departments">Departments</span>
                 </a>
             </li>
 
             <li class="nav-item" asp-authorize-role="Admin">
-                <a class="nav-link menu-link" href="/EmployeeBkps/">
+                <a class="nav-link menu-link @(currentController == "EmployeeBkps" ? "active" : "")" href="/EmployeeBkps/">
                     <i class="ri-user-3-line"></i> <span data-key="t-employees">Employees</span>
                 </a>
             </li>
 
             <li class="nav-item" asp-authorize-role="Admin">
-                <a class="nav-link menu-link" href="/Roles/">
+                <a class="nav-link menu-link @(currentController == "Roles" ? "active" : "")" href="/Roles/">
                     <i class="ri-shield-user-line"></i> <span data-key="t-roles">Roles</span>
                 </a>
             </li>
