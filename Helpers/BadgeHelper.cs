@@ -11,11 +11,11 @@ namespace MRIV.Helpers
                 ApprovalStatus.PendingApproval => "badge-warning",
                 ApprovalStatus.NotStarted => "badge-information",
                 ApprovalStatus.Rejected => "badge-error",
-                ApprovalStatus.Dispatched => "badge-light",
+                ApprovalStatus.Dispatched => "badge-success",
                 ApprovalStatus.Received => "badge-active",
                 ApprovalStatus.Approved => "badge-success",
-                ApprovalStatus.Completed => "badge-success",
-                ApprovalStatus.Forwarded => "badge-info",
+                ApprovalStatus.PendingDispatch => "badge-warning",
+                ApprovalStatus.PendingReceive => "badge-warning",
                 ApprovalStatus.OnHold => "badge-secondary",
                 _ => "bg-primary" // Default class
             };

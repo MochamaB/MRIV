@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 
 namespace MRIV.Enums
 {
@@ -22,13 +22,15 @@ namespace MRIV.Enums
         [Description("Received")]
         Received = 5,
 
-        [Description("Completed")]
-        Completed = 6,
-
-        [Description("Forwarded")]
-        Forwarded = 7,
-
+     
         [Description("On Hold")]
-        OnHold = 8
+        OnHold = 6,
+
+        [Description("Pending Dispatch")]
+        PendingDispatch = 7,
+
+        [Description("Not Received")]
+        PendingReceive = 8,
+
     }
 }

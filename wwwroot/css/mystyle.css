@@ -216,6 +216,30 @@ a.text-primary:hover {
     font-size: 1.015rem;
 }
 
+.text-info {
+    font-weight: 700;
+    color: #0e45f9 !important;
+    font-size: 0.815rem;
+}
+
+a.text-info:hover {
+    color: #1c47d5; /* Darker shade of primary color for hover effect */
+    text-decoration: underline; /* Add underline on hover */
+    font-size: 1.015rem;
+}
+
+.text-light {
+    font-weight: 700;
+    color: #6a008a !important;
+    font-size: 0.815rem;
+}
+
+a.text-light:hover {
+    color: #6a008a; /* Darker shade of primary color for hover effect */
+    text-decoration: underline; /* Add underline on hover */
+    font-size: 1.015rem;
+}
+
 .text-danger {
     font-weight: 600 !important;
     color: red !important;

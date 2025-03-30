@@ -319,10 +319,12 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            // Check if the approval is in a state that can be approved/rejected
-            if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+            // Check if the approval is in a state that can be processed
+            if (approval.ApprovalStatus != ApprovalStatus.PendingApproval && 
+                approval.ApprovalStatus != ApprovalStatus.PendingDispatch && 
+                approval.ApprovalStatus != ApprovalStatus.PendingReceive)
             {
-                TempData["ErrorMessage"] = $"This approval step is not pending approval. Current status: {approval.ApprovalStatus}";
+                TempData["ErrorMessage"] = $"This approval step is not in a pending state. Current status: {approval.ApprovalStatus}";
                 return RedirectToAction(nameof(Index));
             }
 
@@ -375,103 +377,38 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    bool success = false;
-
-                    // Parse the action to get the enum value
-                    if (int.TryParse(viewModel.Action, out int statusValue))
+                    // Check if comments are required for rejection
+                    if ((viewModel.Action == "3" || viewModel.Action.ToLower() == "reject") && string.IsNullOrWhiteSpace(viewModel.Comments))
                     {
-                        var approvalStatus = (ApprovalStatus)statusValue;
-                        Console.WriteLine($"Parsed action value: {statusValue} as {approvalStatus}");
-
-                        // Handle based on the approval status
-                        if (approvalStatus == ApprovalStatus.Approved)
-                        {
-                            Console.WriteLine($"Calling ApproveStepAsync for ID {id}");
-                            success = await _approvalService.ApproveStepAsync(id, viewModel.Comments);
-
-                            Console.WriteLine($"ApproveStepAsync result: {success}");
-                            if (success)
-                            {
-                                TempData["SuccessMessage"] = "Approval step approved successfully.";
-                                return RedirectToAction(nameof(Index));
-                            }
-                            else
-                            {
-                                TempData["ErrorMessage"] = "Failed to approve the step. Please try again.";
-                            }
-                        }
-                        else if (approvalStatus == ApprovalStatus.Rejected)
-                        {
-                            Console.WriteLine($"Calling RejectStepAsync for ID {id}");
-                            if (string.IsNullOrWhiteSpace(viewModel.Comments))
-                            {
-                                ModelState.AddModelError("Comments", "Comments are required when rejecting an approval.");
-                                Console.WriteLine("Comments missing for rejection");
-                            }
-                            else
-                            {
-                                success = await _approvalService.RejectStepAsync(id, viewModel.Comments);
-                                Console.WriteLine($"RejectStepAsync result: {success}");
-
-                                if (success)
-                                {
-                                    TempData["SuccessMessage"] = "Approval step rejected successfully.";
-                                    return RedirectToAction(nameof(Index));
-                                }
-                                else
-                                {
-                                    TempData["ErrorMessage"] = "Failed to reject the step. Please try again.";
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine($"Unsupported approval status: {approvalStatus}");
-                            TempData["ErrorMessage"] = $"Unsupported action: {approvalStatus}";
-                            return RedirectToAction(nameof(Index));
-                        }
+                        ModelState.AddModelError("Comments", "Comments are required when rejecting an approval.");
+                        Console.WriteLine("Comments missing for rejection");
                     }
                     else
                     {
-                        // Try string-based action handling as fallback
-                        string action = viewModel.Action.ToLowerInvariant();
-                        Console.WriteLine($"Trying string-based action handling: {action}");
-
-                        if (action == "approve")
+                        // Process the approval action using the new dynamic method
+                        bool success = await _approvalService.ProcessApprovalActionAsync(id, viewModel.Action, viewModel.Comments);
+                        
+                        if (success)
                         {
-                            success = await _approvalService.ApproveStepAsync(id, viewModel.Comments);
-                            Console.WriteLine($"ApproveStepAsync result: {success}");
-
-                            if (success)
+                            // Determine the success message based on the action
+                            string successMessage = "Action completed successfully.";
+                            
+                            if (int.TryParse(viewModel.Action, out int statusValue))
                             {
-                                TempData["SuccessMessage"] = "Approval step approved successfully.";
-                                return RedirectToAction(nameof(Index));
-                            }
-                        }
-                        else if (action == "reject")
-                        {
-                            if (string.IsNullOrWhiteSpace(viewModel.Comments))
-                            {
-                                ModelState.AddModelError("Comments", "Comments are required when rejecting an approval.");
-                                Console.WriteLine("Comments missing for rejection");
+                                var status = (ApprovalStatus)statusValue;
+                                successMessage = $"Step {GetActionVerb(status)} successfully.";
                             }
                             else
                             {
-                                success = await _approvalService.RejectStepAsync(id, viewModel.Comments);
-                                Console.WriteLine($"RejectStepAsync result: {success}");
-
-                                if (success)
-                                {
-                                    TempData["SuccessMessage"] = "Approval step rejected successfully.";
-                                    return RedirectToAction(nameof(Index));
-                                }
+                                successMessage = $"Step {viewModel.Action}d successfully.";
                             }
+                            
+                            TempData["SuccessMessage"] = successMessage;
+                            return RedirectToAction(nameof(Index));
                         }
                         else
                         {
-                            Console.WriteLine($"Invalid action format: {viewModel.Action}");
-                            TempData["ErrorMessage"] = $"Invalid action format: {viewModel.Action}";
-                            return RedirectToAction(nameof(Index));
+                            TempData["ErrorMessage"] = "Failed to process the action. Please try again.";
                         }
                     }
                 }
@@ -526,6 +463,26 @@ namespace MRIV.Controllers
             viewModel.DepartmentName = department?.DepartmentName ?? "Unknown Department";
 
             return View(viewModel);
+        }
+        
+        // Helper method to get the verb form of an action based on the status
+        private string GetActionVerb(ApprovalStatus status)
+        {
+            switch (status)
+            {
+                case ApprovalStatus.Approved:
+                    return "approved";
+                case ApprovalStatus.Rejected:
+                    return "rejected";
+                case ApprovalStatus.Dispatched:
+                    return "dispatched";
+                case ApprovalStatus.Received:
+                    return "received";
+                case ApprovalStatus.OnHold:
+                    return "put on hold";
+                default:
+                    return "processed";
+            }
         }
     }
 }
