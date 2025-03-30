@@ -1,4 +1,4 @@
-﻿using MRIV.Models;
+using MRIV.Models;
 using Microsoft.EntityFrameworkCore;
 using MRIV.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
@@ -12,8 +12,22 @@ namespace MRIV.Services
         Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee);
         Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors);
         Task<Dictionary<string, SelectList>> PopulateDepartmentEmployeesAsync(Requisition requisition, List<Approval> approvalSteps);
-
         Task<Approval> GetMostSignificantApprovalAsync(int requisitionId);
+        
+        // Phase 2: Core Approval Functions
+        Task<bool> ApproveStepAsync(int approvalId, string comments);
+        Task<bool> RejectStepAsync(int approvalId, string comments);
+        Task<Approval> GetNextStepAsync(int requisitionId, int currentStepNumber);
+        Task<List<ApprovalStepViewModel>> GetApprovalHistoryAsync(int requisitionId);
+        
+        // Get available status options based on approval step
+        Task<Dictionary<string, string>> GetAvailableStatusOptionsAsync(int approvalId);
+        
+        // Get available status options for an approval
+        List<ApprovalStatus> GetAvailableStatusOptions(Approval approval);
+        
+        // Convert list of ApprovalStatus to dictionary for dropdown
+        Dictionary<string, string> GetStatusOptionsForDropdown(List<ApprovalStatus> statuses);
     }
     public class ApprovalService : IApprovalService
     {
@@ -319,41 +333,362 @@ namespace MRIV.Services
 
         public async Task<Approval> GetMostSignificantApprovalAsync(int requisitionId)
         {
-            // Get all approvals for this requisition
             var approvals = await _context.Approvals
                 .Where(a => a.RequisitionId == requisitionId)
                 .OrderBy(a => a.StepNumber)
                 .ToListAsync();
 
-            return GetMostSignificantApproval(approvals);
-        }
-
-        // Helper method for internal use
-        private Approval GetMostSignificantApproval(List<Approval> approvals)
-        {
-            if (approvals == null || !approvals.Any())
-                return null;
-
-            // Priority order: PendingApproval, Completed, Rejected, Forwarded
+            // First look for a pending approval
             var pendingApproval = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.PendingApproval);
             if (pendingApproval != null)
+            {
                 return pendingApproval;
+            }
 
-            var completed = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Completed);
-            if (completed != null)
-                return completed;
+            // If no pending approval, look for the most recent rejected approval
+            var rejectedApproval = approvals
+                .Where(a => a.ApprovalStatus == ApprovalStatus.Rejected)
+                .OrderByDescending(a => a.UpdatedAt ?? a.CreatedAt)
+                .FirstOrDefault();
+            if (rejectedApproval != null)
+            {
+                return rejectedApproval;
+            }
 
-            var rejected = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Rejected);
-            if (rejected != null)
-                return rejected;
-
-            var forwarded = approvals.FirstOrDefault(a => a.ApprovalStatus == ApprovalStatus.Forwarded);
-            if (forwarded != null)
-                return forwarded;
-
-            // If none of the specific statuses are found, return the first approval
-            return approvals.FirstOrDefault();
+            // If no pending or rejected approvals, return the last approval in the sequence
+            return approvals.OrderByDescending(a => a.StepNumber).FirstOrDefault();
         }
 
+        #region Phase 2: Core Approval Functions
+
+        /// <summary>
+        /// Approves an approval step and activates the next step if available
+        /// </summary>
+        /// <param name="approvalId">The ID of the approval to approve</param>
+        /// <param name="comments">Optional comments for the approval</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> ApproveStepAsync(int approvalId, string comments)
+        {
+            Console.WriteLine($"ApproveStepAsync called for ID {approvalId}");
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+
+            try
+            {
+                // Get the approval
+                var approval = await _context.Approvals
+                    .Include(a => a.Requisition)
+                    .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                if (approval == null)
+                {
+                    Console.WriteLine($"Approval with ID {approvalId} not found");
+                    return false;
+                }
+
+                // Check if the approval is in a state that can be approved
+                if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                {
+                    Console.WriteLine($"Approval with ID {approvalId} is not pending approval. Current status: {approval.ApprovalStatus}");
+                    return false;
+                }
+
+                // Update the approval
+                approval.ApprovalStatus = ApprovalStatus.Approved;
+                approval.Comments = comments;
+                approval.UpdatedAt = DateTime.Now;
+
+                Console.WriteLine($"Setting approval ID {approvalId} status to Approved");
+                _context.Update(approval);
+                await _context.SaveChangesAsync();
+                Console.WriteLine("Approval updated in database");
+
+                // Get the next step
+                var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+
+                if (nextStep != null)
+                {
+                    // Activate the next step
+                    Console.WriteLine($"Activating next step ID {nextStep.Id} for requisition {approval.RequisitionId}");
+                    nextStep.ApprovalStatus = ApprovalStatus.PendingApproval;
+                    nextStep.UpdatedAt = DateTime.Now;
+
+                    _context.Update(nextStep);
+                    await _context.SaveChangesAsync();
+
+                    Console.WriteLine($"Next step activated: ID: {nextStep.Id}, Step: {nextStep.ApprovalStep}");
+                }
+                else
+                {
+                    // This was the last step, update requisition status to Completed
+                    Console.WriteLine($"No next step found - this was the last step. Completing requisition {approval.RequisitionId}");
+                    var requisition = approval.Requisition;
+                    if (requisition != null)
+                    {
+                        requisition.Status = RequisitionStatus.Completed;
+                        requisition.CompleteDate = DateTime.Now;
+                        requisition.UpdatedAt = DateTime.Now;
+
+                        _context.Update(requisition);
+                        await _context.SaveChangesAsync();
+
+                        Console.WriteLine($"Requisition {requisition.Id} marked as Completed");
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Requisition is null for approval ID {approvalId}");
+                    }
+                }
+
+                Console.WriteLine("Committing transaction");
+                await transaction.CommitAsync();
+                Console.WriteLine("Transaction committed successfully");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception in ApproveStepAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                await transaction.RollbackAsync();
+                Console.WriteLine("Transaction rolled back due to exception");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Rejects an approval step
+        /// </summary>
+        /// <param name="approvalId">The ID of the approval to reject</param>
+        /// <param name="comments">Required comments explaining the rejection</param>
+        /// <returns>True if successful, false otherwise</returns>
+        public async Task<bool> RejectStepAsync(int approvalId, string comments)
+        {
+            _logger.LogInformation($"Rejecting step with ID {approvalId}");
+
+            // Check if comments are provided when rejecting
+            if (string.IsNullOrWhiteSpace(comments))
+            {
+                _logger.LogWarning("Comments are required when rejecting an approval");
+                return false;
+            }
+
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            
+            try
+            {
+                // Get the approval
+                var approval = await _context.Approvals
+                    .Include(a => a.Requisition)
+                    .FirstOrDefaultAsync(a => a.Id == approvalId);
+                
+                if (approval == null)
+                {
+                    _logger.LogWarning($"Approval with ID {approvalId} not found");
+                    return false;
+                }
+                
+                // Check if the approval is in a state that can be rejected
+                if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                {
+                    _logger.LogWarning($"Approval with ID {approvalId} is not pending approval. Current status: {approval.ApprovalStatus}");
+                    return false;
+                }
+                
+                // Update the approval
+                approval.ApprovalStatus = ApprovalStatus.Rejected;
+                approval.Comments = comments;
+                approval.UpdatedAt = DateTime.Now;
+                
+                _context.Update(approval);
+                
+                // Update the requisition status to Cancelled
+                var requisition = approval.Requisition;
+                if (requisition != null)
+                {
+                    requisition.Status = RequisitionStatus.Cancelled;
+                    requisition.UpdatedAt = DateTime.Now;
+                    
+                    _context.Update(requisition);
+                }
+                
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+                
+                _logger.LogInformation($"Successfully rejected approval step with ID {approvalId}");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, $"Error rejecting step with ID {approvalId}");
+                return false;
+            }
+        }
+        
+        /// <summary>
+        /// Gets the next approval step for a requisition
+        /// </summary>
+        /// <param name="requisitionId">The requisition ID</param>
+        /// <param name="currentStepNumber">The current step number</param>
+        /// <returns>The next approval step or null if there is no next step</returns>
+        public async Task<Approval> GetNextStepAsync(int requisitionId, int currentStepNumber)
+        {
+            _logger.LogInformation($"Getting next step after step {currentStepNumber} for requisition {requisitionId}");
+            
+            return await _context.Approvals
+                .Where(a => a.RequisitionId == requisitionId && a.StepNumber > currentStepNumber)
+                .OrderBy(a => a.StepNumber)
+                .FirstOrDefaultAsync();
+        }
+        
+        /// <summary>
+        /// Gets the approval history for a requisition
+        /// </summary>
+        /// <param name="requisitionId">The requisition ID</param>
+        /// <returns>List of approval steps with their details</returns>
+        public async Task<List<ApprovalStepViewModel>> GetApprovalHistoryAsync(int requisitionId)
+        {
+            _logger.LogInformation($"Getting approval history for requisition {requisitionId}");
+            
+            try
+            {
+                // Get the approval steps
+                var approvalSteps = await _context.Approvals
+                    .Where(a => a.RequisitionId == requisitionId)
+                    .OrderBy(a => a.StepNumber)
+                    .ToListAsync();
+                
+                if (approvalSteps == null || !approvalSteps.Any())
+                {
+                    _logger.LogWarning($"No approval steps found for requisition {requisitionId}");
+                    return new List<ApprovalStepViewModel>();
+                }
+                
+                // Get the requisition
+                var requisition = await _context.Requisitions
+                    .FirstOrDefaultAsync(r => r.Id == requisitionId);
+                
+                if (requisition == null)
+                {
+                    _logger.LogWarning($"Requisition {requisitionId} not found");
+                    return new List<ApprovalStepViewModel>();
+                }
+                
+                // Get vendors for vendor dispatch steps
+                var vendors = await _vendorService.GetVendorsAsync();
+                
+                // Convert to view models
+                return await ConvertToViewModelsAsync(approvalSteps, requisition, vendors);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error getting approval history for requisition {requisitionId}");
+                return new List<ApprovalStepViewModel>();
+            }
+        }
+        
+        /// <summary>
+        /// Gets available status options based on the approval step type
+        /// </summary>
+        /// <param name="approvalId">The ID of the approval</param>
+        /// <returns>A dictionary of available status options</returns>
+        public async Task<Dictionary<string, string>> GetAvailableStatusOptionsAsync(int approvalId)
+        {
+            // Get the approval
+            var approval = await _context.Approvals
+                .Include(a => a.StepConfig)
+                .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+            if (approval == null)
+            {
+                // Return default options if approval not found
+                return GetStatusOptionsForDropdown(new List<ApprovalStatus> 
+                { 
+                    ApprovalStatus.Approved, 
+                    ApprovalStatus.Rejected 
+                });
+            }
+
+            // Get available status options for this approval
+            var statusOptions = GetAvailableStatusOptions(approval);
+            
+            // Convert to dictionary for dropdown
+            return GetStatusOptionsForDropdown(statusOptions);
+        }
+        
+        public List<ApprovalStatus> GetAvailableStatusOptions(Approval approval)
+        {
+            // Default fallback statuses if nothing is configured
+            var defaultStatuses = new List<ApprovalStatus> 
+            {  
+                ApprovalStatus.Approved, 
+                ApprovalStatus.Rejected,
+                ApprovalStatus.Received,
+                ApprovalStatus.OnHold
+            };
+            
+            if (approval?.StepConfig == null || approval.StepConfig.Conditions == null)
+            {
+                return defaultStatuses;
+            }
+            
+            // Try to get custom status options from the step configuration
+            if (approval.StepConfig.Conditions.TryGetValue("ValidStatusTransitions", out var statusOptionsString))
+            {
+                try
+                {
+                    var customStatuses = statusOptionsString.Split(',')
+                        .Select(s => s.Trim())
+                        .Where(s => !string.IsNullOrEmpty(s))
+                        .Select(s => (ApprovalStatus)int.Parse(s))
+                        .ToList();
+                        
+                    return customStatuses.Any() ? customStatuses : defaultStatuses;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error parsing approval status options");
+                    return defaultStatuses;
+                }
+            }
+            
+            return defaultStatuses;
+        }
+        
+        public Dictionary<string, string> GetStatusOptionsForDropdown(List<ApprovalStatus> statuses)
+        {
+            var statusOptions = new Dictionary<string, string>();
+
+            foreach (var status in statuses)
+            {
+                // Use the integer value of the enum as the key
+                var enumValue = ((int)status).ToString();
+                
+                // Get the description from the enum using reflection
+                var description = GetEnumDescription(status);
+                
+                statusOptions.Add(enumValue, description);
+            }
+
+            return statusOptions;
+        }
+        
+        private string GetEnumDescription(ApprovalStatus status)
+        {
+            // Get description from enum using reflection
+            var fieldInfo = status.GetType().GetField(status.ToString());
+            if (fieldInfo == null) return status.ToString();
+            
+            var attributes = fieldInfo.GetCustomAttributes(typeof(System.ComponentModel.DescriptionAttribute), false);
+            
+            if (attributes.Length > 0)
+            {
+                return ((System.ComponentModel.DescriptionAttribute)attributes[0]).Description;
+            }
+            
+            return status.ToString();
+        }
+        
+        #endregion
     }
 }

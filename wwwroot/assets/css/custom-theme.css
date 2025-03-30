@@ -118,7 +118,9 @@
 .simplebar-scrollbar:before {
     background-color: rgba(255, 175, 0, 0.5) !important;
 }
-
+.card {
+    padding: 0.5rem 0rem 0.5rem 1rem;
+}
 /* Modify vertical overlay behavior */
 /* .vertical-overlay {
     background-color: transparent !important; 
@@ -174,3 +176,8 @@
 /* [data-sidebar-size="sm"] .main-content {
     margin-left: 70px;
 } */
+.contwrapper {
+    border: 1px solid #dee2e6;
+    padding: 1rem;
+    background-color: #ffffff;
+}

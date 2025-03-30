@@ -6,7 +6,20 @@
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
 
 }
+<style>
+    .formcontrol2 {
+        margin-left: 10px; /* Adds space between label and dropdown */
+    }
 
+    .inline-container {
+        display: flex;
+        align-items: center; /* Aligns items vertically */
+    }
+
+    .label-width {
+        min-width: 90px; /* Adjust width as needed */
+        white-space: nowrap; /* Prevents word wrap */
+</style>
 <div class="row" data-view="approvers-receivers">
     <!-- Personal Details Section -->
     <div class="col-md-10">
@@ -47,8 +60,8 @@
                            selectList.Any() &&  @* Add this check *@
                            step.ApprovalStep != "Vendor Dispatch")
                             {
-                                <p class="text-muted">
-                                    <b>CHANGE TO:</b>
+                                 <p class="text-muted inline-container">
+                                        <b class="label-width">CHANGE TO:</b>
                                     @Html.DropDownList(
                                              $"SelectedEmployee_{step.StepNumber}",
                                              selectList,

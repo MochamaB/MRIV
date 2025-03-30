@@ -578,24 +578,37 @@ namespace MRIV.Controllers
             return _context.Set<WorkflowConfig>().Any(e => e.Id == id);
         }
 
-    
+
 
         private SelectList GetApproverRolesSelectList()
         {
             try
             {
-                // Assuming you have a Roles DbSet in your context
-                var roles = _ktdaleaveContext.Roles
-                    .OrderBy(r => r.RoleName)  // Optional: Order by role name
-                    .Select(r => r.RoleName)   // Assuming Name is the property storing role names
+                // Get base roles from database
+                var dbRoles = _ktdaleaveContext.Roles
+                    .OrderBy(r => r.RoleName)
+                    .Select(r => r.RoleName)
                     .ToList();
 
-                return new SelectList(roles);
+                // Create a combined list with additional roles
+                var allRoles = new List<string>(dbRoles);
+
+                // Add special roles if they don't already exist
+                if (!allRoles.Contains("dispatchAdmin"))
+                    allRoles.Add("dispatchAdmin");
+
+                if (!allRoles.Contains("vendor"))
+                    allRoles.Add("vendor");
+
+                // Optional: Order the combined list
+                allRoles = allRoles.OrderBy(r => r).ToList();
+
+                return new SelectList(allRoles);
             }
             catch (Exception ex)
             {
                 // Handle exceptions (log, return empty list, etc.)
-              
+                // Consider logging the exception here
                 return new SelectList(Enumerable.Empty<string>());
             }
         }

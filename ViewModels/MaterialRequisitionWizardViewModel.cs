@@ -81,6 +81,8 @@ namespace MRIV.ViewModels
         public ApprovalStatus ApprovalStatus { get; set; }
         public DateTime CreatedAt { get; set; }
 
+        public string? Comments { get; set; }
+
         // New properties for selection
         public SelectList? AvailableDepartments { get; set; }
         public SelectList? AvailableStations { get; set; }

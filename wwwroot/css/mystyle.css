@@ -660,6 +660,7 @@ a.table {
     color: #326408 !important; /* Use the specified color */
     font-weight: 500;
     text-transform: capitalize;
+    font-size:0.95rem;
 }
 
     /* Hover effect for <a> elements with the .table class */

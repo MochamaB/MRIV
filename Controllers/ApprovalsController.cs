@@ -19,16 +19,18 @@ namespace MRIV.Controllers
         private readonly VendorService _vendorService;
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
+        private readonly ILogger<ApprovalService> _logger;
 
         public ApprovalsController(RequisitionContext context, IEmployeeService employeeService, VendorService vendorService,
-            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService)
+            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, ILogger<ApprovalService> logger)
         {
             _context = context;
             _employeeService = employeeService;
             _vendorService = vendorService;
             _approvalService = approvalService;
             _departmentService = departmentService;
-           
+            _logger = logger;
+
         }
 
         // GET: Approvals
@@ -258,33 +260,6 @@ namespace MRIV.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // Helper method to activate the next approval step
-        private async Task ActivateNextApprovalStepAsync(int requisitionId, int? currentStepNumber)
-        {
-            if (!currentStepNumber.HasValue)
-                return;
-                
-            // Get all approval steps for this requisition
-            var approvalSteps = await _context.Approvals
-                .Where(a => a.RequisitionId == requisitionId)
-                .OrderBy(a => a.StepNumber)
-                .ToListAsync();
-                
-            // Find the next step
-            var nextStep = approvalSteps
-                .FirstOrDefault(a => a.StepNumber > currentStepNumber.Value && 
-                                    a.ApprovalStatus == MRIV.Enums.ApprovalStatus.NotStarted);
-                
-            if (nextStep != null)
-            {
-                // Activate the next step
-                nextStep.ApprovalStatus = MRIV.Enums.ApprovalStatus.PendingApproval;
-                nextStep.UpdatedAt = DateTime.Now;
-                _context.Update(nextStep);
-                await _context.SaveChangesAsync();
-            }
-        }
-
         // GET: Approvals/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
@@ -324,6 +299,233 @@ namespace MRIV.Controllers
         private bool ApprovalExists(int id)
         {
             return _context.Approvals.Any(e => e.Id == id);
+        }
+
+        // GET: Approvals/Approve/5
+        public async Task<IActionResult> Approve(int? id)
+        {
+            if (id == null)
+            {
+                return NotFound();
+            }
+
+            var approval = await _context.Approvals
+                .Include(a => a.Requisition)
+                .Include(a => a.StepConfig)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (approval == null)
+            {
+                return NotFound();
+            }
+
+            // Check if the approval is in a state that can be approved/rejected
+            if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+            {
+                TempData["ErrorMessage"] = $"This approval step is not pending approval. Current status: {approval.ApprovalStatus}";
+                return RedirectToAction(nameof(Index));
+            }
+
+            // Get approval history for this requisition
+            var approvalHistory = await _approvalService.GetApprovalHistoryAsync(approval.RequisitionId);
+
+            // Get available status options for this approval step
+            var statusOptions = await _approvalService.GetAvailableStatusOptionsAsync(approval.Id);
+            ViewBag.StatusOptions = statusOptions;
+
+            // Create the view model
+            var viewModel = new ApprovalActionViewModel
+            {
+                Id = approval.Id,
+                RequisitionId = approval.RequisitionId,
+                ApprovalStep = approval.ApprovalStep,
+                CurrentStatus = approval.ApprovalStatus,
+                RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStation} to {approval.Requisition?.DeliveryStation}",
+                IssueCategory = approval.Requisition.IssueStationCategory,
+                IssueStation = approval.Requisition.IssueStation,
+                DeliveryCategory = approval.Requisition.DeliveryStationCategory,
+                DeliveryStation = approval.Requisition.DeliveryStation,
+                ApprovalHistory = approvalHistory
+            };
+
+            // Get employee and department information
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
+            var department = await _departmentService.GetDepartmentByIdAsync(approval.DepartmentId);
+
+            viewModel.EmployeeName = employee?.Fullname ?? "Unknown";
+            viewModel.DepartmentName = department?.DepartmentName ?? "Unknown Department";
+
+            return View(viewModel);
+        }
+
+        // POST: Approvals/Approve/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Approve(int id, ApprovalActionViewModel viewModel)
+        {
+            Console.WriteLine($"Approve action called for ID {id} with action {viewModel.Action}");
+
+            if (id != viewModel.Id)
+            {
+                Console.WriteLine($"ID mismatch: URL ID {id} vs Model ID {viewModel.Id}");
+                return NotFound();
+            }
+
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    bool success = false;
+
+                    // Parse the action to get the enum value
+                    if (int.TryParse(viewModel.Action, out int statusValue))
+                    {
+                        var approvalStatus = (ApprovalStatus)statusValue;
+                        Console.WriteLine($"Parsed action value: {statusValue} as {approvalStatus}");
+
+                        // Handle based on the approval status
+                        if (approvalStatus == ApprovalStatus.Approved)
+                        {
+                            Console.WriteLine($"Calling ApproveStepAsync for ID {id}");
+                            success = await _approvalService.ApproveStepAsync(id, viewModel.Comments);
+
+                            Console.WriteLine($"ApproveStepAsync result: {success}");
+                            if (success)
+                            {
+                                TempData["SuccessMessage"] = "Approval step approved successfully.";
+                                return RedirectToAction(nameof(Index));
+                            }
+                            else
+                            {
+                                TempData["ErrorMessage"] = "Failed to approve the step. Please try again.";
+                            }
+                        }
+                        else if (approvalStatus == ApprovalStatus.Rejected)
+                        {
+                            Console.WriteLine($"Calling RejectStepAsync for ID {id}");
+                            if (string.IsNullOrWhiteSpace(viewModel.Comments))
+                            {
+                                ModelState.AddModelError("Comments", "Comments are required when rejecting an approval.");
+                                Console.WriteLine("Comments missing for rejection");
+                            }
+                            else
+                            {
+                                success = await _approvalService.RejectStepAsync(id, viewModel.Comments);
+                                Console.WriteLine($"RejectStepAsync result: {success}");
+
+                                if (success)
+                                {
+                                    TempData["SuccessMessage"] = "Approval step rejected successfully.";
+                                    return RedirectToAction(nameof(Index));
+                                }
+                                else
+                                {
+                                    TempData["ErrorMessage"] = "Failed to reject the step. Please try again.";
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Unsupported approval status: {approvalStatus}");
+                            TempData["ErrorMessage"] = $"Unsupported action: {approvalStatus}";
+                            return RedirectToAction(nameof(Index));
+                        }
+                    }
+                    else
+                    {
+                        // Try string-based action handling as fallback
+                        string action = viewModel.Action.ToLowerInvariant();
+                        Console.WriteLine($"Trying string-based action handling: {action}");
+
+                        if (action == "approve")
+                        {
+                            success = await _approvalService.ApproveStepAsync(id, viewModel.Comments);
+                            Console.WriteLine($"ApproveStepAsync result: {success}");
+
+                            if (success)
+                            {
+                                TempData["SuccessMessage"] = "Approval step approved successfully.";
+                                return RedirectToAction(nameof(Index));
+                            }
+                        }
+                        else if (action == "reject")
+                        {
+                            if (string.IsNullOrWhiteSpace(viewModel.Comments))
+                            {
+                                ModelState.AddModelError("Comments", "Comments are required when rejecting an approval.");
+                                Console.WriteLine("Comments missing for rejection");
+                            }
+                            else
+                            {
+                                success = await _approvalService.RejectStepAsync(id, viewModel.Comments);
+                                Console.WriteLine($"RejectStepAsync result: {success}");
+
+                                if (success)
+                                {
+                                    TempData["SuccessMessage"] = "Approval step rejected successfully.";
+                                    return RedirectToAction(nameof(Index));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine($"Invalid action format: {viewModel.Action}");
+                            TempData["ErrorMessage"] = $"Invalid action format: {viewModel.Action}";
+                            return RedirectToAction(nameof(Index));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Exception in Approve action: {ex.Message}");
+                    Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                    TempData["ErrorMessage"] = "An error occurred while processing your request.";
+                }
+            }
+            else
+            {
+                Console.WriteLine("ModelState is invalid");
+                foreach (var error in ModelState.Values.SelectMany(v => v.Errors))
+                {
+                    Console.WriteLine($"Model error: {error.ErrorMessage}");
+                }
+            }
+
+            // If we get here, reload the view with error messages
+            Console.WriteLine("Reloading the view due to errors or failed operation");
+            var approval = await _context.Approvals
+                .Include(a => a.Requisition)
+                .Include(a => a.StepConfig)
+                .FirstOrDefaultAsync(m => m.Id == id);
+
+            if (approval == null)
+            {
+                Console.WriteLine($"Approval not found for ID {id}");
+                return NotFound();
+            }
+
+            // Get approval history and other data needed for the view
+            var approvalHistory = await _approvalService.GetApprovalHistoryAsync(approval.RequisitionId);
+            var statusOptions = await _approvalService.GetAvailableStatusOptionsAsync(approval.Id);
+            ViewBag.StatusOptions = statusOptions;
+
+            // Update the view model
+            viewModel.ApprovalHistory = approvalHistory;
+            viewModel.RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStation} to {approval.Requisition?.DeliveryStation}";
+            viewModel.IssueCategory = approval.Requisition.IssueStationCategory;
+            viewModel.IssueStation = approval.Requisition.IssueStation;
+            viewModel.DeliveryCategory = approval.Requisition.DeliveryStationCategory;
+            viewModel.DeliveryStation = approval.Requisition.DeliveryStation;
+            viewModel.StepNumber = approval.StepNumber;
+
+            // Get employee and department information
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
+            var department = await _departmentService.GetDepartmentByIdAsync(approval.DepartmentId);
+
+            viewModel.EmployeeName = employee?.Fullname ?? "Unknown";
+            viewModel.DepartmentName = department?.DepartmentName ?? "Unknown Department";
+
+            return View(viewModel);
         }
     }
 }

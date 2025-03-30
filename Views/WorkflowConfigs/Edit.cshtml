@@ -37,7 +37,7 @@
 
         <div class="d-flex justify-content-between align-items-center">
             <h5>Workflow Steps</h5>
-            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary">
+            <button type="submit" formaction="@Url.Action("AddStep")" class="btn btn-primary mb-3">
                 <i class="mdi mdi-plus-circle-outline"></i> Add Step
             </button>
         </div>
@@ -45,7 +45,7 @@
             @if (Model.Steps != null && Model.Steps.Any())
             {
                 <div class="table-responsive">
-                    <table class="table select-table">
+                    <table class="table ">
                         <thead class="thead-light">
                             <tr>
                                 <th>Order</th>
@@ -70,14 +70,14 @@
                                         <span asp-validation-for="Steps[i].StepName" class="text-danger"></span>
                                     </td>
                                     <td style="width: 30%">
-                                        <select asp-for="Steps[i].ApproverRole" asp-items="Model.ApproverRoles" class="form-control">
+                                        <select asp-for="Steps[i].ApproverRole" asp-items="Model.ApproverRoles" class="formcontrol2">
                                             <option value="">-- Select Role --</option>
                                         </select>
                                         <span asp-validation-for="Steps[i].ApproverRole" class="text-danger"></span>
                                     </td>
                                     <td style="width: 20%">
-                                        <div class="btn-group" role="group">
-                                            <button type="button" class="btn btn-hazard open-parameters-modal"
+                                        <div class="btn-group " role="group">
+                                            <button type="button" class="btn btn-hazard btn-sm open-parameters-modal"
                                                     data-step-index="@i"
                                                     data-step-id="@Model.Steps[i].Id"
                                                     data-workflow-id="@Model.WorkflowConfig.Id">
@@ -114,7 +114,7 @@
 
 <!-- Modal template for parameter editing -->
 <div class="modal fade" id="parameters-modal" tabindex="-1" aria-labelledby="parameters-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog ">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="parameters-modal-label">Edit Step Parameters</h5>
@@ -232,30 +232,32 @@
         function renderParameterEditors(container, data) {
             container.innerHTML = `
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
+                            <div class="col-md-12">
+                                <div class="">
+                                    <div class=" d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">Role Parameters</h5>
-                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn" data-param-type="roleParameters">
+                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn mb-3" data-param-type="roleParameters">
                                             <i class="mdi mdi-plus"></i> Add New
                                         </button>
                                     </div>
-                                    <div class="card-body">
+                                    <div class="">
                                         <div id="role-parameters-container">
                                             ${renderParameterTable('roleParameters', data.roleParameters)}
                                         </div>
                                     </div>
                                 </div>
+                                        <hr/>
                             </div>
-                            <div class="col-md-6">
-                                <div class="card">
-                                    <div class="card-header d-flex justify-content-between align-items-center">
+                            
+                            <div class="col-md-12">
+                                <div class="">
+                                    <div class=" d-flex justify-content-between align-items-center">
                                         <h5 class="mb-0">Conditions</h5>
-                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn" data-param-type="conditions">
+                                        <button type="button" class="btn btn-sm btn-primary add-parameter-btn mb-3" data-param-type="conditions">
                                             <i class="mdi mdi-plus"></i> Add New
                                         </button>
                                     </div>
-                                    <div class="card-body">
+                                    <div class="">
                                         <div id="conditions-container">
                                             ${renderParameterTable('conditions', data.conditions)}
                                         </div>

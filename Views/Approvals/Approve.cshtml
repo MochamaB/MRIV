@@ -1,0 +1,178 @@
+@model MRIV.ViewModels.ApprovalActionViewModel
+@using MRIV.Enums
+@using MRIV.Helpers
+
+@{
+    ViewData["Title"] = "Approve or Reject";
+}
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1">Make Approval & Receipt</h5>
+                <div class="flex-shrink-0">
+                    <span class="ms-5 badge @BadgeHelper.GetApprovalsBadgeClass(Model.CurrentStatus)">
+                        @EnumHelper.GetEnumDescription(Model.CurrentStatus)
+                    </span>
+                </div>
+            </div>
+       
+            <div class="card-body pl-5">
+                <div class="row">
+                 
+                    <!-- Material Requisition Details on the right -->
+                    <div class="col-md-7 pt-3">
+                        <h6><b>Material Requisition Details</b></h6>
+              
+                        <hr/>
+                        <dl class="row">
+                            <dt class="col-sm-6">Requisition ID</dt>
+                            <dd class="col-sm-6">
+                                <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@Model.RequisitionId">
+                                    @Model.RequisitionId
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-6">Issue Station</dt>
+                            <dd class="col-sm-6" style="text-transform:capitalize"> @Model.IssueCategory</dd>
+
+                            <dt class="col-sm-6">Issue Point</dt>
+                            <dd class="col-sm-6"> @Model.IssueStation</dd>
+
+                            <dt class="col-sm-6">Delivery Station</dt>
+                            <dd class="col-sm-6" style="text-transform:capitalize"> @Model.DeliveryCategory</dd>
+
+                            <dt class="col-sm-6">Delivery Point</dt>
+                            <dd class="col-sm-6"> @Model.DeliveryStation</dd>
+
+                            <dt class="col-sm-6">Approval Step Number</dt>
+                            <dd class="col-sm-6"> @Model.StepNumber  </dd>
+
+                            <dt class="col-sm-6">Approval Step </dt>
+                            <dd class="col-sm-6"> @Model.ApprovalStep </dd>
+
+                            <dt class="col-sm-6">Approver</dt>
+                            <dd class="col-sm-6"> @Model.EmployeeName </dd>
+
+                            <dt class="col-sm-6">Department</dt>
+                            <dd class="col-sm-6">@Model.DepartmentName  </dd>
+
+                            <dt class="col-sm-6">
+                                <a class="table" asp-controller="Requisitions" asp-action="Details" asp-route-id="@Model.RequisitionId">
+                                    View More Details <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i>
+                                </a>
+                            </dt>
+                        </dl>
+
+                        <form asp-action="Approve" method="post" id="approvalForm" class="mt-4">
+                            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                            <input type="hidden" asp-for="Id" />
+                            <input type="hidden" asp-for="RequisitionId" />
+                            <input type="hidden" asp-for="ApprovalStep" />
+                            <input type="hidden" asp-for="StepNumber" />
+
+                            <h5>Approval Decision</h5>
+                            <hr/>
+                            <div class="mb-3">
+                                <label class="form-label">Action <span class="text-danger">*</span></label>
+                                <select asp-for="Action" class="form-select" id="actionSelect">
+                                    <option value="">-- Select Action --</option>
+                                    @if (ViewBag.StatusOptions != null)
+                                    {
+                                        foreach (var option in ViewBag.StatusOptions)
+                                        {
+                                            <option value="@option.Key">@option.Value</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="Approve">Approve</option>
+                                        <option value="Reject">Reject</option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Action" class="text-danger"></span>
+                            </div>
+
+                            <div class="mb-3" id="commentsSection">
+                                <label asp-for="Comments" class="form-label">
+                                    Comments
+                                    
+                                </label>
+                                <textarea asp-for="Comments" class="form-control" rows="3"></textarea>
+                                <span asp-validation-for="Comments" class="text-danger"></span>
+                                
+                            </div>
+                        
+                            <div class="col-md-12 mt-4">
+                                <hr style="border:2px solid black" />
+                            </div>
+                            <div class="d-flex justify-content-left">
+                                <div class="p-2">
+                                    <button type="submit" class="btn btn-primary text-white mb-0 me-0">
+                                        Submit Decision
+                                    </button>
+                                </div>
+                                <div class="p-2">
+                                    <a asp-action="Index" class="btn btn-outline-primary text-white mb-0 me-0">
+                                        Back to List
+                                    </a>
+                                </div>
+                              
+                            </div>
+                        </form>
+                    </div>
+                    <!-- Approval History on the left -->
+                    <div class="col-md-5">
+                        <div class="contwrapper" style="background-color: #ffffa8; border: 1px solid #fcb900;">
+                            <h6><b>Approval History</b></h6>
+                            <hr />
+                            @if (Model.ApprovalHistory != null && Model.ApprovalHistory.Any())
+                            {
+                                <ul class="bullet-line-list">
+                                    @foreach (var step in Model.ApprovalHistory)
+                                    {
+                                        <li>
+                                            <div class="d-flex justify-content-between">
+                                                <div>
+                                                    <h6 class="text-information">
+                                                        <b>@step.StepNumber. @step.ApprovalStep</b>
+                                                    </h6>
+                                                    <hr />
+                                                    <p class="text-muted mb-2 fw-bold">
+                                                        <b>UPDATED ON:</b> @(step.CreatedAt.ToString("dd MMM yyyy HH:mm"))
+                                                    </p>
+                                                    <p class="text-muted">
+                                                        <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>
+                                                        @step.EmployeeName
+                                                    </p>
+                                                    <p class="text-muted">
+                                                        <span class="badge @BadgeHelper.GetApprovalsBadgeClass(step.ApprovalStatus)">
+                                                            @EnumHelper.GetEnumDescription(step.ApprovalStatus)
+                                                        </span>
+                                                    </p>
+                                                    @if (!string.IsNullOrEmpty(step.Comments))
+                                                    {
+                                                        <p class="text-muted">
+                                                            <b>COMMENTS:</b> @step.Comments
+                                                        </p>
+                                                    }
+                                                </div>
+                                            </div>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                            else
+                            {
+                                <p>No approval history available.</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
