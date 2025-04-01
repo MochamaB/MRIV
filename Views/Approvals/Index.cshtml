@@ -93,19 +93,19 @@
                             <td>
                                 @if (item.ApprovalStatus == ApprovalStatus.PendingApproval)
                                 {
-                                    <a asp-action="Approve" asp-route-id="@item.Id" class="text-primary">
+                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
                                         <i class="mdi mdi-check-circle mdi-24px text-primary" style="vertical-align: middle;"></i> Approve
                                     </a>
                                 }
                                 else if (item.ApprovalStatus == ApprovalStatus.PendingDispatch)
                                 {
-                                    <a asp-action="Approve" asp-route-id="@item.Id" class="text-light">
+                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-success">
                                         <i class="mdi mdi-truck-delivery mdi-24px text-success" style="vertical-align: middle;"></i> Dispatch
                                     </a>
                                 }
                                 else if (item.ApprovalStatus == ApprovalStatus.PendingReceive)
                                 {
-                                    <a asp-action="Approve" asp-route-id="@item.Id" class="text-info">
+                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-info">
                                         <i class="mdi mdi-package-variant-closed-check mdi-24px text-info" style="vertical-align: middle;"></i> Receive
                                     </a>
                                 }

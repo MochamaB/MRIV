@@ -1,0 +1,192 @@
+@model MRIV.ViewModels.ApprovalWizardViewModel
+@using MRIV.Enums
+@using MRIV.Helpers
+
+<div class=" mb-4">
+    <div class="col-md-10">
+        <h5 class="ml-1"><b>Requisition Details</b></h5>
+        <hr style="border:2px solid black" />
+    </div>
+
+        <div class="row">
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Requisition Number:</label>
+                    <p>@Model.RequisitionNumber</p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold" style="text-transform:capitalize">Issue Point :</label>
+                    <p>@Model.IssueStationCategory</p>
+                </div>
+                 <div class="mb-3">
+                    <label class="form-label fw-bold">Requesting Station:</label>
+                    <p>@Model.RequestingStation</p>
+                </div>
+               
+            </div>
+            <div class="col-md-6">
+            <div class="mb-3">
+                <label class="form-label fw-bold">Request Date:</label>
+                <p>@Model.RequestDate.ToShortDateString()</p>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-bold">Delivery Point:</label>
+                <p>@Model.DeliveryStationCategory</p>
+            </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Delivery Station:</label>
+                    <p>@Model.DeliveryStation</p>
+                </div>
+                <div class="mb-3">
+                   
+                    <p>
+                    <a class="table" asp-controller="Requisitions" asp-action="Details" asp-route-id="@Model.RequisitionId">
+                        View More Details <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i>
+                    </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+</div>
+
+
+<div class="col-md-12 d-flex justify-content-between align-items-center mb-1">
+    <h5 class="ml-1"><b>Requisition Items</b></h5>
+        <div>
+            <span class="badge bg-info">Current Step: @Model.StepNumber .@Model.ApprovalStep</span>
+        </div>
+    </div>
+<hr style="border:2px solid black" />
+
+
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>No</th>
+                        <th>Name</th>
+                        <th>Quantity</th>   
+                        <th>Description</th>
+                        <th>Serial No / Code</th>
+                        <th>Current Condition</th>
+                        <th>Vendor</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (int i = 0; i < Model.Items.Count; i++)
+                    {
+                        var item = Model.Items[i];
+
+                        <tr>
+                            <td>@item.RequisitionItemId</td>
+                            <td>@item.Name</td>
+                            <td>@item.Quantity</td>
+                            <td>@item.Description</td>
+                            <td>@item.MaterialCode</td>
+                           
+                            <td>
+                                @if (item.Condition != null)
+                                {
+                                    <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Condition)">@EnumHelper.GetEnumDescription(item.Condition)
+                                    @if (!string.IsNullOrEmpty(item.Notes))
+                                    {
+                                    <i class="mdi mdi-information mdi-12px text-info" data-bs-toggle="tooltip" title="@item.Notes"></i>
+                                    }
+                            </span>
+                                }
+                                else
+                                {
+                            <span class="badge @BadgeHelper.GetMaterialGetRequisitionItemStatusBadgeClassStatusBadgeClass(item.RequisitionItemCondition)">
+                                @EnumHelper.GetEnumDescription(item.RequisitionItemCondition)
+                            </span>
+                                }
+                            </td>
+                            <td>
+                                @(item.vendor?.Name ?? "N/A")
+                            </td>
+                            <td>
+                        <a href="javascript:void(0);" class="text-info edit-condition-btn" data-item-id="@i">
+                            <i class="mdi mdi-lead-pencil mdi-12px text-info" style="vertical-align: middle;"></i> Record Condition
+                                </a>
+                              
+                                <input type="hidden" asp-for="Items[i].RequisitionItemId" />
+                                <input type="hidden" asp-for="Items[i].MaterialId" />
+                                <input type="hidden" asp-for="Items[i].MaterialCode" />
+                                <input type="hidden" asp-for="Items[i].Description" />
+                                <input type="hidden" asp-for="Items[i].Quantity" />
+                                <input type="hidden" asp-for="Items[i].MaterialConditionId" />
+                            </td>
+                        </tr>
+                        
+                        <!-- Modal for editing condition -->
+                        <div class="modal fade" id="editConditionModal-@i" tabindex="-1" aria-labelledby="editConditionModalLabel-@i" aria-hidden="true">
+                            <div class="modal-dialog">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="editConditionModalLabel-@i">Record Material Condition</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Material:</label>
+                                            <p><strong>@item.MaterialCode</strong> - @item.Description</p>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label asp-for="Items[i].Condition" class="form-label">Condition</label>
+                                            <select asp-for="Items[i].Condition" class="form-select">
+                                                <option value="">-- Select Condition --</option>
+                                                <option value="@((int)MaterialStatus.GoodCondition)">@EnumHelper.GetEnumDescription(MaterialStatus.GoodCondition)</option>
+                                                <option value="@((int)MaterialStatus.MinorDamage)">@EnumHelper.GetEnumDescription(MaterialStatus.MinorDamage)</option>
+                                                <option value="@((int)MaterialStatus.MajorDamage)">@EnumHelper.GetEnumDescription(MaterialStatus.MajorDamage)</option>
+                                                <option value="@((int)MaterialStatus.Faulty)">@EnumHelper.GetEnumDescription(MaterialStatus.Faulty)</option>
+                                                <option value="@((int)MaterialStatus.UnderMaintenance)">@EnumHelper.GetEnumDescription(MaterialStatus.UnderMaintenance)</option>
+                                                <option value="@((int)MaterialStatus.LostOrStolen)">@EnumHelper.GetEnumDescription(MaterialStatus.LostOrStolen)</option>
+                                            </select>
+                                            <span asp-validation-for="Items[i].Condition" class="text-danger"></span>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label asp-for="Items[i].Notes" class="form-label">Notes</label>
+                                            <textarea asp-for="Items[i].Notes" class="form-control" rows="3" placeholder="Enter any notes about the condition"></textarea>
+                                        </div>
+                                        <input type="hidden" asp-for="Items[i].Stage" value="@GetStageBasedOnApprovalStep(Model.ApprovalStep)" />
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Save Changes</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </tbody>
+            </table>
+        </div>
+ 
+
+
+@functions {
+    public string GetConditionBadgeClass(string condition)
+    {
+        return condition?.ToLower() switch
+        {
+            "excellent" => "bg-success",
+            "good" => "bg-info",
+            "fair" => "bg-warning",
+            "poor" => "bg-danger",
+            "damaged" => "bg-danger",
+            _ => "bg-secondary"
+        };
+    }
+
+    public string GetStageBasedOnApprovalStep(string approvalStep)
+    {
+        if (approvalStep.ToLower().Contains("dispatch"))
+            return "Pre-Dispatch";
+        else if (approvalStep.ToLower().Contains("receiv"))
+            return "Post-Receive";
+        else
+            return "Inspection";
+    }
+}

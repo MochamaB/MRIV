@@ -482,66 +482,9 @@ namespace MRIV.Services
                 await _context.SaveChangesAsync();
                 Console.WriteLine("Approval updated in database");
 
-                // Get the next step
-                var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+                // Handle next step or complete requisition
+                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
 
-                if (nextStep != null)
-                {
-                    // Determine the appropriate pending status based on the next step's role
-                    ApprovalStatus nextStepStatus = ApprovalStatus.PendingApproval; // Default
-                    
-                    // Check the step name or role to determine the appropriate pending status
-                    string stepNameLower = nextStep.ApprovalStep.ToLower();
-                    string approverRoleLower = nextStep.StepConfig?.ApproverRole?.ToLower() ?? "";
-                    
-                    if (stepNameLower.Contains("dispatch") || approverRoleLower.Contains("dispatch"))
-                    {
-                        nextStepStatus = ApprovalStatus.PendingDispatch;
-                        Console.WriteLine($"Next step is a dispatch step, setting status to PendingDispatch");
-                    }
-                    else if (stepNameLower.Contains("recei") || approverRoleLower.Contains("recei"))
-                    {
-                        nextStepStatus = ApprovalStatus.PendingReceive;
-                        Console.WriteLine($"Next step is a receive step, setting status to PendingReceive");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Next step is a standard approval step, setting status to PendingApproval");
-                    }
-
-                    // Activate the next step
-                    Console.WriteLine($"Activating next step ID {nextStep.Id} for requisition {approval.RequisitionId}");
-                    nextStep.ApprovalStatus = nextStepStatus;
-                    nextStep.UpdatedAt = DateTime.Now;
-
-                    _context.Update(nextStep);
-                    await _context.SaveChangesAsync();
-
-                    Console.WriteLine($"Next step activated: ID: {nextStep.Id}, Step: {nextStep.ApprovalStep}, Status: {nextStepStatus}");
-                }
-                else
-                {
-                    // This was the last step, update requisition status to Completed
-                    Console.WriteLine($"No next step found - this was the last step. Completing requisition {approval.RequisitionId}");
-                    var requisition = approval.Requisition;
-                    if (requisition != null)
-                    {
-                        requisition.Status = RequisitionStatus.Completed;
-                        requisition.CompleteDate = DateTime.Now;
-                        requisition.UpdatedAt = DateTime.Now;
-
-                        _context.Update(requisition);
-                        await _context.SaveChangesAsync();
-
-                        Console.WriteLine($"Requisition {requisition.Id} marked as Completed");
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Requisition is null for approval ID {approvalId}");
-                    }
-                }
-
-                Console.WriteLine("Committing transaction");
                 await transaction.CommitAsync();
                 Console.WriteLine("Transaction committed successfully");
                 return true;
@@ -554,6 +497,41 @@ namespace MRIV.Services
                 Console.WriteLine("Transaction rolled back due to exception");
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Determines the appropriate pending status for the next step based on the step name or role
+        /// </summary>
+        /// <param name="nextStep">The next step in the workflow</param>
+        /// <returns>The appropriate ApprovalStatus for the next step</returns>
+        private ApprovalStatus DetermineNextStepStatus(Approval nextStep)
+        {
+            // Default status
+            ApprovalStatus nextStepStatus = ApprovalStatus.PendingApproval;
+            
+            if (nextStep != null)
+            {
+                // Check the step name or role to determine the appropriate pending status
+                string stepNameLower = nextStep.ApprovalStep.ToLower();
+                string approverRoleLower = nextStep.StepConfig?.ApproverRole?.ToLower() ?? "";
+                
+                if (stepNameLower.Contains("dispatch") || approverRoleLower.Contains("dispatch"))
+                {
+                    nextStepStatus = ApprovalStatus.PendingDispatch;
+                    _logger.LogInformation($"Next step is a dispatch step, setting status to PendingDispatch");
+                }
+                else if (stepNameLower.Contains("recei") || approverRoleLower.Contains("recei"))
+                {
+                    nextStepStatus = ApprovalStatus.PendingReceive;
+                    _logger.LogInformation($"Next step is a receive step, setting status to PendingReceive");
+                }
+                else
+                {
+                    _logger.LogInformation($"Next step is a standard approval step, setting status to PendingApproval");
+                }
+            }
+            
+            return nextStepStatus;
         }
 
         /// <summary>
@@ -667,42 +645,8 @@ namespace MRIV.Services
                 _context.Update(approval);
                 await _context.SaveChangesAsync();
 
-                // Get the next step
-                var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
-
-                if (nextStep != null)
-                {
-                    // Set the next step to PendingReceive since after dispatch comes receive
-                    _logger.LogInformation($"Activating next step ID {nextStep.Id} for requisition {approval.RequisitionId}");
-                    nextStep.ApprovalStatus = ApprovalStatus.PendingReceive;
-                    nextStep.UpdatedAt = DateTime.Now;
-
-                    _context.Update(nextStep);
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation($"Next step activated: ID: {nextStep.Id}, Step: {nextStep.ApprovalStep}, Status: {nextStep.ApprovalStatus}");
-                }
-                else
-                {
-                    // This was the last step, update requisition status to Completed
-                    _logger.LogInformation($"No next step found - this was the last step. Completing requisition {approval.RequisitionId}");
-                    var requisition = approval.Requisition;
-                    if (requisition != null)
-                    {
-                        requisition.Status = RequisitionStatus.Completed;
-                        requisition.CompleteDate = DateTime.Now;
-                        requisition.UpdatedAt = DateTime.Now;
-
-                        _context.Update(requisition);
-                        await _context.SaveChangesAsync();
-
-                        _logger.LogInformation($"Requisition {requisition.Id} marked as Completed");
-                    }
-                    else
-                    {
-                        _logger.LogInformation($"Requisition is null for approval ID {approvalId}");
-                    }
-                }
+                // Handle next step or complete requisition
+                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
 
                 await transaction.CommitAsync();
 
@@ -757,35 +701,8 @@ namespace MRIV.Services
 
                 _context.Update(approval);
 
-                // Get the next step
-                var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
-
-                if (nextStep != null)
-                {
-                    // Set the next step to PendingApproval for final approval
-                    _logger.LogInformation($"Activating next step ID {nextStep.Id} for requisition {approval.RequisitionId}");
-                    nextStep.ApprovalStatus = ApprovalStatus.PendingApproval;
-                    nextStep.UpdatedAt = DateTime.Now;
-
-                    _context.Update(nextStep);
-                    await _context.SaveChangesAsync();
-
-                    _logger.LogInformation($"Next step activated: ID: {nextStep.Id}, Step: {nextStep.ApprovalStep}, Status: {nextStep.ApprovalStatus}");
-                }
-                else
-                {
-                    // This was the last step, update requisition status to Completed
-                    _logger.LogInformation($"No next step found - this was the last step. Completing requisition {approval.RequisitionId}");
-                    var requisition = approval.Requisition;
-                    if (requisition != null)
-                    {
-                        requisition.Status = RequisitionStatus.Completed;
-                        requisition.CompleteDate = DateTime.Now;
-                        requisition.UpdatedAt = DateTime.Now;
-
-                        _context.Update(requisition);
-                    }
-                }
+                // Handle next step or complete requisition
+                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
 
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
@@ -855,13 +772,108 @@ namespace MRIV.Services
         }
 
         /// <summary>
-        /// Processes an approval action dynamically based on the action parameter
+        /// Handles the next step in the workflow or completes the requisition if this is the last step
         /// </summary>
-        /// <param name="approvalId">The ID of the approval to process</param>
-        /// <param name="action">The action to perform (can be enum value or string)</param>
-        /// <param name="comments">Comments for the action</param>
+        /// <param name="approval">The current approval that was processed</param>
+        /// <param name="nextStepStatus">The status to set for the next step (if any)</param>
         /// <returns>True if successful, false otherwise</returns>
-     
+        private async Task<bool> HandleNextStepOrCompleteRequisitionAsync(Approval approval, ApprovalStatus nextStepStatus)
+        {
+            // Get the next step
+            var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+
+            if (nextStep != null)
+            {
+                // Activate the next step
+                _logger.LogInformation($"Activating next step ID {nextStep.Id} for requisition {approval.RequisitionId}");
+                nextStep.ApprovalStatus = nextStepStatus;
+                nextStep.UpdatedAt = DateTime.Now;
+
+                _context.Update(nextStep);
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation($"Next step activated: ID: {nextStep.Id}, Step: {nextStep.ApprovalStep}, Status: {nextStepStatus}");
+                return true;
+            }
+            else
+            {
+                // This was the last step, complete the requisition and update material location
+                _logger.LogInformation($"No next step found - this was the last step. Completing requisition {approval.RequisitionId}");
+                
+                var requisition = approval.Requisition;
+                if (requisition != null)
+                {
+                    // Update requisition status
+                    requisition.Status = RequisitionStatus.Completed;
+                    requisition.CompleteDate = DateTime.Now;
+                    requisition.UpdatedAt = DateTime.Now;
+                    
+                    _context.Update(requisition);
+                    
+                    // Update material locations for all items in the requisition
+                    await UpdateMaterialLocationsAsync(requisition);
+                    
+                    await _context.SaveChangesAsync();
+                    
+                    _logger.LogInformation($"Requisition {requisition.Id} marked as Completed and material locations updated");
+                    return true;
+                }
+                else
+                {
+                    _logger.LogWarning($"Requisition is null for approval ID {approval.Id}");
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Updates the current location of materials associated with a completed requisition
+        /// </summary>
+        /// <param name="requisition">The completed requisition</param>
+        private async Task UpdateMaterialLocationsAsync(Requisition requisition)
+        {
+            try
+            {
+                // Get all requisition items with material IDs
+                var requisitionItems = await _context.RequisitionItems
+                    .Where(ri => ri.RequisitionId == requisition.Id && ri.MaterialId.HasValue)
+                    .ToListAsync();
+                
+                if (requisitionItems.Any())
+                {
+                    // Get the delivery station's location ID
+                    var deliveryStationLocation = requisition.DeliveryStation;
+                    
+                    if (deliveryStationLocation != null)
+                    {
+                        foreach (var item in requisitionItems)
+                        {
+                            if (item.MaterialId.HasValue)
+                            {
+                                // Update the material's current location
+                                var material = await _context.Materials.FindAsync(item.MaterialId.Value);
+                                if (material != null)
+                                {
+                                    material.CurrentLocationId = deliveryStationLocation;
+                                  //  material.UpdatedAt = DateTime.Now;
+                                    _context.Update(material);
+                                }
+                            }
+                        }
+                        
+                        _logger.LogInformation($"Updated locations for {requisitionItems.Count} materials to location ID {deliveryStationLocation}");
+                    }
+                    else
+                    {
+                        _logger.LogWarning($"Could not find location ID for delivery station {requisition.DeliveryStation}");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Error updating material locations for requisition {requisition.Id}");
+            }
+        }
 
         /// <summary>
         /// Gets the next approval step for a requisition

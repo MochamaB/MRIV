@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
@@ -22,6 +22,9 @@ public partial class RequisitionContext : DbContext
     public DbSet<RequisitionItem> RequisitionItems { get; set; }
     public DbSet<Material> Materials { get; set; }
     public DbSet<MaterialCategory> MaterialCategories { get; set; }
+
+    public DbSet<MaterialCondition> MaterialCondition { get; set; }
+
     public DbSet<Approval> Approvals { get; set; }
 
     public DbSet<StationCategory> StationCategories { get; set; }

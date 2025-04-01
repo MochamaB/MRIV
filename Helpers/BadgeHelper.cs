@@ -48,5 +48,20 @@ namespace MRIV.Helpers
                 _ => "badge-secondary"
             };
         }
+        public static string GetMaterialGetRequisitionItemStatusBadgeClassStatusBadgeClass(RequisitionItemCondition? status)
+        {
+            return status switch
+            {
+                RequisitionItemCondition.GoodCondition => "badge-active",
+                RequisitionItemCondition.MinorDamage => "badge-warning",
+                RequisitionItemCondition.MajorDamage => "badge-danger",
+                RequisitionItemCondition.Faulty => "badge-danger",
+                RequisitionItemCondition.UnderMaintenance => "badge-info",
+                RequisitionItemCondition.LostOrStolen => "badge-dark",
+                RequisitionItemCondition.Disposed => "badge-secondary",
+                null => "badge-light", // Handle null case (optional)
+                _ => "bg-primary" // Default class
+            };
+        }
     }
 }

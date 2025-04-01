@@ -1,0 +1,211 @@
+@model MRIV.ViewModels.ApprovalWizardViewModel
+@using MRIV.Enums
+@using MRIV.Helpers
+
+<div class="row">
+    <div class="col-md-12">
+        <h5 class="ml-1"><b></b></h5>
+        <hr style="border:2px solid black" />
+    </div>
+    <!-- Approval Action Section -->
+    <div class="col-md-7 pt-3">
+        <h5 class="ml-1"><b>Approval Action</b></h5>
+        <hr style="border:2px solid black" />
+        <div class="">
+          
+
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="menu-icon mdi mdi mdi-alert-circle mdi-24px"></i>
+                <strong>Info! </strong>  Your action will be recorded and the workflow will be updated accordingly.
+                @if (Model?.IsLastStep == true)
+                {
+                    <span>This is the final approval step for this requisition.</span>
+                }
+              
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Action" class="form-label">Action</label><span class="text-danger">*</span>
+                <select asp-for="Action" class="form-select">
+                    <option value="">-- Select Action --</option>
+                    @if (!string.IsNullOrEmpty(Model?.ApprovalStep))
+                    {
+                        if (Model.ApprovalStep.ToLower().Contains("dispatch"))
+                        {
+                            <option value="@((int)ApprovalStatus.Dispatched)">Dispatch</option>
+                        }
+                        else if (Model.ApprovalStep.ToLower().Contains("receiv"))
+                        {
+                            <option value="@((int)ApprovalStatus.Received)">Receive</option>
+                        }
+                        else
+                        {
+                            <option value="@((int)ApprovalStatus.Approved)">Approve</option>
+                        }
+                    }
+                    else
+                    {
+                        <option value="@((int)ApprovalStatus.Approved)">Approve</option>
+                    }
+                    <option value="@((int)ApprovalStatus.Rejected)">Reject</option>
+                    <option value="@((int)ApprovalStatus.OnHold)">Put On Hold</option>
+                </select>
+                <span asp-validation-for="Action" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Comments" class="form-label">Comments</label>
+                <textarea asp-for="Comments" class="form-control" rows="4" placeholder="Enter comments about your decision"></textarea>
+                <span asp-validation-for="Comments" class="text-danger"></span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Approval History Section -->
+    <div class="col-md-5">
+        <div class="contwrapper" style="background-color: #ffffa8; border: 1px solid #fcb900;">
+            <h6><b>Approval History</b></h6>
+            <hr />
+            @if (Model?.ApprovalHistory != null && Model.ApprovalHistory.Any())
+            {
+                <ul class="bullet-line-list">
+                    @foreach (var step in Model.ApprovalHistory.OrderBy(h => h.StepNumber))
+                    {
+                        <li>
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h6 class="text-information">
+                                        <b>@step.StepNumber. @step.ApprovalStep</b>
+                                    </h6>
+                                    <hr />
+                                    @if (step.ApprovedDate.HasValue)
+                                    {
+                                        <p class="text-muted mb-2 fw-bold">
+                                            <b>UPDATED ON:</b> @step.ApprovedDate.Value.ToString("dd MMM yyyy HH:mm")
+                                        </p>
+                                    }
+                                    <p class="text-muted">
+                                        <b>@(step.ApprovalStep.Contains("Dispatch", StringComparison.OrdinalIgnoreCase) ? "DISPATCH BY:" : "APPROVAL BY:")</b>
+                                        @step.ApproverName
+                                    </p>
+                                    <p class="text-muted">
+                                        @if (Enum.TryParse<ApprovalStatus>(step.Status, out var status))
+                                        {
+                                            <span class="badge @BadgeHelper.GetApprovalsBadgeClass(status)">
+                                                @EnumHelper.GetEnumDescription(status)
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">@step.Status</span>
+                                        }
+                                    </p>
+                                    @if (!string.IsNullOrEmpty(step.Comments))
+                                    {
+                                        <p class="text-muted">
+                                            <b>COMMENTS:</b> @step.Comments
+                                        </p>
+                                    }
+                                </div>
+                            </div>
+                        </li>
+                    }
+                </ul>
+            }
+            else
+            {
+                <p>No approval history available.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<style>
+    .timeline {
+        position: relative;
+        padding: 20px 0;
+        list-style: none;
+        max-height: 500px;
+        overflow-y: auto;
+    }
+
+        .timeline:before {
+            content: " ";
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 20px;
+            width: 3px;
+            background-color: #eeeeee;
+        }
+
+    .timeline-item {
+        position: relative;
+        margin-bottom: 25px;
+        margin-left: 40px;
+    }
+
+    .timeline-badge {
+        position: absolute;
+        top: 0;
+        left: -40px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        text-align: center;
+        color: #fff;
+        line-height: 30px;
+    }
+
+    .timeline-content {
+        padding: 15px;
+        background-color: #f8f9fa;
+        border-radius: 5px;
+        border-left: 3px solid #ddd;
+    }
+</style>
+
+@functions {
+    public string GetStatusBadgeClass(string status)
+    {
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<ApprovalStatus>(status, out var approvalStatus))
+        {
+            return approvalStatus switch
+            {
+                ApprovalStatus.Approved => "bg-success",
+                ApprovalStatus.Rejected => "bg-danger",
+                ApprovalStatus.PendingApproval => "bg-warning",
+                ApprovalStatus.PendingDispatch => "bg-info",
+                ApprovalStatus.PendingReceive => "bg-info",
+                ApprovalStatus.Dispatched => "bg-success",
+                ApprovalStatus.Received => "bg-success",
+                ApprovalStatus.OnHold => "bg-secondary",
+                ApprovalStatus.NotStarted => "bg-light",
+                _ => "bg-secondary"
+            };
+        }
+        return "bg-secondary";
+    }
+
+    public string GetStatusIcon(string status)
+    {
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<ApprovalStatus>(status, out var approvalStatus))
+        {
+            return approvalStatus switch
+            {
+                ApprovalStatus.Approved => "mdi mdi-check-circle",
+                ApprovalStatus.Rejected => "mdi mdi-close-circle",
+                ApprovalStatus.PendingApproval => "mdi mdi-clock-outline",
+                ApprovalStatus.PendingDispatch => "mdi mdi-truck-outline",
+                ApprovalStatus.PendingReceive => "mdi mdi-package-variant-closed",
+                ApprovalStatus.Dispatched => "mdi mdi-truck-delivery",
+                ApprovalStatus.Received => "mdi mdi-package-variant-closed-check",
+                ApprovalStatus.OnHold => "mdi mdi-pause-circle",
+                ApprovalStatus.NotStarted => "mdi mdi-timer-sand",
+                _ => "mdi mdi-help-circle"
+            };
+        }
+        return "mdi mdi-help-circle";
+    }
+}

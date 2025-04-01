@@ -88,6 +88,7 @@ namespace MRIV.ViewModels
         public SelectList? AvailableStations { get; set; }
         public int? SelectedDepartmentId { get; set; }
         public string? SelectedStation { get; set; }
+        public DateTime? UpdatedAt { get; internal set; }
     }
 
 
