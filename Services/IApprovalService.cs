@@ -968,23 +968,15 @@ namespace MRIV.Services
 
         public List<ApprovalStatus> GetAvailableStatusOptions(Approval approval)
         {
-            // Default fallback statuses if nothing is configured
-            var defaultStatuses = new List<ApprovalStatus>
+            // If approval is null, return empty list
+            if (approval == null)
             {
-                ApprovalStatus.Approved,
-                ApprovalStatus.Rejected,
-                ApprovalStatus.Dispatched,
-                ApprovalStatus.Received,
-                ApprovalStatus.OnHold
-            };
-
-            if (approval?.StepConfig == null || approval.StepConfig.Conditions == null)
-            {
-                return defaultStatuses;
+                return new List<ApprovalStatus>();
             }
 
-            // Try to get custom status options from the step configuration
-            if (approval.StepConfig.Conditions.TryGetValue("ValidStatusTransitions", out var statusOptionsString))
+            // Check if we have custom status options from the step configuration
+            if (approval.StepConfig?.Conditions != null && 
+                approval.StepConfig.Conditions.TryGetValue("ValidStatusTransitions", out var statusOptionsString))
             {
                 try
                 {
@@ -994,16 +986,59 @@ namespace MRIV.Services
                         .Select(s => (ApprovalStatus)int.Parse(s))
                         .ToList();
 
-                    return customStatuses.Any() ? customStatuses : defaultStatuses;
+                    if (customStatuses.Any())
+                    {
+                        return customStatuses;
+                    }
                 }
                 catch (Exception ex)
                 {
                     _logger.LogError(ex, "Error parsing approval status options");
-                    return defaultStatuses;
+                    // Continue to default status mapping
                 }
             }
 
-            return defaultStatuses;
+            // If no custom configuration, map based on current approval status
+            var currentStatus = approval.ApprovalStatus;
+            
+            // Map status options based on current approval status
+            switch (currentStatus)
+            {
+                case ApprovalStatus.PendingApproval:
+                    return new List<ApprovalStatus>
+                    {
+                        ApprovalStatus.Approved,
+                        ApprovalStatus.Rejected,
+                        ApprovalStatus.OnHold
+                    };
+                
+                case ApprovalStatus.PendingDispatch:
+                    return new List<ApprovalStatus>
+                    {
+                        ApprovalStatus.Dispatched,
+                        ApprovalStatus.Rejected,
+                        ApprovalStatus.OnHold
+                    };
+                
+                case ApprovalStatus.PendingReceive:
+                    return new List<ApprovalStatus>
+                    {
+                        ApprovalStatus.Received,
+                        ApprovalStatus.Rejected,
+                        ApprovalStatus.OnHold
+                    };
+                
+                default:
+                    // Default fallback statuses for any other status
+                    return new List<ApprovalStatus>
+                    {
+                        ApprovalStatus.Approved,
+                        ApprovalStatus.Rejected,
+                        ApprovalStatus.Dispatched,
+                        ApprovalStatus.Received,
+                        ApprovalStatus.OnHold
+                    };
+            }
         }
 
         public Dictionary<string, string> GetStatusOptionsForDropdown(List<ApprovalStatus> statuses)

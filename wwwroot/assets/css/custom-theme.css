@@ -181,3 +181,12 @@
     padding: 1rem;
     background-color: #ffffff;
 }
+
+.form-group {
+    margin-bottom: 1rem;
+}
+.modal-headercustom {
+    background-color: #326408;
+    padding: 2rem !important;
+    color: #ffffff;
+}

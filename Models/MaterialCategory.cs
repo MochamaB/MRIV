@@ -15,6 +15,7 @@ namespace MRIV.Models
         public string? Description { get; set; }
 
         [StringLength(500)]
+        [Display(Name = "Unit Of Measure")]
         public string? UnitOfMeasure { get; set; }
 
         // Navigation property
