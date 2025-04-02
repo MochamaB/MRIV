@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Extensions;
@@ -19,8 +19,10 @@ namespace MRIV.Controllers.Auth
             _authenticationService = authenticationService;
             _context = context;
         }
-        public IActionResult Index()
+        public IActionResult Index(string returnUrl = null)
         {
+            // Store the returnUrl in ViewBag to pass it to the form
+            ViewBag.ReturnUrl = returnUrl;
             return View("~/Views/Auth/Login.cshtml");
         }
 
@@ -32,6 +34,7 @@ namespace MRIV.Controllers.Auth
             if (string.IsNullOrEmpty(payrollNo) || string.IsNullOrEmpty(password))
             {
                 ViewBag.ErrorMessage = "Payroll number and password are required.";
+                ViewBag.ReturnUrl = returnUrl; // Preserve returnUrl on validation error
                 return View("~/Views/Auth/Login.cshtml");
             }
 
@@ -54,28 +57,33 @@ namespace MRIV.Controllers.Auth
 
                 }
                 Console.WriteLine($"ReturnUrl: {returnUrl}"); // Log the returnUrl
-                Console.WriteLine($"Is Local URL: {Url.IsLocalUrl(returnUrl)}");
+                
                 // Authentication successful
                 // Redirect to authenticated page
-                if (!string.IsNullOrEmpty(returnUrl)
-                    //   && Url.IsLocalUrl(returnUrl)
-                    )
+                if (!string.IsNullOrEmpty(returnUrl))
                 {
                     // Decode the URL before redirecting
                     returnUrl = Uri.UnescapeDataString(returnUrl);
-                    return Redirect(returnUrl);
+                    Console.WriteLine($"Decoded ReturnUrl: {returnUrl}");
+                    Console.WriteLine($"Is Local URL: {Url.IsLocalUrl(returnUrl)}");
+                    
+                    // Only redirect if it's a local URL for security
+                    if (Url.IsLocalUrl(returnUrl))
+                    {
+                        return Redirect(returnUrl);
+                    }
                 }
-                else
-                {
-                    Console.WriteLine("Redirecting to Dashboard Index");
-                    return RedirectToAction("Index", "Dashboard");
-                }
+                
+                // Default redirect if returnUrl is empty or not local
+                Console.WriteLine("Redirecting to Dashboard Index");
+                return RedirectToAction("Index", "Dashboard");
             }
             else
             {
                 // Authentication failed
                 // Return login view with error message
                 ViewBag.ErrorMessage = "The payroll number and password do not match";
+                ViewBag.ReturnUrl = returnUrl; // Preserve returnUrl on authentication error
                 return View("~/Views/Auth/Login.cshtml");
             }
         }

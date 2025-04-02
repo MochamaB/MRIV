@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using MRIV.Attributes;
 using MRIV.Enums;
 using MRIV.Models;
 using MRIV.Services;
@@ -12,6 +13,7 @@ using MRIV.ViewModels;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class RequisitionsController : Controller
     {
         private readonly RequisitionContext _context;

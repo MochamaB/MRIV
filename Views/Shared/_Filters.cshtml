@@ -1,0 +1,74 @@
+@model MRIV.ViewModels.FilterViewModel
+
+<div class="filter-container mb-3" id="filterContainer" style="display: none;">
+    <div class="card">
+        <div class="card-header bg-light">
+            <div class="d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Advanced Filters</h5>
+                <button type="button" class="btn-close" id="closeFilters" aria-label="Close"></button>
+            </div>
+        </div>
+        <div class="card-body">
+            <form id="filterForm" method="get">
+                <div class="row g-3">
+                    @foreach (var filter in Model.Filters)
+                    {
+                        <div class="col-lg-4">
+                            <div class="form-floating">
+                                <select class="form-select filter-select" 
+                                        id="filter_@filter.PropertyName" 
+                                        name="@filter.PropertyName" 
+                                        data-property="@filter.PropertyName"
+                                        aria-label="@filter.DisplayName">
+                                    <option value="">All</option>
+                                    @foreach (var option in filter.Options)
+                                    {
+                                       @:<option value="@option.Value" @(option.Selected ? "selected" : "")>@option.Text</option>
+                                    }
+                                </select>
+                                <label for="filter_@filter.PropertyName">@filter.DisplayName</label>
+                            </div>
+                        </div>
+                    }
+                </div>
+                
+                <div class="d-flex justify-content-end mt-3">
+                    <button type="button" id="resetFilters" class="btn btn-light me-2">Reset</button>
+                    <button type="submit" class="btn btn-primary">Apply Filters</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Toggle filter container visibility
+        document.getElementById('toggleFilters')?.addEventListener('click', function() {
+            const filterContainer = document.getElementById('filterContainer');
+            if (filterContainer) {
+                filterContainer.style.display = filterContainer.style.display === 'none' ? 'block' : 'none';
+            }
+        });
+        
+        // Close filter container
+        document.getElementById('closeFilters')?.addEventListener('click', function() {
+            document.getElementById('filterContainer').style.display = 'none';
+        });
+        
+        // Auto-submit on select change
+        document.querySelectorAll('.filter-select').forEach(select => {
+            select.addEventListener('change', function() {
+                document.getElementById('filterForm').submit();
+            });
+        });
+        
+        // Reset filters
+        document.getElementById('resetFilters')?.addEventListener('click', function() {
+            document.querySelectorAll('.filter-select').forEach(select => {
+                select.value = '';
+            });
+            document.getElementById('filterForm').submit();
+        });
+    });
+</script>

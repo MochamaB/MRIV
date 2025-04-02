@@ -1,6 +1,7 @@
-﻿@{
+@{
     Layout = "_LoginLayout";
     var errorMessage = ViewBag.ErrorMessage as string;
+    var returnUrl = ViewBag.ReturnUrl;
 }
 
 <div class="container-scroller">
@@ -31,7 +32,10 @@
                             </div>
                         }
 
-                        <form class="pt-3" asp-controller="Login" asp-action="Authenticate" asp-route-returnurl="@ViewData["ReturnUrl"]" method="post">
+                        <form class="pt-3" asp-controller="Login" asp-action="Authenticate" method="post">
+                            <!-- Hidden input for returnUrl -->
+                            <input type="hidden" name="returnUrl" value="@returnUrl" />
+                            
                             <div class="form-group">
                                 <label for="exampleInputEmail">Payroll Number</label> 
                                 <div class="input-group">
