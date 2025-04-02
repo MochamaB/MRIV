@@ -173,6 +173,68 @@
                 var itemId = $(this).data('item-id');
                 $('#editConditionModal-' + itemId).modal('show');
             });
+            
+            // Initialize tooltips
+            $('[data-bs-toggle="tooltip"]').tooltip();
+            
+            // Handle saving material conditions via AJAX
+            $('.save-condition-btn').click(function () {
+                var itemId = $(this).data('item-id');
+                var requisitionItemId = $(this).data('requisition-item-id');
+                var approvalId = $(this).data('approval-id');
+                var condition = $('#condition-' + itemId).val();
+                var notes = $('#notes-' + itemId).val();
+                var stage = $('#stage-' + itemId).val();
+                var materialId = $('#materialId-' + itemId).val();
+                var materialConditionId = $('#materialConditionId-' + itemId).val();
+                
+                // Validate condition
+                if (!condition) {
+                    $('#condition-error-' + itemId).text('Please select a condition');
+                    return;
+                } else {
+                    $('#condition-error-' + itemId).text('');
+                }
+                
+                // Show loading state
+                var $btn = $(this);
+                var originalText = $btn.text();
+                $btn.prop('disabled', true).text('Saving...');
+                
+                // Send AJAX request
+                $.ajax({
+                    url: '@Url.Action("SaveItemCondition", "Approvals")',
+                    type: 'POST',
+                    data: {
+                        approvalId: approvalId,
+                        requisitionItemId: requisitionItemId,
+                        materialId: materialId || null,
+                        materialConditionId: materialConditionId || null,
+                        condition: condition,
+                        notes: notes,
+                        stage: stage
+                    },
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function (response) {
+                        if (response.success) {
+                            // Close the modal
+                            $('#editConditionModal-' + itemId).modal('hide');
+                            
+                            // Reload the page to show updated conditions
+                            location.reload();
+                        } else {
+                            alert('Error: ' + (response.message || 'Failed to save condition'));
+                            $btn.prop('disabled', false).text(originalText);
+                        }
+                    },
+                    error: function (xhr, status, error) {
+                        alert('Error: ' + error);
+                        $btn.prop('disabled', false).text(originalText);
+                    }
+                });
+            });
         });
     </script>
 }

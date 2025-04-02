@@ -1,3 +1,4 @@
+using MRIV.Attributes;
 using MRIV.Enums;
 using MRIV.Models;
 using System;
@@ -30,11 +31,17 @@ namespace MRIV.ViewModels
 
         // Action properties
         public string? Action { get; set; }
+        [StringLength(500, ErrorMessage = "Comments cannot exceed 500 characters")]
+        [RequiredIfRejected("Action", ErrorMessage = "Comments are required when rejecting an approval or putting it on hold.")]
         public string? Comments { get; set; }
 
         // Collections
         public List<RequisitionItemConditionViewModel> Items { get; set; } = new List<RequisitionItemConditionViewModel>();
         public List<ApprovalHistoryViewModel> ApprovalHistory { get; set; } = new List<ApprovalHistoryViewModel>();
+        
+        // Status options for the approval action dropdown
+        public Dictionary<string, string> StatusOptions { get; set; } = new Dictionary<string, string>();
+
     }
 
     public class RequisitionItemConditionViewModel

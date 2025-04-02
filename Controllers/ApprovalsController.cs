@@ -532,81 +532,18 @@ namespace MRIV.Controllers
             _logger.LogInformation($"Created ViewModel - ApprovalId: {viewModel.ApprovalId}, ApprovalStep: {viewModel.ApprovalStep}");
 
             // Populate requisition items with any existing conditions
-            if (approval.Requisition.RequisitionItems != null)
-            {
-                foreach (var item in approval.Requisition.RequisitionItems)
-                {
-                    // Check if there's an existing material condition record for this item in this approval step
-                    var existingCondition = await _context.MaterialCondition
-                        .Where(mc => mc.RequisitionItemId == item.Id && mc.ApprovalId == approval.Id)
-                        .FirstOrDefaultAsync();
-
-                    Vendor? vendor = null;
-                    if (item.Material?.VendorId != null)
-                    {
-                        vendor = await _vendorService.GetVendorByIdAsync(item.Material.VendorId);
-                    }
-
-                    var itemViewModel = new RequisitionItemConditionViewModel
-                    {
-                        RequisitionItemId = item.Id,
-                        Name = item.Name ?? "N/A",
-                        MaterialId = item.MaterialId,
-                        MaterialCode = item.Material?.Code ?? "N/A",
-                        Description = item.Description ?? "N/A",
-                        Quantity = item.Quantity,
-                        RequisitionItemCondition = item.Condition,
-                        vendor = vendor
-                    };
-
-                    // If there's an existing condition, populate it
-                    if (existingCondition != null)
-                    {
-                        itemViewModel.MaterialConditionId = existingCondition.Id;
-                        itemViewModel.Condition = existingCondition.Condition;
-                        itemViewModel.Notes = existingCondition.Notes;
-                        itemViewModel.Stage = existingCondition.Stage;
-                    }
-                    else
-                    {
-                        // Set default stage based on the approval step
-                        if (approval.ApprovalStep?.ToLower().Contains("dispatch") == true)
-                        {
-                            itemViewModel.Stage = "Pre-Dispatch";
-                        }
-                        else if (approval.ApprovalStep?.ToLower().Contains("receiv") == true)
-                        {
-                            itemViewModel.Stage = "Post-Receive";
-                        }
-                        else
-                        {
-                            itemViewModel.Stage = "Inspection";
-                        }
-                    }
-
-                    viewModel.Items.Add(itemViewModel);
-                }
-            }
+            await PopulateRequisitionItemsWithConditions(viewModel, approval);
 
             // Populate approval history
-            viewModel.ApprovalHistory = approvalHistory
-                .Select(a => new ApprovalHistoryViewModel
-                {
-                    ApprovalId = a.Id,
-                    ApprovalStep = a.ApprovalStep,
-                    StepNumber = a.StepNumber,
-                    Status = a.ApprovalStatus.ToString(),
-                    ApproverName = a.EmployeeName,
-                    Comments = a.Comments,
-                    ApprovedDate = a.UpdatedAt
-                })
-                .ToList();
+            PopulateApprovalHistory(viewModel, approvalHistory);
+
+            // Load status options for when we move to the approval action step
+            viewModel.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(approval.Id);
 
             return View(viewModel);
         }
 
 
-        // POST: Approvals/ProcessApprovalWizard
         // POST: Approvals/ProcessApprovalWizard
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -621,15 +558,10 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    // Save material conditions before moving to the next step
-                    await SaveMaterialConditions(model);
-
+                    // No need to save material conditions here as they are now saved immediately via AJAX
+                    
                     // Reload the approval to ensure we have fresh data for the next step
-                    var approval = await _context.Approvals
-                        .Include(a => a.Requisition)
-                        .Include(a => a.StepConfig)
-                        .FirstOrDefaultAsync(a => a.Id == model.ApprovalId);
-
+                    var approval = await GetApprovalWithBasicIncludes(model.ApprovalId);
                     if (approval == null)
                     {
                         _logger.LogWarning($"Approval with ID {model.ApprovalId} not found during next step transition");
@@ -641,20 +573,12 @@ namespace MRIV.Controllers
                     model.CurrentStep = "ApprovalAction";
                     model.IsLastStep = true;
 
+                    // Get available status options for this approval step
+                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
+
                     // Re-populate the approval history
                     var approvalHistory = await _approvalService.GetApprovalHistoryAsync(approval.RequisitionId);
-                    model.ApprovalHistory = approvalHistory
-                        .Select(a => new ApprovalHistoryViewModel
-                        {
-                            ApprovalId = a.Id,
-                            ApprovalStep = a.ApprovalStep,
-                            StepNumber = a.StepNumber,
-                            Status = a.ApprovalStatus.ToString(),
-                            ApproverName = a.EmployeeName,
-                            Comments = a.Comments,
-                            ApprovedDate = a.UpdatedAt
-                        })
-                        .ToList();
+                    PopulateApprovalHistory(model, approvalHistory);
 
                     _logger.LogInformation($"Moving to ApprovalAction step with model: ApprovalId={model.ApprovalId}, ApprovalStep={model.ApprovalStep}");
                     return View("ApprovalWizard", model);
@@ -672,6 +596,31 @@ namespace MRIV.Controllers
                 model.CurrentStep = "ItemConditions";
                 model.IsLastStep = false;
                 _logger.LogInformation("Moving back to ItemConditions step");
+                
+                try
+                {
+                    // Reload the approval to ensure we have fresh data for the previous step
+                    var approval = await GetApprovalWithRequisitionItems(model.ApprovalId);
+                    if (approval == null)
+                    {
+                        _logger.LogWarning($"Approval with ID {model.ApprovalId} not found during previous step transition");
+                        return NotFound();
+                    }
+
+                    // Clear and repopulate the items collection
+                    model.Items.Clear();
+                    
+                    // Populate requisition items with any existing conditions
+                    await PopulateRequisitionItemsWithConditions(model, approval);
+
+                    _logger.LogInformation($"Reloaded {model.Items.Count} items for the previous step");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during previous step transition");
+                    ModelState.AddModelError("", "An error occurred while processing your request.");
+                }
+                
                 return View("ApprovalWizard", model);
             }
             else if (direction == "finish")
@@ -685,14 +634,29 @@ namespace MRIV.Controllers
                     ModelState.AddModelError("Action", "Please select an action");
                     model.CurrentStep = "ApprovalAction";
                     model.IsLastStep = true;
+                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
+                    return View("ApprovalWizard", model);
+                }
+
+                // Check if the action is Rejected or OnHold and validate that comments are provided
+                if ((model.Action == ((int)ApprovalStatus.Rejected).ToString() || 
+                     model.Action == ((int)ApprovalStatus.OnHold).ToString()) && 
+                    string.IsNullOrWhiteSpace(model.Comments))
+                {
+                    _logger.LogWarning("Comments required for Rejected or OnHold status");
+                    ModelState.AddModelError("Comments", "Comments are required when rejecting an approval or putting it on hold.");
+                    model.CurrentStep = "ApprovalAction";
+                    model.IsLastStep = true;
+                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
+                    var approvalHistory = await _approvalService.GetApprovalHistoryAsync(model.RequisitionId);
+                    PopulateApprovalHistory(model, approvalHistory);
                     return View("ApprovalWizard", model);
                 }
 
                 try
                 {
-                    // Save material conditions first
-                    await SaveMaterialConditions(model);
-
+                    // No need to save material conditions here as they are now saved immediately via AJAX
+                    
                     // Process the approval action
                     bool success = await _approvalService.ProcessApprovalActionAsync(model.ApprovalId, model.Action, model.Comments ?? "");
 
@@ -715,6 +679,9 @@ namespace MRIV.Controllers
                     ModelState.AddModelError("", "An error occurred while processing your approval action.");
                     model.CurrentStep = "ApprovalAction";
                     model.IsLastStep = true;
+                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
+                    var approvalHistory = await _approvalService.GetApprovalHistoryAsync(model.RequisitionId);
+                    PopulateApprovalHistory(model, approvalHistory);
                     return View("ApprovalWizard", model);
                 }
             }
@@ -724,56 +691,238 @@ namespace MRIV.Controllers
             return RedirectToAction(nameof(Index));
         }
 
-        // Helper method to save material conditions
-        // Helper method to save material conditions
-        private async Task SaveMaterialConditions(ApprovalWizardViewModel model)
+        // POST: Approvals/SaveItemCondition
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveItemCondition(int approvalId, int requisitionItemId, int? materialId, int? materialConditionId, MaterialStatus? condition, string notes, string stage)
         {
-            _logger.LogInformation($"Saving material conditions for {model.Items.Count} items");
-
-            foreach (var item in model.Items)
+            _logger.LogInformation($"Saving material condition for item ID: {requisitionItemId}");
+            
+            try
             {
-                // Skip items without condition data
-                if (item.Condition == null)
+                // Get the current approval to access the ApprovalStep and approver's payroll
+                var approval = await _context.Approvals
+                    .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                if (approval == null)
                 {
-                    continue;
+                    _logger.LogWarning($"Approval with ID {approvalId} not found when saving material condition");
+                    return Json(new { success = false, message = "Approval not found" });
                 }
 
-                if (item.MaterialConditionId.HasValue)
+                // Skip if no condition is provided
+                if (condition == null)
+                {
+                    return Json(new { success = false, message = "No condition provided" });
+                }
+
+                if (materialConditionId.HasValue)
                 {
                     // Update existing condition
-                    var existingCondition = await _context.MaterialCondition.FindAsync(item.MaterialConditionId.Value);
+                    var existingCondition = await _context.MaterialCondition.FindAsync(materialConditionId.Value);
                     if (existingCondition != null)
                     {
                         _logger.LogInformation($"Updating existing condition ID: {existingCondition.Id}");
-                        existingCondition.Condition = item.Condition;
-                        existingCondition.Notes = item.Notes;
+                        existingCondition.Condition = condition;
+                        existingCondition.Notes = notes;
+                        existingCondition.Stage = approval.ApprovalStep ?? stage ?? existingCondition.Stage;
                         existingCondition.InspectionDate = DateTime.Now;
+                        existingCondition.InspectedBy = approval.PayrollNo ?? User.Identity?.Name ?? "System";
                         _context.Update(existingCondition);
                     }
                 }
                 else
                 {
+                    // Check if the MaterialId is valid
+                    int? validMaterialId = await ValidateMaterialId(materialId);
+                    
                     // Create new condition record
-                    _logger.LogInformation($"Creating new condition for item ID: {item.RequisitionItemId}");
                     var materialCondition = new MaterialCondition
                     {
-                        MaterialId = item.MaterialId ?? 0,
-                        RequisitionId = model.RequisitionId,
-                        RequisitionItemId = item.RequisitionItemId,
-                        ApprovalId = model.ApprovalId,
-                        Stage = item.Stage ?? "Unknown",
-                        Condition = item.Condition,
-                        Notes = item.Notes,
-                        InspectedBy = User.Identity?.Name ?? "System",
+                        MaterialId = validMaterialId,
+                        RequisitionId = approval.RequisitionId,
+                        RequisitionItemId = requisitionItemId,
+                        ApprovalId = approvalId,
+                        Stage = approval.ApprovalStep ?? stage ?? "Unknown",
+                        Condition = condition,
+                        Notes = notes,
+                        InspectedBy = approval.PayrollNo ?? User.Identity?.Name ?? "System",
                         InspectionDate = DateTime.Now
                     };
 
                     _context.Add(materialCondition);
                 }
+
+                await _context.SaveChangesAsync();
+                _logger.LogInformation("Material condition saved successfully");
+                
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error saving material condition");
+                return Json(new { success = false, message = ex.Message });
+            }
+        }
+
+        #region Helper Methods
+
+        /// <summary>
+        /// Populates the approval history in the view model
+        /// </summary>
+        private void PopulateApprovalHistory(ApprovalWizardViewModel model, List<ApprovalStepViewModel> approvalHistory)
+        {
+            model.ApprovalHistory = approvalHistory
+                .Select(a => new ApprovalHistoryViewModel
+                {
+                    ApprovalId = a.Id,
+                    ApprovalStep = a.ApprovalStep,
+                    StepNumber = a.StepNumber,
+                    Status = a.ApprovalStatus.ToString(),
+                    ApproverName = a.EmployeeName,
+                    Comments = a.Comments,
+                    ApprovedDate = a.UpdatedAt
+                })
+                .ToList();
+        }
+
+        /// <summary>
+        /// Gets an approval with basic includes (Requisition and StepConfig)
+        /// </summary>
+        private async Task<Approval> GetApprovalWithBasicIncludes(int approvalId)
+        {
+            return await _context.Approvals
+                .Include(a => a.Requisition)
+                .Include(a => a.StepConfig)
+                .FirstOrDefaultAsync(a => a.Id == approvalId);
+        }
+
+        /// <summary>
+        /// Gets an approval with requisition items includes
+        /// </summary>
+        private async Task<Approval> GetApprovalWithRequisitionItems(int approvalId)
+        {
+            return await _context.Approvals
+                .Include(a => a.Requisition)
+                .ThenInclude(r => r.RequisitionItems)
+                .ThenInclude(ri => ri.Material)
+                .FirstOrDefaultAsync(a => a.Id == approvalId);
+        }
+
+        /// <summary>
+        /// Populates the requisition items with their material conditions
+        /// </summary>
+        private async Task PopulateRequisitionItemsWithConditions(ApprovalWizardViewModel model, Approval approval)
+        {
+            if (approval.Requisition.RequisitionItems == null)
+                return;
+
+            foreach (var item in approval.Requisition.RequisitionItems)
+            {
+                // Check if there's an existing material condition record for this item in this approval step
+                var existingCondition = await FindMaterialCondition(item.Id, approval.Id, approval.RequisitionId);
+
+                // Get vendor information if available
+                Vendor? vendor = null;
+                if (item.Material?.VendorId != null)
+                {
+                    vendor = await _vendorService.GetVendorByIdAsync(item.Material.VendorId);
+                }
+
+                var itemViewModel = new RequisitionItemConditionViewModel
+                {
+                    RequisitionItemId = item.Id,
+                    Name = item.Name ?? "N/A",
+                    MaterialId = item.MaterialId,
+                    MaterialCode = item.Material?.Code ?? "N/A",
+                    Description = item.Description ?? "N/A",
+                    Quantity = item.Quantity,
+                    RequisitionItemCondition = item.Condition,
+                    vendor = vendor
+                };
+
+                // If there's an existing condition, populate it
+                if (existingCondition != null)
+                {
+                    itemViewModel.MaterialConditionId = existingCondition.Id;
+                    itemViewModel.Condition = existingCondition.Condition;
+                    itemViewModel.Notes = existingCondition.Notes;
+                    itemViewModel.Stage = existingCondition.Stage;
+                }
+                else
+                {
+                    // Set default stage based on the approval step
+                    itemViewModel.Stage = GetStageFromApprovalStep(approval.ApprovalStep);
+                }
+
+                model.Items.Add(itemViewModel);
+            }
+        }
+
+        /// <summary>
+        /// Finds a material condition for a requisition item, first checking the current approval step,
+        /// then looking for any condition from the same requisition
+        /// </summary>
+        private async Task<MaterialCondition> FindMaterialCondition(int requisitionItemId, int approvalId, int requisitionId)
+        {
+            // First check if there's a condition for this approval step
+            var condition = await _context.MaterialCondition
+                .Where(mc => mc.RequisitionItemId == requisitionItemId && mc.ApprovalId == approvalId)
+                .FirstOrDefaultAsync();
+
+            // If no condition found for this approval, check if there's any condition for this item from any approval
+            if (condition == null)
+            {
+                condition = await _context.MaterialCondition
+                    .Where(mc => mc.RequisitionItemId == requisitionItemId && mc.RequisitionId == requisitionId)
+                    .OrderByDescending(mc => mc.InspectionDate)
+                    .FirstOrDefaultAsync();
+                
+                if (condition != null)
+                {
+                    _logger.LogInformation($"Found previous condition for item {requisitionItemId} from another approval step");
+                }
             }
 
-            await _context.SaveChangesAsync();
-            _logger.LogInformation("Material conditions saved successfully");
+            return condition;
         }
+
+        /// <summary>
+        /// Determines the appropriate stage based on the approval step
+        /// </summary>
+        private string GetStageFromApprovalStep(string approvalStep)
+        {
+            if (string.IsNullOrEmpty(approvalStep))
+                return "Inspection";
+
+            if (approvalStep.ToLower().Contains("dispatch"))
+                return "Pre-Dispatch";
+            else if (approvalStep.ToLower().Contains("receiv"))
+                return "Post-Receive";
+            else
+                return "Inspection";
+        }
+
+        /// <summary>
+        /// Validates if a material ID exists in the database
+        /// </summary>
+        private async Task<int?> ValidateMaterialId(int? materialId)
+        {
+            if (!materialId.HasValue)
+                return null;
+                
+            var materialExists = await _context.Materials.AnyAsync(m => m.Id == materialId.Value);
+            if (materialExists)
+            {
+                return materialId.Value;
+            }
+            else
+            {
+                _logger.LogWarning($"Material with ID {materialId.Value} not found. Setting MaterialId to null.");
+                return null;
+            }
+        }
+
+        #endregion
     }
 }

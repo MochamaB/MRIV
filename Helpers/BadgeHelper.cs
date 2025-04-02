@@ -29,7 +29,7 @@ namespace MRIV.Helpers
                 MaterialStatus.MinorDamage => "badge-warning",
                 MaterialStatus.MajorDamage => "badge-danger",
                 MaterialStatus.Faulty => "badge-danger",
-                MaterialStatus.UnderMaintenance => "badge-info",
+                MaterialStatus.UnderMaintenance => "badge-information",
                 MaterialStatus.LostOrStolen => "badge-dark",
                 MaterialStatus.Disposed => "badge-secondary",
                 null => "badge-light", // Handle null case (optional)
@@ -48,7 +48,7 @@ namespace MRIV.Helpers
                 _ => "badge-secondary"
             };
         }
-        public static string GetMaterialGetRequisitionItemStatusBadgeClassStatusBadgeClass(RequisitionItemCondition? status)
+        public static string GetRequisitionItemConditionBadgeClass(RequisitionItemCondition? status)
         {
             return status switch
             {
@@ -56,7 +56,7 @@ namespace MRIV.Helpers
                 RequisitionItemCondition.MinorDamage => "badge-warning",
                 RequisitionItemCondition.MajorDamage => "badge-danger",
                 RequisitionItemCondition.Faulty => "badge-danger",
-                RequisitionItemCondition.UnderMaintenance => "badge-info",
+                RequisitionItemCondition.UnderMaintenance => "badge-information",
                 RequisitionItemCondition.LostOrStolen => "badge-dark",
                 RequisitionItemCondition.Disposed => "badge-secondary",
                 null => "badge-light", // Handle null case (optional)

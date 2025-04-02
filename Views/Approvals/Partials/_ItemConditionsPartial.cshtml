@@ -15,8 +15,8 @@
                     <p>@Model.RequisitionNumber</p>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label fw-bold" style="text-transform:capitalize">Issue Point :</label>
-                    <p>@Model.IssueStationCategory</p>
+                    <label class="form-label fw-bold" >Issue Point :</label>
+                <p style="text-transform:capitalize">@Model.IssueStationCategory</p>
                 </div>
                  <div class="mb-3">
                     <label class="form-label fw-bold">Requesting Station:</label>
@@ -35,7 +35,7 @@
             </div>
                 <div class="mb-3">
                     <label class="form-label fw-bold">Delivery Station:</label>
-                    <p>@Model.DeliveryStation</p>
+                <p style="text-transform:capitalize">@Model.DeliveryStation</p>
                 </div>
                 <div class="mb-3">
                    
@@ -54,7 +54,7 @@
 <div class="col-md-12 d-flex justify-content-between align-items-center mb-1">
     <h5 class="ml-1"><b>Requisition Items</b></h5>
         <div>
-            <span class="badge bg-info">Current Step: @Model.StepNumber .@Model.ApprovalStep</span>
+            <span class="badge bg-info">Current Step: @Model.StepNumber @Model.ApprovalStep</span>
         </div>
     </div>
 <hr style="border:2px solid black" />
@@ -98,7 +98,7 @@
                                 }
                                 else
                                 {
-                            <span class="badge @BadgeHelper.GetMaterialGetRequisitionItemStatusBadgeClassStatusBadgeClass(item.RequisitionItemCondition)">
+                            <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.RequisitionItemCondition)">
                                 @EnumHelper.GetEnumDescription(item.RequisitionItemCondition)
                             </span>
                                 }
@@ -134,27 +134,38 @@
                                             <p><strong>@item.MaterialCode</strong> - @item.Description</p>
                                         </div>
                                         <div class="mb-3">
-                                            <label asp-for="Items[i].Condition" class="form-label">Condition</label>
-                                            <select asp-for="Items[i].Condition" class="form-select">
+                                            <label for="condition-@i" class="form-label">Condition</label>
+                                               <select id="condition-@i" class="form-select">
                                                 <option value="">-- Select Condition --</option>
-                                                <option value="@((int)MaterialStatus.GoodCondition)">@EnumHelper.GetEnumDescription(MaterialStatus.GoodCondition)</option>
-                                                <option value="@((int)MaterialStatus.MinorDamage)">@EnumHelper.GetEnumDescription(MaterialStatus.MinorDamage)</option>
-                                                <option value="@((int)MaterialStatus.MajorDamage)">@EnumHelper.GetEnumDescription(MaterialStatus.MajorDamage)</option>
-                                                <option value="@((int)MaterialStatus.Faulty)">@EnumHelper.GetEnumDescription(MaterialStatus.Faulty)</option>
-                                                <option value="@((int)MaterialStatus.UnderMaintenance)">@EnumHelper.GetEnumDescription(MaterialStatus.UnderMaintenance)</option>
-                                                <option value="@((int)MaterialStatus.LostOrStolen)">@EnumHelper.GetEnumDescription(MaterialStatus.LostOrStolen)</option>
+                                                @foreach (MaterialStatus status in Enum.GetValues(typeof(MaterialStatus)))
+                                                {
+                                                    bool isSelected = false;
+        
+                                                    if (item.Condition.HasValue)
+                                                    {
+                                                        isSelected = item.Condition.Value == status;
+                                                    }
+                                                    else
+                                                    {
+                                                        isSelected = (int)item.RequisitionItemCondition == (int)status;
+                                                    }
+
+                                                    @:<option value="@((int)status)" @(isSelected ? "selected" : "")>@EnumHelper.GetEnumDescription(status)</option>
+                                                }
                                             </select>
-                                            <span asp-validation-for="Items[i].Condition" class="text-danger"></span>
+                                            <div id="condition-error-@i" class="text-danger"></div>
                                         </div>
                                         <div class="mb-3">
-                                            <label asp-for="Items[i].Notes" class="form-label">Notes</label>
-                                            <textarea asp-for="Items[i].Notes" class="form-control" rows="3" placeholder="Enter any notes about the condition"></textarea>
+                                            <label for="notes-@i" class="form-label">Notes</label>
+                                            <textarea id="notes-@i" class="form-control" rows="3" placeholder="Enter any notes about the condition">@item.Notes</textarea>
                                         </div>
-                                        <input type="hidden" asp-for="Items[i].Stage" value="@GetStageBasedOnApprovalStep(Model.ApprovalStep)" />
+                                        <input type="hidden" id="stage-@i" value="@GetStageBasedOnApprovalStep(Model.ApprovalStep)" />
+                                        <input type="hidden" id="materialId-@i" value="@item.MaterialId" />
+                                        <input type="hidden" id="materialConditionId-@i" value="@item.MaterialConditionId" />
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Save Changes</button>
+                                        <button type="button" class="btn btn-primary save-condition-btn" data-item-id="@i" data-requisition-item-id="@item.RequisitionItemId" data-approval-id="@Model.ApprovalId">Save Changes</button>
                                     </div>
                                 </div>
                             </div>

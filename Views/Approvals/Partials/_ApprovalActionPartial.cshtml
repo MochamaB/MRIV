@@ -28,27 +28,38 @@
                 <label asp-for="Action" class="form-label">Action</label><span class="text-danger">*</span>
                 <select asp-for="Action" class="form-select">
                     <option value="">-- Select Action --</option>
-                    @if (!string.IsNullOrEmpty(Model?.ApprovalStep))
+                    @if (Model?.StatusOptions != null && Model.StatusOptions.Any())
                     {
-                        if (Model.ApprovalStep.ToLower().Contains("dispatch"))
+                        @foreach (var option in Model.StatusOptions)
                         {
-                            <option value="@((int)ApprovalStatus.Dispatched)">Dispatch</option>
+                            <option value="@option.Key">@option.Value</option>
                         }
-                        else if (Model.ApprovalStep.ToLower().Contains("receiv"))
+                    }
+                    else
+                    {
+                        @* Fallback options if no status options are provided *@
+                        @if (!string.IsNullOrEmpty(Model?.ApprovalStep))
                         {
-                            <option value="@((int)ApprovalStatus.Received)">Receive</option>
+                            if (Model.ApprovalStep.ToLower().Contains("dispatch"))
+                            {
+                                <option value="@((int)ApprovalStatus.Dispatched)">Dispatch</option>
+                            }
+                            else if (Model.ApprovalStep.ToLower().Contains("receiv"))
+                            {
+                                <option value="@((int)ApprovalStatus.Received)">Receive</option>
+                            }
+                            else
+                            {
+                                <option value="@((int)ApprovalStatus.Approved)">Approve</option>
+                            }
                         }
                         else
                         {
                             <option value="@((int)ApprovalStatus.Approved)">Approve</option>
                         }
+                        <option value="@((int)ApprovalStatus.Rejected)">Reject</option>
+                        <option value="@((int)ApprovalStatus.OnHold)">Put On Hold</option>
                     }
-                    else
-                    {
-                        <option value="@((int)ApprovalStatus.Approved)">Approve</option>
-                    }
-                    <option value="@((int)ApprovalStatus.Rejected)">Reject</option>
-                    <option value="@((int)ApprovalStatus.OnHold)">Put On Hold</option>
                 </select>
                 <span asp-validation-for="Action" class="text-danger"></span>
             </div>

@@ -4,7 +4,7 @@ using MRIV.Enums;
 namespace MRIV.Attributes
 {
     /// <summary>
-    /// Validation attribute that makes a property required when the approval action is Reject
+    /// Validation attribute that makes a property required when the approval action is Reject or OnHold
     /// </summary>
     public class RequiredIfRejectedAttribute : ValidationAttribute
     {
@@ -31,24 +31,25 @@ namespace MRIV.Attributes
             if (string.IsNullOrEmpty(actionValue))
                 return ValidationResult.Success;
 
-            // Check if the action represents a rejection
-            bool isRejection = false;
+            // Check if the action represents a rejection or on hold
+            bool requiresComments = false;
 
             // Try to parse as integer (enum value)
             if (int.TryParse(actionValue, out int statusValue))
             {
-                isRejection = statusValue == (int)ApprovalStatus.Rejected;
+                requiresComments = statusValue == (int)ApprovalStatus.Rejected || 
+                                  statusValue == (int)ApprovalStatus.OnHold;
             }
 
-            // Skip validation if not a rejection
-            if (!isRejection)
+            // Skip validation if not a rejection or on hold
+            if (!requiresComments)
                 return ValidationResult.Success;
 
-            // Validate only when the action is a rejection
+            // Validate only when the action is a rejection or on hold
             if (value == null || string.IsNullOrWhiteSpace(value.ToString()))
             {
                 var errorMessage = ErrorMessage ??
-                    $"{context.DisplayName} is required when rejecting an approval";
+                    $"{context.DisplayName} is required when rejecting an approval or putting it on hold";
                 return new ValidationResult(errorMessage);
             }
 
