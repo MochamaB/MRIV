@@ -1,13 +1,7 @@
 @model MRIV.ViewModels.FilterViewModel
 
-<div class="filter-container mb-3" id="filterContainer" style="display: none;">
-    <div class="card">
-        <div class="card-header bg-light">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Advanced Filters</h5>
-                <button type="button" class="btn-close" id="closeFilters" aria-label="Close"></button>
-            </div>
-        </div>
+<div class="filter-container" id="filterContainer" style="display: none;">
+    <div class="card" style="border-left:5px solid #ffaf00">
         <div class="card-body">
             <form id="filterForm" method="get">
                 <div class="row g-3">
@@ -43,23 +37,30 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Toggle filter container visibility
+        const filterContainer = document.getElementById('filterContainer');
+        const filterForm = document.getElementById('filterForm');
+
+        // Show filters if any are selected on page load
+        const hasActiveFilters = Array.from(document.querySelectorAll('.filter-select'))
+            .some(select => select.value !== '');
+        if (hasActiveFilters) {
+            filterContainer.style.display = 'block';
+        }
+
+        // Toggle filter container
         document.getElementById('toggleFilters')?.addEventListener('click', function() {
-            const filterContainer = document.getElementById('filterContainer');
-            if (filterContainer) {
-                filterContainer.style.display = filterContainer.style.display === 'none' ? 'block' : 'none';
-            }
+            filterContainer.style.display = filterContainer.style.display === 'none' ? 'block' : 'none';
         });
-        
-        // Close filter container
-        document.getElementById('closeFilters')?.addEventListener('click', function() {
-            document.getElementById('filterContainer').style.display = 'none';
+
+        // Maintain open state after form submit
+        filterForm?.addEventListener('submit', function() {
+            filterContainer.style.display = 'block';
         });
-        
+
         // Auto-submit on select change
         document.querySelectorAll('.filter-select').forEach(select => {
             select.addEventListener('change', function() {
-                document.getElementById('filterForm').submit();
+                filterForm.submit();
             });
         });
         
@@ -68,7 +69,7 @@
             document.querySelectorAll('.filter-select').forEach(select => {
                 select.value = '';
             });
-            document.getElementById('filterForm').submit();
+            filterForm.submit();
         });
     });
 </script>

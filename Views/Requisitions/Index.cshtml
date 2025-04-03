@@ -1,139 +1,150 @@
 @using MRIV.Enums
 @using MRIV.Helpers
+@using MRIV.ViewModels
 @model IEnumerable<MRIV.ViewModels.RequisitionViewModel>
 
 @{
     ViewData["Title"] = "Index";
+    var pagination = ViewBag.Pagination as PaginationViewModel;
 }
-<a asp-controller="MaterialRequisition" asp-action="Ticket" class="btn btn-primary text-white mb-3 me-0  float-end">
-    <div style="display: flex; align-items: center;">
-        <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
-        <span>  Add Requisition</span>
-    </div>
-</a>
-<div style="clear: both;"></div>
-<div class=" contwrapper">
-<div class=" table-responsive" id="dataTable">
-        <div id="toolbar">
-            <button id="customButton" class="btn btn-success float-right ml-2">
-                <i class="fa fa-plus"></i> Add New
-            </button>
-        </div>
-    <table id="table"
-           data-toggle="table"
-           data-icon-size="sm"
-           data-buttons-class="primary"
-           data-toolbar-align="right"
-           data-buttons-align="left"
-           data-search-align="left"
-           data-sort-order="asc"
-           data-search="true"
-           data-mobile-responsive="true"
-           data-sticky-header="true"
-           data-pagination="true"
-           data-page-list="[100, 200, 250, 500, ALL]"
-           data-page-size="100"
-           data-show-footer="false"
-           data-side-pagination="client"
-           data-show-export="true"
-           class="table">
-    <thead>
-                <tr>
-                    <th>Id</th>
-                    <th>Ticket ID</th>
-                    <th>Issue Point</th>
-                    <th>Delivery Point</th>
-                    <th>Issue Date</th>
-                    <th>Issued By</th>
-                    <th>Status</th>
-                    <th>Approvals & Receipts</th> 
-                    <th></th>
-                </tr>
-        </tr>
-    </thead>
-            <tbody>
-                @foreach (var item in Model)
-                {
-                    <tr>
-                        <td>@item.Id</td>
-                        <td>
-                            @(item.TicketId == 0 ? "Inter Factory Borrowing" : item.TicketId.ToString())
-                        </td>
-                        <td>
-                            <div class="font-weight-bold pb-2">
-                                @(item.IssueStationCategory?.ToLower() == "headoffice" ? "Head Office" :
-                                    item.IssueStationCategory?.ToLower() == "factory" ? "Factory" :
-                                    item.IssueStationCategory?.ToLower() == "region" ? "Region" :
-                                    item.IssueStationCategory)
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1"></h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
                             </div>
-                            <div class="text-muted">
-                                @item.IssueLocationName
-                            </div>
-                        </td>
-                        <td>
-                            <div class="font-weight-bold pb-2">
-                                @(item.DeliveryStationCategory?.ToLower() == "headoffice" ? "Head Office" :
-                                    item.DeliveryStationCategory?.ToLower() == "factory" ? "Factory" :
-                                    item.DeliveryStationCategory?.ToLower() == "region" ? "Region" :
-                                    item.DeliveryStationCategory?.ToLower() == "vendor" ? "Vendor" :
-                                    item.DeliveryStationCategory)
-                            </div>
-                            <div class="text-muted">
-                                @item.DeliveryLocationName
-                            </div>
-                        </td>
-                        <td>
-                            <div class="pb-2">@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
-                           
-                                <div class="@(item.DaysPending > 7 ? "text-danger" : "text-muted")">
-                                    <small>Days Pending: @item.DaysPending </small>
-                               </div>
-                            
-                        </td>
-                        <td>
-                            <div class="pb-2">@item.DepartmentName</div>
-                            <div class="text-muted">@item.EmployeeName</div>
-                        </td>
-                        <td>
-                            @if (item.Status != null)
-                            {
-                                <span class="badge @BadgeHelper.GetRequisitionStatusBadgeClass(item.Status.Value)">
-                                    @EnumHelper.GetEnumDescription(item.Status)
-                                </span>
-                            }
-                        </td>
-                        <td>
 
-                            @if (item.CurrentApprovalStepNumber.HasValue)
+                            <!-- Filter Toggle Button -->
+                            @await Html.PartialAsync("_FilterToggleButton")
+
+                            <!-- Add other action buttons here -->
+                            <a href="@Url.Action("Ticket", "MaterialRequisition")" class="btn btn-primary">
+                                <i class="ri-add-line align-bottom me-1"></i> New Requisition
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Partial View -->
+            @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Id</th>
+                                <th>Ticket ID</th>
+                                <th>Issue Point</th>
+                                <th>Delivery Point</th>
+                                <th>Issue Date</th>
+                                <th>Issued By</th>
+                                <th>Status</th>
+                                <th>Approvals & Receipts</th>
+                                <th></th>
+                            </tr>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
                             {
-                                <div class="pb-2">
-                                    <span class="text-bold" style="font-weight:700"> AT STAGE:  @item.CurrentApprovalStepName</span> -
-                                    <span>@item.CurrentApproverName</span>
-                                    @if (!string.IsNullOrEmpty(item.CurrentApproverDesignation))
-                                    {
-                                        <span class="text-muted"> - @item.CurrentApproverDesignation</span>
-                                    }
-                                </div>
-                                <div>
-                                    <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.CurrentApprovalStatus)">
-                                        @EnumHelper.GetEnumDescription(item.CurrentApprovalStatus)
-                                    </span>
-                                </div>
+                                <tr>
+                                    <td>@item.Id</td>
+                                    <td>
+                                        @(item.TicketId == 0 ? "Inter Factory Borrowing" : item.TicketId.ToString())
+                                    </td>
+                                    <td>
+                                        <div class="font-weight-bold pb-2">
+                                            @(item.IssueStationCategory?.ToLower() == "headoffice" ? "Head Office" :
+                                                item.IssueStationCategory?.ToLower() == "factory" ? "Factory" :
+                                                item.IssueStationCategory?.ToLower() == "region" ? "Region" :
+                                                item.IssueStationCategory)
+                                        </div>
+                                        <div class="text-muted">
+                                            @item.IssueLocationName
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="font-weight-bold pb-2">
+                                            @(item.DeliveryStationCategory?.ToLower() == "headoffice" ? "Head Office" :
+                                                item.DeliveryStationCategory?.ToLower() == "factory" ? "Factory" :
+                                                item.DeliveryStationCategory?.ToLower() == "region" ? "Region" :
+                                                item.DeliveryStationCategory?.ToLower() == "vendor" ? "Vendor" :
+                                                item.DeliveryStationCategory)
+                                        </div>
+                                        <div class="text-muted">
+                                            @item.DeliveryLocationName
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="pb-2">@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
+
+                                        <div class="@(item.DaysPending > 7 ? "text-danger" : "text-muted")">
+                                            <small>Days Pending: @item.DaysPending </small>
+                                        </div>
+
+                                    </td>
+                                    <td>
+                                        <div class="pb-2">@item.DepartmentName</div>
+                                        <div class="text-muted">@item.EmployeeName</div>
+                                    </td>
+                                    <td>
+                                        @if (item.Status != null)
+                                        {
+                                            <span class="badge @BadgeHelper.GetRequisitionStatusBadgeClass(item.Status.Value)">
+                                                @EnumHelper.GetEnumDescription(item.Status)
+                                            </span>
+                                        }
+                                    </td>
+                                    <td>
+
+                                        @if (item.CurrentApprovalStepNumber.HasValue)
+                                        {
+                                            <div class="pb-2">
+                                                <span class="text-bold" style="font-weight:700"> AT STAGE:  @item.CurrentApprovalStepName</span> -
+                                                <span>@item.CurrentApproverName</span>
+                                                @if (!string.IsNullOrEmpty(item.CurrentApproverDesignation))
+                                                {
+                                                    <span class="text-muted"> - @item.CurrentApproverDesignation</span>
+                                                }
+                                            </div>
+                                            <div>
+                                                <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.CurrentApprovalStatus)">
+                                                    @EnumHelper.GetEnumDescription(item.CurrentApprovalStatus)
+                                                </span>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">No approvals</span>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                                    </td>
+                                </tr>
                             }
-                            else
-                            {
-                                <span class="text-muted">No approvals</span>
-                            }
-                        </td>
-                      
-                        <td>
-                            <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                            <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                            <a asp-action="Delete" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
-                        </td>
-                    </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                @if (pagination != null)
+                {
+                    @await Html.PartialAsync("_Pagination", pagination)
                 }
-            </tbody>
-</table>
+            </div>
+        </div>
+    </div>
 </div>
-</div>
+

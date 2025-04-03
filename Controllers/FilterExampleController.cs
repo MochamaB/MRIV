@@ -20,18 +20,22 @@ namespace MRIV.Controllers
             _context = context;
         }
 
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
+            // Ensure valid pagination parameters
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
+
             // Get filter values from request query string
             var filters = new Dictionary<string, string>();
-            foreach (var key in Request.Query.Keys)
+            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
             {
                 filters[key] = Request.Query[key];
             }
 
             // Create base query
             var query = _context.Requisitions
-              //  .Include(r => r.Department)
+            //    .Include(r => r.Department)
                 .AsQueryable();
 
             // Create filter view model with explicit type for the array
@@ -49,11 +53,29 @@ namespace MRIV.Controllers
             // Apply filters to query
             query = query.ApplyFilters(filters);
 
-            // Apply any other filtering, sorting, paging, etc.
+            // Get total count for pagination
+            var totalItems = await query.CountAsync();
+
+            // Apply pagination
             var requisitions = await query
                 .OrderByDescending(r => r.CreatedAt)
-                .Take(100)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
+
+            // Create pagination view model
+            var paginationModel = new PaginationViewModel
+            {
+                TotalItems = totalItems,
+                ItemsPerPage = pageSize,
+                CurrentPage = page,
+                Action = "Index",
+                Controller = "FilterExample",
+                RouteData = filters
+            };
+
+            // Pass pagination model to view
+            ViewBag.Pagination = paginationModel;
 
             return View("~/Views/Shared/_FilterUsageExample.cshtml", requisitions);
         }

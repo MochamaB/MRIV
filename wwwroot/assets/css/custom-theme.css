@@ -59,6 +59,16 @@
     border-color: #e69e00 !important;
 }
 
+/* Button Light color */
+.btn-light {
+    background-color: #f3f3f9 !important;
+    border-color: #f3f3f9 !important;
+}
+
+.btn-light:hover, .btn-light:focus, .btn-light:active {
+    background-color: #dee2e6 !important;
+    border-color: #dee2e6 !important;
+}
 /* Badge primary color */
 .badge-primary, .bg-primary {
     background-color: #324721 !important;
@@ -119,7 +129,10 @@
     background-color: rgba(255, 175, 0, 0.5) !important;
 }
 .card {
-    padding: 0.5rem 0rem 0.5rem 1rem;
+    padding:  1rem;
+}
+.card-body {
+    padding: 0rem;
 }
 /* Modify vertical overlay behavior */
 /* .vertical-overlay {
