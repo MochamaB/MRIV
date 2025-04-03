@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MRIV.ViewModels;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Linq.Expressions;
@@ -51,30 +52,66 @@ namespace MRIV.Extensions
                     Options = new List<SelectListItem>()
                 };
                 
-                // Get distinct values for this property
-                var values = await query
-                    .Select(e => EF.Property<object>(e, propertyName))
-                    .Where(v => v != null)
-                    .Distinct()
-                    .Take(100) // Limit to prevent performance issues
-                    .ToListAsync();
-                
-                // Create select list items
-                foreach (var value in values.OrderBy(v => v.ToString()))
+                // Special handling for enum types
+                if (propertyInfo.PropertyType.IsEnum)
                 {
-                    var stringValue = value.ToString();
-                    var isSelected = currentFilters.TryGetValue(propertyName, out var currentValue) && 
-                                     currentValue == stringValue;
+                    // Get all possible enum values
+                    var enumValues = Enum.GetValues(propertyInfo.PropertyType);
                     
-                    filter.Options.Add(new SelectListItem
+                    foreach (var enumValue in enumValues)
                     {
-                        Value = stringValue,
-                        Text = stringValue,
-                        Selected = isSelected
-                    });
+                        // Get the enum field and its description attribute
+                        var enumField = propertyInfo.PropertyType.GetField(enumValue.ToString());
+                        var descriptionAttribute = enumField?.GetCustomAttribute<DescriptionAttribute>();
+                        
+                        // Use description if available, otherwise use the enum name
+                        var displayText = descriptionAttribute?.Description ?? enumValue.ToString();
+                        
+                        // Use the integer value for filtering
+                        var intValue = Convert.ToInt32(enumValue).ToString();
+                        
+                        var isSelected = currentFilters.TryGetValue(propertyName, out var currentValue) && 
+                                        currentValue == intValue;
+                        
+                        filter.Options.Add(new SelectListItem
+                        {
+                            Value = intValue,
+                            Text = displayText,
+                            Selected = isSelected
+                        });
+                    }
+                }
+                else
+                {
+                    // Get distinct values for this property
+                    var values = await query
+                        .Select(e => EF.Property<object>(e, propertyName))
+                        .Where(v => v != null)
+                        .Distinct()
+                        .Take(100) // Limit to prevent performance issues
+                        .ToListAsync();
+                    
+                    // Create select list items for non-enum types
+                    foreach (var value in values.OrderBy(v => v.ToString()))
+                    {
+                        var stringValue = value.ToString();
+                        var isSelected = currentFilters.TryGetValue(propertyName, out var currentValue) && 
+                                        currentValue == stringValue;
+                        
+                        filter.Options.Add(new SelectListItem
+                        {
+                            Value = stringValue,
+                            Text = stringValue,
+                            Selected = isSelected
+                        });
+                    }
                 }
                 
-                model.Filters.Add(filter);
+                // Only add the filter if it has options
+                if (filter.Options.Any())
+                {
+                    model.Filters.Add(filter);
+                }
             }
             
             return model;
@@ -115,6 +152,21 @@ namespace MRIV.Extensions
                         propertyAccess,
                         typeof(string).GetMethod("Contains", new[] { typeof(string) }),
                         valueExpression);
+                }
+                else if (property.PropertyType.IsEnum)
+                {
+                    // Enum comparison - convert string value to enum
+                    if (int.TryParse(filterValue, out int intValue))
+                    {
+                        // Convert int to enum value
+                        var enumValue = Enum.ToObject(property.PropertyType, intValue);
+                        var valueExpression = Expression.Constant(enumValue);
+                        comparison = Expression.Equal(propertyAccess, valueExpression);
+                    }
+                    else
+                    {
+                        continue; // Skip if conversion fails
+                    }
                 }
                 else
                 {

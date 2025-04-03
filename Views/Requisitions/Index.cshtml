@@ -4,7 +4,7 @@
 @model IEnumerable<MRIV.ViewModels.RequisitionViewModel>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Requisitions";
     var pagination = ViewBag.Pagination as PaginationViewModel;
 }
 <div class="row">
@@ -41,16 +41,15 @@
                     <table class="table table-bordered align-middle mb-0">
                         <thead>
                             <tr>
-                                <th>Id</th>
-                                <th>Ticket ID</th>
-                                <th>Issue Point</th>
-                                <th>Delivery Point</th>
-                                <th>Issue Date</th>
-                                <th>Issued By</th>
-                                <th>Status</th>
+                                <th data-sortable="true">Id</th>
+                                <th data-sortable="true">Ticket ID</th>
+                                <th data-sortable="true">Issue Point</th>
+                                <th data-sortable="true">Delivery Point</th>
+                                <th data-sortable="true">Issue Date</th>
+                                <th data-sortable="true">Issued By</th>
+                                <th data-sortable="true">Status</th>
                                 <th>Approvals & Receipts</th>
                                 <th></th>
-                            </tr>
                             </tr>
                         </thead>
                         <tbody>
@@ -147,4 +146,3 @@
         </div>
     </div>
 </div>
-

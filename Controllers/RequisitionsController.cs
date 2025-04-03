@@ -22,13 +22,16 @@ namespace MRIV.Controllers
         private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
+        private readonly VendorService _vendorService;
 
-        public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService, IApprovalService approvalService)
+        public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService,
+            IApprovalService approvalService, VendorService vendorService)
         {
             _context = context;
             _employeeService = employeeService;
             _departmentService = departmentService;
             _approvalService = approvalService;
+            _vendorService = vendorService;
         }
 
         // GET: Requisitions
@@ -83,7 +86,20 @@ namespace MRIV.Controllers
 
                 // Get location names
                 var issueLocationName = requisition.IssueStation;
-                var deliveryLocationName = requisition.DeliveryStation;
+                string deliveryLocationName;
+
+                // Special handling for vendor delivery locations
+                if (requisition.DeliveryStationCategory?.ToLower() == "vendor" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+                {
+                    // Try to get vendor by ID
+                    var vendor = await _vendorService.GetVendorByIdAsync(requisition.DeliveryStation);
+                    deliveryLocationName = vendor?.Name ?? requisition.DeliveryStation;
+                }
+                else
+                {
+                    // For non-vendor locations, use the station name directly
+                    deliveryLocationName = requisition.DeliveryStation;
+                }
 
                 // Calculate days pending
                 var daysPending = requisition.CompleteDate.HasValue ? 0 :
