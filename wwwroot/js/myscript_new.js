@@ -250,6 +250,41 @@ $(document).ready(function () {
                 return;
             }
 
+            // Check if code exists
+            const code = $codeInput.val().trim();
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            
+            // Disable the save button while checking
+            $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...');
+            
+            $.ajax({
+                url: '/MaterialRequisition/CheckCodeExists',
+                type: 'POST',
+                data: JSON.stringify({ code: code }),
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    if (response.exists) {
+                        // Code exists, show error
+                        $codeInput.closest('.form-group').find('.text-danger')
+                            .text('This code already exists. Please use a different code or generate a new one.');
+                        $button.prop('disabled', false).text('Save Material');
+                    } else {
+                        // Code doesn't exist, proceed with saving
+                        saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect);
+                    }
+                },
+                error: function() {
+                    // Error checking code, proceed anyway
+                    saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect);
+                }
+            });
+        });
+        
+        // Function to save material details after validation
+        function saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect) {
             // Update badge container visibility
             const $badgeContainer = $row.find('[id^="badgeContainer_"]');       
             $badgeContainer.removeClass('d-none');
@@ -267,6 +302,9 @@ $(document).ready(function () {
                 $checkbox.prop('disabled', false).prop('checked', true);        
                 $checkbox.closest('.form-check-label').css('display', 'block'); 
             }
+
+            // Reset button state
+            $button.prop('disabled', false).text('Save Material');
 
             // Close modal using Bootstrap's API
             try {
@@ -301,7 +339,7 @@ $(document).ready(function () {
                         'padding-right': ''
                     });
             }, 100);
-        });
+        }
 
         // Use event delegation for generate code button
         $('#itemsAccordion').off('click', '.generateCodeBtn').on('click', '.generateCodeBtn', function () {
@@ -316,6 +354,7 @@ $(document).ready(function () {
             // Get form elements
             const $categorySelect = $modal.find('.materialCategoryId');
             const $codeInput = $modal.find('.materialCode');
+           
 
             // Clear any previous validation messages
             $modal.find('.text-danger').text('');
@@ -330,9 +369,15 @@ $(document).ready(function () {
 
             // Get category ID from the select
             const categoryId = $categorySelect.val();
+            console.log('Selected categoryId:', categoryId);
+            console.log('Parsed categoryId:', parseInt(categoryId));
+            console.log('Index:', index);
 
             // Anti-forgery token
             const token = $('input[name="__RequestVerificationToken"]').val();  
+
+            // Show loading indicator
+            $button.prop('disabled', true).html('<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Generating...');
 
             // Call server with correct data
             $.ajax({
@@ -347,13 +392,56 @@ $(document).ready(function () {
                     'RequestVerificationToken': token
                 },
                 success: function (response) {
+                    $button.prop('disabled', false).text('Generate Code');
+                    
                     if (response && response.code) {
                         $codeInput.val(response.code);
+                    } else {
+                        $codeInput.closest('.form-group').find('.text-danger')
+                            .text('Error generating code. Please try again.');
                     }
                 },
                 error: function (error) {
+                    $button.prop('disabled', false).text('Generate Code');
                     $codeInput.closest('.form-group').find('.text-danger')      
                         .text('Error generating code. Please try again.');      
+                }
+            });
+        });
+
+        // Add validation for material code input
+        $('#itemsAccordion').off('blur', '.materialCode').on('blur', '.materialCode', function() {
+            const $input = $(this);
+            const code = $input.val().trim();
+            
+            // Skip validation if empty (will be caught by required validation)
+            if (!code) return;
+            
+            // Get the error message element
+            const $errorMsg = $input.closest('.form-group').find('.text-danger');
+            
+            // Clear any previous error message
+            $errorMsg.text('');
+            
+            // Anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+            
+            // Check if code exists
+            $.ajax({
+                url: '/MaterialRequisition/CheckCodeExists',
+                type: 'POST',
+                data: JSON.stringify({ code: code }),
+                contentType: 'application/json',
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    if (response.exists) {
+                        $errorMsg.text('This code already exists. Please use a different code or generate a new one.');
+                    }
+                },
+                error: function() {
+                    // Silent fail - don't show error to user for validation
                 }
             });
         });
@@ -461,6 +549,7 @@ $(document).ready(function () {
         function attachMaterialSelectionHandlers() {
             $('.material-result, .select-material').off('click').on('click', function(e) {
                 e.preventDefault();
+                e.stopPropagation(); // Prevent event bubbling
                 
                 const $this = $(this);
                 const materialId = $this.data('id');
@@ -470,6 +559,7 @@ $(document).ready(function () {
                 const categoryId = $this.data('category-id');
                 const categoryName = $this.data('category-name');
                 const vendorId = $this.data('vendor-id');
+                const vendorName = $this.data('vendor-name');
                 
                 // Find the currently open accordion
                 const $openAccordion = $('.accordion-collapse.show');
@@ -491,22 +581,22 @@ $(document).ready(function () {
                     
                     // Fill in the material details for the new row
                     populateMaterialDetails($newOpenAccordion, newIndex, materialName, materialId, materialCode, 
-                        materialDescription, categoryId, categoryName, vendorId);
+                        materialDescription, categoryId, categoryName, vendorId, vendorName);
                 } else {
                     // Use the current row
                     populateMaterialDetails($openAccordion, index, materialName, materialId, materialCode, 
-                        materialDescription, categoryId, categoryName, vendorId);
+                        materialDescription, categoryId, categoryName, vendorId, vendorName);
                 }
                 
-                // Close the dropdown
-                $resultsContainer.hide();
+                // Close the dropdown - use direct DOM manipulation to ensure it's hidden
+                $resultsContainer.css('display', 'none');
                 $clearButton.addClass('d-none');
                 $searchInput.val('');
             });
         }
         
         // Helper function to populate material details in a row
-        function populateMaterialDetails($accordion, index, name, id, code, description, categoryId, categoryName, vendorId) {
+        function populateMaterialDetails($accordion, index, name, id, code, description, categoryId, categoryName, vendorId, vendorName) {
             // Fill in the material details
             $accordion.find(`[name="RequisitionItems[${index}].Name"]`).val(name);
             $accordion.find(`[name="RequisitionItems[${index}].MaterialId"]`).val(id);
@@ -523,25 +613,32 @@ $(document).ready(function () {
             $accordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
             $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
             
+            // Get the row element
+            const $row = $accordion.closest('.item-row');
+            
             // Update badges
-            const $badgeContainer = $accordion.find(`#badgeContainer_${index}`);
+            const $badgeContainer = $row.find(`#badgeContainer_${index}`);
             $badgeContainer.removeClass('d-none');
             
             // Format badges with proper content
-            $accordion.find(`#selectedMaterialCategory_${index}`).text(categoryName || 'No Category');
-            $accordion.find(`#selectedMaterialCode_${index}`).text(code || 'No Code');
+            $accordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName || 'Unknown'}`);
+            $accordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${code || 'No Code'}`);
             
-            // Get vendor name from the dropdown
-            let vendorName = '';
+            // Set vendor badge
             if (vendorId) {
-                vendorName = $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"] option[value="${vendorId}"]`).text();
-                $accordion.find(`#selectedMaterialVendor_${index}`).text(vendorName).removeClass('d-none');
+                // Use the vendor name from data attribute if available, otherwise get from dropdown
+                let displayVendorName = vendorName || 'Unknown';
+                if (!displayVendorName || displayVendorName === 'Unknown') {
+                    const $vendorSelect = $row.find(`[name="RequisitionItems[${index}].Material.VendorId"]`);
+                    displayVendorName = $vendorSelect.find(`option[value="${vendorId}"]`).text() || vendorId;
+                }
+                $accordion.find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${displayVendorName}`).removeClass('d-none');
             } else {
                 $accordion.find(`#selectedMaterialVendor_${index}`).addClass('d-none');
             }
             
             // Populate and make modal fields readonly
-            const $modal = $accordion.closest('.item-row').find(`#inventoryModal_${index}`);
+            const $modal = $row.find(`#inventoryModal_${index}`);
             
             // Set category dropdown
             const $categorySelect = $modal.find(`.materialCategoryId`);
@@ -561,6 +658,13 @@ $(document).ready(function () {
             const $vendorSelect = $modal.find(`.materialVendor`);
             $vendorSelect.val(vendorId);
             $vendorSelect.prop('disabled', true);
+            
+            // Enable SaveToInventory checkbox
+            const $checkbox = $row.find('input[type="checkbox"]');
+            if ($checkbox.length > 0) {
+                $checkbox.prop('disabled', false).prop('checked', true);
+                $checkbox.closest('.form-check-label').css('display', 'block');
+            }
             
             // Update background colors for readonly fields
             updateBackground($categorySelect[0]);

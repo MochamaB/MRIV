@@ -14,6 +14,22 @@
     }
 </style>
 
+@{
+    // Parse vendor data from JSON
+    var vendorData = new Dictionary<string, string>();
+    if (ViewBag.VendorData != null)
+    {
+        try
+        {
+            vendorData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(ViewBag.VendorData);
+        }
+        catch
+        {
+            // Handle deserialization error silently
+        }
+    }
+}
+
 @if (Model.Count == 0)
 {
     <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item">
@@ -26,6 +42,13 @@ else
 {
     @foreach (var material in Model)
     {
+        // Get vendor name from the dictionary
+        var vendorName = "Unknown";
+        if (!string.IsNullOrEmpty(material.VendorId) && vendorData.ContainsKey(material.VendorId))
+        {
+            vendorName = vendorData[material.VendorId];
+        }
+
         <div class="d-flex justify-content-between align-items-center px-3 py-2 search-result-item" 
              style="border-bottom: 1px solid #dee2e6;">
             <div class="d-flex flex-column" style="width: 80%;">
@@ -36,10 +59,17 @@ else
                    data-description="@material.Description"
                    data-category-id="@material.MaterialCategoryId"
                    data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
-                   data-vendor-id="@material.VendorId">
+                   data-vendor-id="@material.VendorId"
+                   data-vendor-name="@vendorName">
                     <strong>@material.Code</strong> - @material.Name
                 </a>
-                <small class="text-muted text-truncate">@material.Description</small>
+                <small class="text-muted text-truncate">
+                    @material.Description
+                    @if (!string.IsNullOrEmpty(material.VendorId))
+                    {
+                        <span class="ms-2 badge bg-light text-dark">Vendor: @vendorName</span>
+                    }
+                </small>
             </div>
             <div class="d-flex justify-content-end" style="width: 20%;">
                        <a href="javascript:void(0);" 
@@ -50,7 +80,8 @@ else
                            data-description="@material.Description"
                            data-category-id="@material.MaterialCategoryId"
                            data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
-                           data-vendor-id="@material.VendorId">
+                           data-vendor-id="@material.VendorId"
+                           data-vendor-name="@vendorName">
                             Select
                             <i class="mdi mdi-arrow-right-bold-circle ms-1" style="vertical-align: middle; font-size: 1.4rem;"></i>
                         </a>

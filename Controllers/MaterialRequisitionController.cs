@@ -514,27 +514,59 @@ namespace MRIV.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> GenerateCode(int categoryId, int itemIndex)
+        public async Task<IActionResult> GenerateCode()
         {
-            // Get the latest ID for this category
-            var latestMaterial = await _context.Materials
-                .Where(m => m.MaterialCategoryId == categoryId)
-                .OrderByDescending(m => m.Id)
-                .FirstOrDefaultAsync();
+            try
+            {
+                // Use StreamReader to read the request body
+                using var reader = new StreamReader(Request.Body);
+                var body = await reader.ReadToEndAsync();
 
-            // Get the next ID
-            int nextId = (latestMaterial?.Id ?? 0) + 1;
+                // Deserialize to dynamic object
+                var data = Newtonsoft.Json.JsonConvert.DeserializeObject<dynamic>(body);
 
-            // Generate base code
-            string baseCode = $"MAT-{nextId:D3}-{categoryId:D3}";
+                // Get values from dynamic object
+                int categoryId = (int)data.categoryId;
+                int itemIndex = (int)data.itemIndex;
 
-            // Add a unique component to ensure no collisions
-            string uniqueCode = $"{baseCode}-{DateTime.Now.Ticks % 10000}";
+                Console.WriteLine($"GenerateCode called with categoryId={categoryId}, itemIndex={itemIndex}");
 
-            // Log what we're generating
-            Console.WriteLine($"Generating code with categoryId={categoryId}, itemIndex={itemIndex}, result={uniqueCode}");
+                // Get the latest ID for this category
+                var latestMaterial = await _context.Materials
+                    .Where(m => m.MaterialCategoryId == categoryId)
+                    .OrderByDescending(m => m.Id)
+                    .FirstOrDefaultAsync();
 
-            return Json(new { code = uniqueCode });
+                // Get the next ID
+                int nextId = (latestMaterial?.Id ?? 0) + 1;
+
+                // Generate base code
+                string baseCode = $"MAT-{nextId:D3}-{categoryId:D3}";
+
+                // Add a unique component
+                string uniqueCode = $"{baseCode}-{DateTime.Now.Millisecond:D3}";
+
+                return Json(new { code = uniqueCode });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error in GenerateCode: {ex.Message}");
+                return StatusCode(500, new { error = "An error occurred" });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> CheckCodeExists(string code)
+        {
+            if (string.IsNullOrEmpty(code))
+            {
+                return Json(new { exists = false });
+            }
+
+            // Check if the code already exists in the database
+            bool exists = await _context.Materials.AnyAsync(m => m.Code == code);
+
+            return Json(new { exists });
         }
 
         [HttpGet]
@@ -568,6 +600,20 @@ namespace MRIV.Controllers
                 
                 var materials = await query.Take(10).ToListAsync();
 
+                // Get vendor information for materials with vendor IDs
+                var vendorData = new Dictionary<string, string>();
+                foreach (var material in materials.Where(m => !string.IsNullOrEmpty(m.VendorId)))
+                {
+                    if (!vendorData.ContainsKey(material.VendorId))
+                    {
+                        var vendor = await _vendorService.GetVendorByIdAsync(material.VendorId);
+                        vendorData[material.VendorId] = vendor?.Name ?? "Unknown";
+                    }
+                }
+
+                // Pass vendor data to view as JSON
+                ViewBag.VendorData = System.Text.Json.JsonSerializer.Serialize(vendorData);
+
                 // Return partial view for AJAX requests
                 if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
                 {
@@ -582,7 +628,8 @@ namespace MRIV.Controllers
                     description = m.Description,
                     categoryId = m.MaterialCategoryId,
                     categoryName = m.MaterialCategory?.Name,
-                    vendorId = m.VendorId
+                    vendorId = m.VendorId,
+                    vendorName = m.VendorId != null && vendorData.ContainsKey(m.VendorId) ? vendorData[m.VendorId] : null
                 }));
             }
             catch (Exception ex)
@@ -646,6 +693,7 @@ namespace MRIV.Controllers
 
             // Move to the next step
             return RedirectToAction("ApproversReceivers");
+
         }
 
         public async Task<IActionResult> ApproversReceiversAsync()
@@ -829,8 +877,13 @@ namespace MRIV.Controllers
         }
         [HttpPost]
         [HttpPost]
-        public async Task<IActionResult> CompleteWizard()
+        public async Task<IActionResult> CompleteWizard(string direction = null)
         {
+            // Handle Previous button
+            if (direction?.ToLower() == "previous")
+            {
+                return RedirectToAction("ApproversReceivers");
+            }
             try
             {
                 // Retrieve the requisition object from the session

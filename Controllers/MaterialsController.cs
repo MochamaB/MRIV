@@ -9,9 +9,11 @@ using MRIV.Models;
 using MRIV.Services;
 using MRIV.Enums;
 using MRIV.ViewModels;
+using MRIV.Attributes;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class MaterialsController : Controller
     {
         private readonly RequisitionContext _context;
@@ -116,8 +118,10 @@ namespace MRIV.Controllers
             {
                 baseCode += $"-{index}";
             }
+            // Add a unique component
+            string uniqueCode = $"{baseCode}-{DateTime.Now.Millisecond:D3}";
 
-            return Json(baseCode);
+            return Json(uniqueCode);
         }
 
         [HttpGet]
