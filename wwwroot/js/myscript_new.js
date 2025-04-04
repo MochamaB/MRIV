@@ -491,11 +491,11 @@ $(document).ready(function () {
                     
                     // Fill in the material details for the new row
                     populateMaterialDetails($newOpenAccordion, newIndex, materialName, materialId, materialCode, 
-                        materialDescription, categoryName, vendorId);
+                        materialDescription, categoryId, categoryName, vendorId);
                 } else {
                     // Use the current row
                     populateMaterialDetails($openAccordion, index, materialName, materialId, materialCode, 
-                        materialDescription, categoryName, vendorId);
+                        materialDescription, categoryId, categoryName, vendorId);
                 }
                 
                 // Close the dropdown
@@ -506,7 +506,7 @@ $(document).ready(function () {
         }
         
         // Helper function to populate material details in a row
-        function populateMaterialDetails($accordion, index, name, id, code, description, categoryName, vendorId) {
+        function populateMaterialDetails($accordion, index, name, id, code, description, categoryId, categoryName, vendorId) {
             // Fill in the material details
             $accordion.find(`[name="RequisitionItems[${index}].Name"]`).val(name);
             $accordion.find(`[name="RequisitionItems[${index}].MaterialId"]`).val(id);
@@ -518,6 +518,7 @@ $(document).ready(function () {
             }
             
             // Update hidden fields for material data
+            $accordion.find(`[name="RequisitionItems[${index}].Material.Id"]`).val(id);
             $accordion.find(`[name="RequisitionItems[${index}].Material.Code"]`).val(code);
             $accordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
             $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
@@ -525,12 +526,46 @@ $(document).ready(function () {
             // Update badges
             const $badgeContainer = $accordion.find(`#badgeContainer_${index}`);
             $badgeContainer.removeClass('d-none');
-            $accordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName}`);
-            $accordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${code}`);
             
+            // Format badges with proper content
+            $accordion.find(`#selectedMaterialCategory_${index}`).text(categoryName || 'No Category');
+            $accordion.find(`#selectedMaterialCode_${index}`).text(code || 'No Code');
+            
+            // Get vendor name from the dropdown
+            let vendorName = '';
             if (vendorId) {
-                $accordion.find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${vendorId}`);
+                vendorName = $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"] option[value="${vendorId}"]`).text();
+                $accordion.find(`#selectedMaterialVendor_${index}`).text(vendorName).removeClass('d-none');
+            } else {
+                $accordion.find(`#selectedMaterialVendor_${index}`).addClass('d-none');
             }
+            
+            // Populate and make modal fields readonly
+            const $modal = $accordion.closest('.item-row').find(`#inventoryModal_${index}`);
+            
+            // Set category dropdown
+            const $categorySelect = $modal.find(`.materialCategoryId`);
+            $categorySelect.val(categoryId);
+            $categorySelect.prop('disabled', true);
+            
+            // Set code field
+            const $codeInput = $modal.find(`.materialCode`);
+            $codeInput.val(code);
+            $codeInput.prop('readonly', true);
+            
+            // Disable generate code button
+            const $generateCodeBtn = $modal.find(`.generateCodeBtn`);
+            $generateCodeBtn.prop('disabled', true);
+            
+            // Set vendor dropdown
+            const $vendorSelect = $modal.find(`.materialVendor`);
+            $vendorSelect.val(vendorId);
+            $vendorSelect.prop('disabled', true);
+            
+            // Update background colors for readonly fields
+            updateBackground($categorySelect[0]);
+            updateBackground($codeInput[0]);
+            updateBackground($vendorSelect[0]);
         }
     }
 

@@ -473,6 +473,7 @@ $(document).ready(function () {
                 const categoryId = $this.data('category-id');
                 const categoryName = $this.data('category-name');
                 const vendorId = $this.data('vendor-id');
+                const vendorName = $this.data('vendor-name') || 'None';
                 
                 // Find the currently open accordion
                 const $openAccordion = $('.accordion-collapse.show');
@@ -480,20 +481,29 @@ $(document).ready(function () {
                 
                 // Fill in the material details
                 $openAccordion.find(`[name="RequisitionItems[${index}].Name"]`).val(materialName);
-                $openAccordion.find(`[name="RequisitionItems[${index}].Material.Id"]`).val(materialId);
-                $openAccordion.find(`[name="RequisitionItems[${index}].Material.Code"]`).val(materialCode);
-                $openAccordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
-                $openAccordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
-                
-                // Update badges
-                const $badgeContainer = $openAccordion.find(`#badgeContainer_${index}`);
-                $badgeContainer.removeClass('d-none');
-                $openAccordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName}`);
-                $openAccordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${materialCode}`);
-                
+                // Set category in the modal
+                $openAccordion.find(`.materialCategoryId[data-index="${index}"]`).val(categoryId);
+
+                // Set code in the modal
+                $openAccordion.find(`.materialCode[data-index="${index}"]`).val(materialCode);
+
+                // Set vendor in the modal if available
                 if (vendorId) {
-                    $openAccordion.find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${vendorId}`);
+                    $openAccordion.find(`.materialVendor[data-index="${index}"]`).val(vendorId);
                 }
+                
+                // Update badges - correct the selectors
+                const $badgeContainer = $openAccordion.closest('.item-row').find(`#badgeContainer_${index}`);
+                $badgeContainer.removeClass('d-none');
+
+                // Set the text directly with the category name
+                $openAccordion.closest('.item-row').find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName}`);
+                $openAccordion.closest('.item-row').find(`#selectedMaterialCode_${index}`).text(`SNo.: ${materialCode}`);
+                $openAccordion.closest('.item-row').find(`#selectedMaterialVendor_${index}`).text(`Vendor: ${vendorName}`);
+
+                // Enable SaveToInventory checkbox
+                const $checkbox = $openAccordion.closest('.item-row').find(`#saveToInventory_${index}`);
+                $checkbox.prop('disabled', false).prop('checked', true);
                 
                 // Close the dropdown
                 $resultsContainer.hide();
