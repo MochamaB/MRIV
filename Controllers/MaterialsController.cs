@@ -10,6 +10,8 @@ using MRIV.Services;
 using MRIV.Enums;
 using MRIV.ViewModels;
 using MRIV.Attributes;
+using MRIV.Extensions;
+using System.Linq.Expressions;
 
 namespace MRIV.Controllers
 {
@@ -34,12 +36,48 @@ namespace MRIV.Controllers
         }
 
         // GET: Materials
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
-            var materials = await _context.Materials
-       .Include(m => m.MaterialCategory)
-       .ToListAsync();
+            // Ensure valid pagination parameters
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
 
+            // Get filter values from request query string
+            var filters = new Dictionary<string, string>();
+            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
+            {
+                filters[key] = Request.Query[key];
+            }
+
+            // Create base query
+            var query = _context.Materials.AsQueryable();
+
+            // Create filter view model with explicit type for the array
+            ViewBag.Filters = await query.CreateFiltersAsync(
+                new Expression<Func<Material, object>>[] {
+            // Select which properties to create filters for
+            m => m.MaterialCategory,
+            m => m.CurrentLocationId,
+            m => m.Status,
+                    // Add other properties as needed
+                },
+                filters
+            );
+
+            // Apply filters to query
+            query = query.ApplyFilters(filters);
+
+            // Get total count for pagination
+            var totalItems = await query.CountAsync();
+
+            // Apply pagination and ordering
+            var materials = await query
+                .Include(m => m.MaterialCategory)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+           
             // Get all vendors in one batch
             var allVendors = await _vendorService.GetVendorsAsync();
 
@@ -51,6 +89,19 @@ namespace MRIV.Controllers
 
             // Pass the dictionary to the view
             ViewBag.VendorNames = vendorNames;
+            // Create pagination view model
+            var paginationModel = new PaginationViewModel
+            {
+                TotalItems = totalItems,
+                ItemsPerPage = pageSize,
+                CurrentPage = page,
+                Action = "Index",
+                Controller = "Requisitions",
+                RouteData = filters
+            };
+
+            // Pass pagination model to view
+            ViewBag.Pagination = paginationModel;
 
             return View(materials);
         }

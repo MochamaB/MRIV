@@ -51,17 +51,18 @@ namespace MRIV.Extensions
                     DisplayName = displayName,
                     Options = new List<SelectListItem>()
                 };
-                
+                var propertyType = Nullable.GetUnderlyingType(propertyInfo.PropertyType) ?? propertyInfo.PropertyType;
                 // Special handling for enum types
-                if (propertyInfo.PropertyType.IsEnum)
+                if (propertyType.IsEnum)
                 {
+                    Console.WriteLine($"Processing enum: {propertyName}");
                     // Get all possible enum values
-                    var enumValues = Enum.GetValues(propertyInfo.PropertyType);
-                    
+                    var enumValues = Enum.GetValues(propertyType);
+
                     foreach (var enumValue in enumValues)
                     {
                         // Get the enum field and its description attribute
-                        var enumField = propertyInfo.PropertyType.GetField(enumValue.ToString());
+                        var enumField = propertyType.GetField(enumValue.ToString());
                         var descriptionAttribute = enumField?.GetCustomAttribute<DescriptionAttribute>();
                         
                         // Use description if available, otherwise use the enum name
@@ -69,7 +70,8 @@ namespace MRIV.Extensions
                         
                         // Use the integer value for filtering
                         var intValue = Convert.ToInt32(enumValue).ToString();
-                        
+                        Console.WriteLine($"  {enumValue} => Value: {intValue}, Text: {displayText}");
+
                         var isSelected = currentFilters.TryGetValue(propertyName, out var currentValue) && 
                                         currentValue == intValue;
                         
@@ -83,6 +85,7 @@ namespace MRIV.Extensions
                 }
                 else
                 {
+                    Console.WriteLine($"Processing others: {propertyName}");
                     // Get distinct values for this property
                     var values = await query
                         .Select(e => EF.Property<object>(e, propertyName))
@@ -116,7 +119,7 @@ namespace MRIV.Extensions
             
             return model;
         }
-        
+
         /// <summary>
         /// Applies filters from the request to a queryable data source
         /// </summary>
@@ -125,23 +128,23 @@ namespace MRIV.Extensions
         /// <param name="filters">Dictionary of filter values from request</param>
         /// <returns>Filtered queryable</returns>
         public static IQueryable<T> ApplyFilters<T>(
-            this IQueryable<T> query,
-            Dictionary<string, string> filters)
+      this IQueryable<T> query,
+      Dictionary<string, string> filters)
         {
             if (filters == null || !filters.Any())
                 return query;
-                
+
             var entityType = typeof(T);
             var parameter = Expression.Parameter(entityType, "e");
-            
+
             foreach (var filter in filters.Where(f => !string.IsNullOrEmpty(f.Value)))
             {
                 var property = entityType.GetProperty(filter.Key);
                 if (property == null) continue;
-                
+
                 var propertyAccess = Expression.Property(parameter, property);
                 var filterValue = filter.Value;
-                
+
                 // Create comparison based on property type
                 Expression comparison;
                 if (property.PropertyType == typeof(string))
@@ -153,14 +156,17 @@ namespace MRIV.Extensions
                         typeof(string).GetMethod("Contains", new[] { typeof(string) }),
                         valueExpression);
                 }
-                else if (property.PropertyType.IsEnum)
+                else if (property.PropertyType.IsEnum ||
+                        (Nullable.GetUnderlyingType(property.PropertyType)?.IsEnum == true))
                 {
-                    // Enum comparison - convert string value to enum
+                    // Handle both regular and nullable enums
+                    var enumType = Nullable.GetUnderlyingType(property.PropertyType) ?? property.PropertyType;
+
                     if (int.TryParse(filterValue, out int intValue))
                     {
-                        // Convert int to enum value
-                        var enumValue = Enum.ToObject(property.PropertyType, intValue);
-                        var valueExpression = Expression.Constant(enumValue);
+                        var enumValue = Enum.ToObject(enumType, intValue);
+                        // Create constant with correct type (important for nullable enums)
+                        var valueExpression = Expression.Constant(enumValue, property.PropertyType);
                         comparison = Expression.Equal(propertyAccess, valueExpression);
                     }
                     else
@@ -180,22 +186,22 @@ namespace MRIV.Extensions
                     {
                         continue; // Skip if conversion fails
                     }
-                    
+
                     // Equality comparison
                     var valueExpression = Expression.Constant(typedValue);
                     comparison = Expression.Equal(propertyAccess, valueExpression);
                 }
-                
+
                 // Create lambda for Where clause
                 var lambda = Expression.Lambda<Func<T, bool>>(comparison, parameter);
-                
+
                 // Apply filter
                 query = query.Where(lambda);
             }
-            
+
             return query;
         }
-        
+
         private static MemberExpression GetMemberExpression(Expression expression)
         {
             if (expression is MemberExpression memberExpression)

@@ -40,12 +40,27 @@ namespace MRIV.Controllers
             // Ensure valid pagination parameters
             page = page < 1 ? 1 : page;
             pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
-
+            // Log received query parameters
+            Console.WriteLine("Received query string:");
+            foreach (var key in Request.Query.Keys)
+            {
+                Console.WriteLine($"{key} = {Request.Query[key]}");
+            }
             // Get filter values from request query string
             var filters = new Dictionary<string, string>();
             foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
             {
-                filters[key] = Request.Query[key];
+                // Skip if the value is null or empty
+                if (!string.IsNullOrEmpty(Request.Query[key]))
+                {
+                    filters[key] = Request.Query[key];
+                }
+            }
+            // Log filters being applied
+            Console.WriteLine("Filters being applied:");
+            foreach (var filter in filters)
+            {
+                Console.WriteLine($"{filter.Key} = {filter.Value}");
             }
 
             // Create base query
@@ -65,6 +80,9 @@ namespace MRIV.Controllers
 
             // Apply filters to query
             query = query.ApplyFilters(filters);
+            // Log SQL query (if using EF Core)
+            Console.WriteLine("Generated SQL:");
+            Console.WriteLine(query.ToQueryString());
 
             // Get total count for pagination
             var totalItems = await query.CountAsync();

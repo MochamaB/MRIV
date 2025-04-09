@@ -1,14 +1,136 @@
 ﻿@using MRIV.Enums
 @using MRIV.Helpers
+@using MRIV.ViewModels
 @model IEnumerable<MRIV.Models.Material>
 
 
 @{
     ViewData["Title"] = "Index";
     var vendorNames = ViewBag.VendorNames as Dictionary<string, string>;
+    var pagination = ViewBag.Pagination as PaginationViewModel;
 }
 
+<div class="row">
+<div class="col-lg-12">
+    <div class="card">
+        <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
+            <div class="d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1"></h5>
+                <div class="flex-shrink-0">
+                    <div class="d-flex gap-2 flex-wrap">
+                        <div class="search-box">
+                            <input type="text" class="form-control search" placeholder="Search...">
+                            <i class="ri-search-line search-icon"></i>
+                        </div>
 
+                        <!-- Filter Toggle Button -->
+                        @await Html.PartialAsync("_FilterToggleButton")
+
+                        <!-- Add other action buttons here -->
+                        <a href="@Url.Action("Create", "Material")" class="btn btn-primary">
+                            <i class="ri-add-line align-bottom me-1"></i> New Material
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Partial View -->
+        @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
+
+        <!-- Table Content -->
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>
+                                Id
+                            </th>
+                            <th>
+                                Material Category
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Code)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Name)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Description)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.CurrentLocationId)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.VendorId)
+                            </th>
+                            <th>
+                                @Html.DisplayNameFor(model => model.Status)
+                            </th>
+
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Id)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Code)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Name)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.Description)
+                                </td>
+                                <td>
+                                    @Html.DisplayFor(modelItem => item.CurrentLocationId)
+                                </td>
+                                <td>
+                                    @{
+                                        var vendorName = "None";
+                                        if (!string.IsNullOrEmpty(item.VendorId) && vendorNames.TryGetValue(item.VendorId, out string name))
+                                        {
+                                            vendorName = name;
+                                        }
+                                    }
+                                    @vendorName
+                                </td>
+                                <td>
+
+                                    <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
+                                        @EnumHelper.GetEnumDescription(item.Status)
+                                    </span>
+
+                                </td>
+
+                                <td>
+                                    <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                                    <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                                    <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <!-- Pagination -->
+            @if (pagination != null)
+            {
+                @await Html.PartialAsync("_Pagination", pagination)
+            }
+        </div>
+    </div>
+</div>
+</div>
 <a asp-action="Create" class="btn btn-primary text-white mb-3 me-0  float-end">
     <div style="display: flex; align-items: center;">
         <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
@@ -38,6 +160,9 @@
                class="table">
     <thead>
         <tr>
+                    <th>
+                        Id
+                    </th>
             <th>
                 Material Category
             </th>
@@ -66,6 +191,9 @@
     <tbody>
 @foreach (var item in Model) {
         <tr>
+                        <td>
+                            @Html.DisplayFor(modelItem => item.Id)
+                        </td>
             <td>
                 @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
             </td>
