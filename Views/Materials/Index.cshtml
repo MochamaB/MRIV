@@ -27,7 +27,7 @@
                         @await Html.PartialAsync("_FilterToggleButton")
 
                         <!-- Add other action buttons here -->
-                        <a href="@Url.Action("Create", "Material")" class="btn btn-primary">
+                        <a href="@Url.Action("Create", "Materials")" class="btn btn-primary">
                             <i class="ri-add-line align-bottom me-1"></i> New Material
                         </a>
                     </div>
@@ -131,110 +131,6 @@
     </div>
 </div>
 </div>
-<a asp-action="Create" class="btn btn-primary text-white mb-3 me-0  float-end">
-    <div style="display: flex; align-items: center;">
-        <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
-        <span>  Add Material</span>
-    </div>
-</a>
-<div style="clear: both;"></div>
-<div class=" contwrapper">
-    <div class=" table-responsive" id="dataTable">
-        <table id="table"
-               data-toggle="table"
-               data-icon-size="sm"
-               data-buttons-class="primary"
-               data-toolbar-align="right"
-               data-buttons-align="left"
-               data-search-align="left"
-               data-sort-order="asc"
-               data-search="true"
-               data-mobile-responsive="true"
-               data-sticky-header="true"
-               data-pagination="true"
-               data-page-list="[100, 200, 250, 500, ALL]"
-               data-page-size="100"
-               data-show-footer="false"
-               data-side-pagination="client"
-               data-show-export="true"
-               class="table">
-    <thead>
-        <tr>
-                    <th>
-                        Id
-                    </th>
-            <th>
-                Material Category
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Code)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Name)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Description)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.CurrentLocationId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.VendorId)
-            </th>
-            <th>
-                @Html.DisplayNameFor(model => model.Status)
-            </th>
-            
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-@foreach (var item in Model) {
-        <tr>
-                        <td>
-                            @Html.DisplayFor(modelItem => item.Id)
-                        </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Code)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Name)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.Description)
-            </td>
-            <td>
-                @Html.DisplayFor(modelItem => item.CurrentLocationId)
-            </td>
-                        <td>
-                            @{
-                                var vendorName = "None";
-                                if (!string.IsNullOrEmpty(item.VendorId) && vendorNames.TryGetValue(item.VendorId, out string name))
-                                {
-                                    vendorName = name;
-                                }
-                            }
-                            @vendorName
-                        </td>
-            <td>
-                           
-                            <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
-                                @EnumHelper.GetEnumDescription(item.Status)
-                            </span>
 
-            </td>
-            
-            <td>
-                            <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                            <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                            <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>  
-            </td>
-        </tr>
-}
-    </tbody>
-</table>
-</div>
-</div>
+
+

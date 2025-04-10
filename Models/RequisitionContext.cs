@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data.Common;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using MRIV.Enums;
 
 namespace MRIV.Models;
 
@@ -22,6 +23,8 @@ public partial class RequisitionContext : DbContext
     public DbSet<RequisitionItem> RequisitionItems { get; set; }
     public DbSet<Material> Materials { get; set; }
     public DbSet<MaterialCategory> MaterialCategories { get; set; }
+
+    public DbSet<MaterialSubcategory> MaterialSubCategories { get; set; }
 
     public DbSet<MaterialCondition> MaterialCondition { get; set; }
 
@@ -77,11 +80,25 @@ public partial class RequisitionContext : DbContext
                   .HasConversion<int>(); // Store enum as an integer
         });
 
-    
-        modelBuilder.Entity<Material>()
-            .HasOne(m => m.MaterialCategory)
-            .WithMany(mc => mc.Materials)
-            .HasForeignKey(m => m.MaterialCategoryId);
+        modelBuilder.Entity<Material>(entity =>
+        {
+            // Relationships
+            entity.HasOne(m => m.MaterialSubcategory)
+                  .WithMany(ms => ms.Materials)
+                  .HasForeignKey(m => m.MaterialSubcategoryId);
+
+            entity.HasOne(m => m.MaterialCategory)
+                 .WithMany(ms => ms.Materials)
+                 .HasForeignKey(m => m.MaterialCategoryId);
+
+            // Property configurations
+            entity.Property(m => m.CreatedAt)
+                  .HasDefaultValueSql("GETUTCDATE()");
+
+
+
+        });
+
 
         OnModelCreatingPartial(modelBuilder);
 

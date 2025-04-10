@@ -19,6 +19,7 @@ namespace MRIV.Models
         public string? UnitOfMeasure { get; set; }
 
         // Navigation property
+        public virtual ICollection<MaterialSubcategory>? Subcategories { get; set; }
         public virtual ICollection<Material>? Materials { get; set; }
     }
 }

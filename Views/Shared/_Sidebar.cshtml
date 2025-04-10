@@ -33,17 +33,25 @@
                 </a>
             </li>
 
-
             <li class="nav-item">
-                <a class="nav-link menu-link @(currentController == "Materials" ? "active" : "")" href="/Materials/">
+                <a class="nav-link menu-link @(currentController == "Materials" || currentController == "MaterialCategories" || currentController == "MaterialSubcategories" ? "active" : "")" href="#sidebarMaterials" data-bs-toggle="collapse" role="button" 
+                   aria-expanded="@(currentController == "Materials" || currentController == "MaterialCategories" || currentController == "MaterialSubcategories" ? "true" : "false")" 
+                   aria-controls="sidebarMaterials">
                     <i class="ri-stack-line"></i> <span data-key="t-materials">Materials</span>
                 </a>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link menu-link @(currentController == "MaterialCategories" ? "active" : "")" href="/MaterialCategories/">
-                    <i class="ri-list-check"></i> <span data-key="t-material-categories">Material Categories</span>
-                </a>
+                <div class="menu-dropdown collapse @(currentController == "Materials" || currentController == "MaterialCategories" || currentController == "MaterialSubcategories" ? "show" : "")" id="sidebarMaterials">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="/MaterialCategories/" class="nav-link @(currentController == "MaterialCategories" ? "active" : "")" data-key="t-material-categories">Material Categories</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/MaterialSubcategories/" class="nav-link @(currentController == "MaterialSubcategories" ? "active" : "")" data-key="t-material-subcategories">Material Subcategories</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/Materials/" class="nav-link @(currentController == "Materials" ? "active" : "")" data-key="t-materials-list">Materials List</a>
+                        </li>
+                    </ul>
+                </div>
             </li>
 
             <li class="nav-item">

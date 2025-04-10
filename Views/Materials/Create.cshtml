@@ -23,8 +23,18 @@
                 
                 <div class="form-group mb-3">
                     <label asp-for="Material.MaterialCategoryId" class="control-label">Material Category</label><span class="requiredlabel">*</span>
-                    <select asp-for="Material.MaterialCategoryId" class ="formcontrol2" asp-items="Model.MaterialCategories"></select>
+                    <select asp-for="Material.MaterialCategoryId" class="formcontrol2" asp-items="Model.MaterialCategories">
+                        <option value="">Select Material Category</option>
+                    </select>
                     <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.MaterialSubcategoryId" class="control-label">Material Subcategory</label>
+                    <select asp-for="Material.MaterialSubcategoryId" class="formcontrol2" asp-items="Model.MaterialSubcategories">
+                        <option value="">Select Material Subcategory</option>
+                    </select>
+                    <span asp-validation-for="Material.MaterialSubcategoryId" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
@@ -60,13 +70,26 @@
                 
                 <div class="form-group mb-3">
                     <label asp-for="Material.CurrentLocationId" class="control-label">Current Location</label><span class="requiredlabel">*</span>
-                    <select asp-for="Material.CurrentLocationId" class="formcontrol2" asp-items="Model.LocationOptions"></select>
+                    <select asp-for="Material.CurrentLocationId" class="formcontrol2" asp-items="Model.LocationOptions">
+                        <option value="">Select Location</option>
+                    </select>
                     <span asp-validation-for="Material.CurrentLocationId" class="text-danger"></span>
                 </div>
                 
                 <div class="form-group mb-3">
+                    <label asp-for="Material.DepartmentId" class="control-label">Department</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.DepartmentId" class="formcontrol2" asp-items="Model.Departments">
+                        <option value="">Select Department</option>
+                    </select>
+                    <span asp-validation-for="Material.DepartmentId" class="text-danger"></span>
+                    <small class="form-text text-muted">For head office materials, this will be synchronized with the current location.</small>
+                </div>
+                
+                <div class="form-group mb-3">
                     <label asp-for="Material.VendorId" class="control-label">Vendor/Supplier</label>
-                    <select asp-for="Material.VendorId" class="formcontrol2" asp-items="Model.Vendors"></select>
+                    <select asp-for="Material.VendorId" class="formcontrol2" asp-items="Model.Vendors">
+                        <option value="">Select Vendor/Supplier</option>
+                    </select>
                     <span asp-validation-for="Material.VendorId" class="text-danger"></span>
                 </div>
                 
@@ -90,9 +113,43 @@
     
     <script>
         $(document).ready(function() {
-            // Handle location category change
-            $('#SelectedLocationCategory').change(function() {
-                var categoryCode = $(this).val();
+            // Handle material category change
+            $('#Material_MaterialCategoryId').change(function() {
+                var categoryId = $(this).val();
+                var subcategoriesDropdown = $('#Material_MaterialSubcategoryId');
+                
+                // Clear the subcategories dropdown
+                subcategoriesDropdown.empty();
+                subcategoriesDropdown.append($('<option></option>').val('').text('Select Material Subcategory'));
+                
+                if (categoryId) {
+                    // Get subcategories for the selected category
+                    $.ajax({
+                        url: '/Materials/GetSubcategoriesForCategory',
+                        type: 'GET',
+                        data: { categoryId: categoryId },
+                        success: function(data) {
+                            // Add options from the server
+                            $.each(data, function(i, item) {
+                                subcategoriesDropdown.append($('<option></option>').val(item.value).text(item.text));
+                            });
+                        },
+                        error: function() {
+                            console.error('Error loading subcategories');
+                        }
+                    });
+                }
+            });
+            
+            // Function to handle department synchronization based on location category
+            function handleLocationCategoryChange() {
+                var categoryCode = $('#SelectedLocationCategory').val();
+                var isHeadOffice = categoryCode && categoryCode.toLowerCase() === 'headoffice';
+                
+                // If headoffice is selected, we'll sync department with location later
+                // Otherwise, enable the department dropdown for manual selection
+                $('#Material_DepartmentId').prop('disabled', isHeadOffice);
+                
                 if (categoryCode) {
                     // Clear any previous errors
                     $('.location-category-error').text('');
@@ -114,6 +171,12 @@
                             $.each(data, function(i, item) {
                                 locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
                             });
+                            
+                            // If this is a headoffice category, trigger the location change handler
+                            // to sync the department dropdown
+                            if (isHeadOffice) {
+                                $('#Material_CurrentLocationId').trigger('change');
+                            }
                         },
                         error: function() {
                             $('.location-category-error').text('Error loading locations. Please try again.');
@@ -122,6 +185,37 @@
                 } else {
                     // Clear the locations dropdown if no category is selected
                     $('#Material_CurrentLocationId').empty().append($('<option></option>').val('').text('-- Select Location --'));
+                }
+            }
+            
+            // Handle location category change
+            $('#SelectedLocationCategory').change(handleLocationCategoryChange);
+            
+            // Handle current location change
+            $('#Material_CurrentLocationId').change(function() {
+                var locationValue = $(this).val();
+                var categoryCode = $('#SelectedLocationCategory').val();
+                
+                // If headoffice is selected and a location is chosen, sync the department
+                if (categoryCode && categoryCode.toLowerCase() === 'headoffice' && locationValue) {
+                    // Find the department option that matches the location text
+                    var locationText = $(this).find('option:selected').text();
+                    var departmentDropdown = $('#Material_DepartmentId');
+                    
+                    // Look for a matching department by name
+                    var matchFound = false;
+                    departmentDropdown.find('option').each(function() {
+                        if ($(this).text() === locationText) {
+                            departmentDropdown.val($(this).val());
+                            matchFound = true;
+                            return false; // Break the loop
+                        }
+                    });
+                    
+                    // If no match found, just select the first non-empty option
+                    if (!matchFound && departmentDropdown.find('option[value!=""]').length > 0) {
+                        departmentDropdown.val(departmentDropdown.find('option[value!=""]').first().val());
+                    }
                 }
             });
             
@@ -161,6 +255,9 @@
                 this.style.height = 'auto';
                 this.style.height = (this.scrollHeight) + 'px';
             });
+            
+            // Initialize the form based on initial values
+            handleLocationCategoryChange();
         });
     </script>
 }

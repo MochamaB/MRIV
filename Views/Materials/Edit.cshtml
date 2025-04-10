@@ -1,61 +1,232 @@
-﻿@model MRIV.Models.Material
+@model MRIV.ViewModels.EditMaterialViewModel
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Material";
 }
 
-<h1>Edit</h1>
-
-<h4>Material</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
-            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="MaterialCategoryId" class="control-label"></label>
-                <select asp-for="MaterialCategoryId" class="form-control" asp-items="ViewBag.MaterialCategoryId"></select>
-                <span asp-validation-for="MaterialCategoryId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Code" class="control-label"></label>
-                <input asp-for="Code" class="form-control" />
-                <span asp-validation-for="Code" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="CurrentLocationId" class="control-label"></label>
-                <input asp-for="CurrentLocationId" class="form-control" />
-                <span asp-validation-for="CurrentLocationId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="VendorId" class="control-label"></label>
-                <input asp-for="VendorId" class="form-control" />
-                <span asp-validation-for="VendorId" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Status" class="control-label"></label>
-                <input asp-for="Status" class="form-control" />
-                <span asp-validation-for="Status" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
-            </div>
-        </form>
+<div class="contwrapper">
+    <div class="row">
+        <div class="col-md-10">
+            <h4>Edit Material</h4>
+            <hr />
+        </div>
+        <div class="col-md-8 ms-1">
+            <form asp-action="Edit" method="post">
+                <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                <input type="hidden" asp-for="Material.Id" />
+                
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success">
+                        @TempData["SuccessMessage"]
+                    </div>
+                }
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.MaterialCategoryId" class="control-label">Material Category</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.MaterialCategoryId" class="formcontrol2" asp-items="Model.MaterialCategories">
+                        <option value="">Select Material Category</option>
+                    </select>
+                    <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.MaterialSubcategoryId" class="control-label">Material Subcategory</label>
+                    <select asp-for="Material.MaterialSubcategoryId" class="formcontrol2" asp-items="Model.MaterialSubcategories">
+                        <option value="">Select Material Subcategory</option>
+                    </select>
+                    <span asp-validation-for="Material.MaterialSubcategoryId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Code" class="control-label">Code / SNo</label><span class="requiredlabel">*</span>
+                    <input asp-for="Material.Code" class="form-control" readonly />
+                    <span asp-validation-for="Material.Code" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Name" class="control-label">Material Name</label><span class="requiredlabel">*</span>
+                    <input asp-for="Material.Name" class="form-control" />
+                    <span asp-validation-for="Material.Name" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Description" class="control-label"></label><span class="requiredlabel">*</span>
+                    <textarea asp-for="Material.Description" class="auto-resize-textarea form-control" rows="2" placeholder="Enter Description..."></textarea>
+                    <span asp-validation-for="Material.Description" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label class="control-label">Location Category</label><span class="requiredlabel">*</span>
+                    <select asp-for="SelectedLocationCategory" class="formcontrol2" asp-items="Model.StationCategories">
+                        <option value="">Select Location Category</option>
+                    </select>
+                    <span class="text-danger location-category-error"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.CurrentLocationId" class="control-label">Current Location</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.CurrentLocationId" class="formcontrol2" asp-items="Model.LocationOptions">
+                       
+                    </select>
+                    <span asp-validation-for="Material.CurrentLocationId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.DepartmentId" class="control-label">Department</label><span class="requiredlabel">*</span>
+                    <select asp-for="Material.DepartmentId" class="formcontrol2" asp-items="Model.Departments">
+                        <option value="">Select Department</option>
+                    </select>
+                    <span asp-validation-for="Material.DepartmentId" class="text-danger"></span>
+                    <small class="form-text text-muted">For head office materials, this will be synchronized with the current location.</small>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.VendorId" class="control-label">Vendor/Supplier</label>
+                    <select asp-for="Material.VendorId" class="formcontrol2" asp-items="Model.Vendors">
+                        <option value="">Select Vendor/Supplier</option>
+                    </select>
+                    <span asp-validation-for="Material.VendorId" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label asp-for="Material.Status" class="control-label"></label>
+                    <select asp-for="Material.Status" class="formcontrol2" asp-items="Model.StatusOptions"></select>
+                    <span asp-validation-for="Material.Status" class="text-danger"></span>
+                </div>
+                
+                <div class="form-group mt-4">
+                    <input type="submit" value="Save" class="btn btn-primary" />
+                    <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Handle material category change
+            $('#Material_MaterialCategoryId').change(function() {
+                var categoryId = $(this).val();
+                var subcategoriesDropdown = $('#Material_MaterialSubcategoryId');
+                
+                // Clear the subcategories dropdown
+                subcategoriesDropdown.empty();
+                subcategoriesDropdown.append($('<option></option>').val('').text('Select Material Subcategory'));
+                
+                if (categoryId) {
+                    // Get subcategories for the selected category
+                    $.ajax({
+                        url: '/Materials/GetSubcategoriesForCategory',
+                        type: 'GET',
+                        data: { categoryId: categoryId },
+                        success: function(data) {
+                            // Add options from the server
+                            $.each(data, function(i, item) {
+                                subcategoriesDropdown.append($('<option></option>').val(item.value).text(item.text));
+                            });
+                        },
+                        error: function() {
+                            console.error('Error loading subcategories');
+                        }
+                    });
+                }
+            });
+            
+            // Function to handle department synchronization based on location category
+            function handleLocationCategoryChange() {
+                var categoryCode = $('#SelectedLocationCategory').val();
+                var isHeadOffice = categoryCode && categoryCode.toLowerCase() === 'headoffice';
+                
+                // If headoffice is selected, we'll sync department with location later
+                // Otherwise, enable the department dropdown for manual selection
+                $('#Material_DepartmentId').prop('disabled', isHeadOffice);
+                
+                if (categoryCode) {
+                    // Clear any previous errors
+                    $('.location-category-error').text('');
+                    
+                    // Get locations for the selected category
+                    $.ajax({
+                        url: '/Materials/GetLocationsForCategory',
+                        type: 'GET',
+                        data: { category: categoryCode },
+                        success: function(data) {
+                            // Clear and populate the locations dropdown
+                            var locationsDropdown = $('#Material_CurrentLocationId');
+                            locationsDropdown.empty();
+                            
+                            // Add default option
+                            locationsDropdown.append($('<option></option>').val('').text('-- Select Location --'));
+                            
+                            // Add options from the server
+                            $.each(data, function(i, item) {
+                                locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
+                            });
+                            
+                            // If this is a headoffice category, trigger the location change handler
+                            // to sync the department dropdown
+                            if (isHeadOffice) {
+                                $('#Material_CurrentLocationId').trigger('change');
+                            }
+                        },
+                        error: function() {
+                            $('.location-category-error').text('Error loading locations. Please try again.');
+                        }
+                    });
+                } else {
+                    // Clear the locations dropdown if no category is selected
+                    $('#Material_CurrentLocationId').empty().append($('<option></option>').val('').text('-- Select Location --'));
+                }
+            }
+            
+            // Handle location category change
+            $('#SelectedLocationCategory').change(handleLocationCategoryChange);
+            
+            // Handle current location change
+            $('#Material_CurrentLocationId').change(function() {
+                var locationValue = $(this).val();
+                var categoryCode = $('#SelectedLocationCategory').val();
+                
+                // If headoffice is selected and a location is chosen, sync the department
+                if (categoryCode && categoryCode.toLowerCase() === 'headoffice' && locationValue) {
+                    // Find the department option that matches the location text
+                    var locationText = $(this).find('option:selected').text();
+                    var departmentDropdown = $('#Material_DepartmentId');
+                    
+                    // Look for a matching department by name
+                    var matchFound = false;
+                    departmentDropdown.find('option').each(function() {
+                        if ($(this).text() === locationText) {
+                            departmentDropdown.val($(this).val());
+                            matchFound = true;
+                            return false; // Break the loop
+                        }
+                    });
+                    
+                    // If no match found, just select the first non-empty option
+                    if (!matchFound && departmentDropdown.find('option[value!=""]').length > 0) {
+                        departmentDropdown.val(departmentDropdown.find('option[value!=""]').first().val());
+                    }
+                }
+            });
+            
+            // Auto-resize textareas
+            $('.auto-resize-textarea').on('input', function() {
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            }).each(function() {
+                // Initialize the height for existing content
+                this.style.height = 'auto';
+                this.style.height = (this.scrollHeight) + 'px';
+            });
+            
+            // Initialize the form based on initial values
+            handleLocationCategoryChange();
+        });
+    </script>
+}

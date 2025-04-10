@@ -11,22 +11,23 @@ using MRIV.Models;
 namespace MRIV.Controllers
 {
     [CustomAuthorize]
-    public class MaterialCategoriesController : Controller
+    public class MaterialSubcategoriesController : Controller
     {
         private readonly RequisitionContext _context;
 
-        public MaterialCategoriesController(RequisitionContext context)
+        public MaterialSubcategoriesController(RequisitionContext context)
         {
             _context = context;
         }
 
-        // GET: MaterialCategories
+        // GET: MaterialSubcategories
         public async Task<IActionResult> Index()
         {
-            return View(await _context.MaterialCategories.ToListAsync());
+            var requisitionContext = _context.MaterialSubCategories.Include(m => m.MaterialCategory);
+            return View(await requisitionContext.ToListAsync());
         }
 
-        // GET: MaterialCategories/Details/5
+        // GET: MaterialSubcategories/Details/5
         public async Task<IActionResult> Details(int? id)
         {
             if (id == null)
@@ -34,39 +35,42 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            var materialCategory = await _context.MaterialCategories
+            var materialSubcategory = await _context.MaterialSubCategories
+                .Include(m => m.MaterialCategory)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (materialCategory == null)
+            if (materialSubcategory == null)
             {
                 return NotFound();
             }
 
-            return View(materialCategory);
+            return View(materialSubcategory);
         }
 
-        // GET: MaterialCategories/Create
+        // GET: MaterialSubcategories/Create
         public IActionResult Create()
         {
+            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name");
             return View();
         }
 
-        // POST: MaterialCategories/Create
+        // POST: MaterialSubcategories/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Description,UnitOfMeasure")] MaterialCategory materialCategory)
+        public async Task<IActionResult> Create([Bind("Id,MaterialCategoryId,Name,Description")] MaterialSubcategory materialSubcategory)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(materialCategory);
+                _context.Add(materialSubcategory);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
-            return View(materialCategory);
+            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", materialSubcategory.MaterialCategoryId);
+            return View(materialSubcategory);
         }
 
-        // GET: MaterialCategories/Edit/5
+        // GET: MaterialSubcategories/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
             if (id == null)
@@ -74,22 +78,23 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            var materialCategory = await _context.MaterialCategories.FindAsync(id);
-            if (materialCategory == null)
+            var materialSubcategory = await _context.MaterialSubCategories.FindAsync(id);
+            if (materialSubcategory == null)
             {
                 return NotFound();
             }
-            return View(materialCategory);
+            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", materialSubcategory.MaterialCategoryId);
+            return View(materialSubcategory);
         }
 
-        // POST: MaterialCategories/Edit/5
+        // POST: MaterialSubcategories/Edit/5
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,UnitOfMeasure")] MaterialCategory materialCategory)
+        public async Task<IActionResult> Edit(int id, [Bind("Id,MaterialCategoryId,Name,Description")] MaterialSubcategory materialSubcategory)
         {
-            if (id != materialCategory.Id)
+            if (id != materialSubcategory.Id)
             {
                 return NotFound();
             }
@@ -98,12 +103,12 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    _context.Update(materialCategory);
+                    _context.Update(materialSubcategory);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!MaterialCategoryExists(materialCategory.Id))
+                    if (!MaterialSubcategoryExists(materialSubcategory.Id))
                     {
                         return NotFound();
                     }
@@ -114,10 +119,11 @@ namespace MRIV.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(materialCategory);
+            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", materialSubcategory.MaterialCategoryId);
+            return View(materialSubcategory);
         }
 
-        // GET: MaterialCategories/Delete/5
+        // GET: MaterialSubcategories/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
             if (id == null)
@@ -125,34 +131,35 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            var materialCategory = await _context.MaterialCategories
+            var materialSubcategory = await _context.MaterialSubCategories
+                .Include(m => m.MaterialCategory)
                 .FirstOrDefaultAsync(m => m.Id == id);
-            if (materialCategory == null)
+            if (materialSubcategory == null)
             {
                 return NotFound();
             }
 
-            return View(materialCategory);
+            return View(materialSubcategory);
         }
 
-        // POST: MaterialCategories/Delete/5
+        // POST: MaterialSubcategories/Delete/5
         [HttpPost, ActionName("Delete")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var materialCategory = await _context.MaterialCategories.FindAsync(id);
-            if (materialCategory != null)
+            var materialSubcategory = await _context.MaterialSubCategories.FindAsync(id);
+            if (materialSubcategory != null)
             {
-                _context.MaterialCategories.Remove(materialCategory);
+                _context.MaterialSubCategories.Remove(materialSubcategory);
             }
 
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 
-        private bool MaterialCategoryExists(int id)
+        private bool MaterialSubcategoryExists(int id)
         {
-            return _context.MaterialCategories.Any(e => e.Id == id);
+            return _context.MaterialSubCategories.Any(e => e.Id == id);
         }
     }
 }

@@ -15,7 +15,10 @@ namespace MRIV.Models
         [DisplayName("Category")]
         public int MaterialCategoryId { get; set; }
 
-       
+        
+        [DisplayName("Subcategory")]
+        public int? MaterialSubcategoryId { get; set; }
+
         [StringLength(50)]
         [DisplayName("Code/SNo")]
         public string? Code { get; set; }
@@ -27,6 +30,14 @@ namespace MRIV.Models
         [StringLength(500)]
         public string? Description { get; set; }
 
+        [StringLength(50)]
+        public string? StationCategory { get; set; }
+
+        [StringLength(100)]
+        public string? Station { get; set; }
+
+        public int? DepartmentId { get; set; }
+
         [DisplayName("Current Location")]
         public string? CurrentLocationId { get; set; }
 
@@ -35,12 +46,19 @@ namespace MRIV.Models
         public string? VendorId { get; set; }
 
         public MaterialStatus? Status { get; set; } //In Use, Broken,Dispatched,Being Repaired 
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public DateTime? UpdatedAt { get; set; }
 
 
 
         // Navigation properties
         [ForeignKey("MaterialCategoryId")]
         public virtual MaterialCategory? MaterialCategory { get; set; }
+
+        // Navigation properties
+        [ForeignKey("MaterialSubcategoryId")]
+        public virtual MaterialSubcategory? MaterialSubcategory { get; set; }
 
         public virtual ICollection<RequisitionItem>? RequisitionItems { get; set; }
     }

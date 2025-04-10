@@ -587,7 +587,7 @@ namespace MRIV.Controllers
                 var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
                 var issueStationId = requisition?.IssueStation;
 
-                // Search for materials matching the term and available at the issue station
+                // Search for materials matching the search term and available/currently at the issue station
                 var query = _context.Materials
                     .Include(m => m.MaterialCategory)
                     .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));

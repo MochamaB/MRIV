@@ -5,7 +5,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace MRIV.ViewModels
 {
-    public class CreateMaterialViewModel
+    public class EditMaterialViewModel
     {
         // Material properties
         public Material Material { get; set; } = new Material();
@@ -23,7 +23,7 @@ namespace MRIV.ViewModels
         public string? SelectedLocationCategory { get; set; }
         
         // Constructor to initialize the status options
-        public CreateMaterialViewModel()
+        public EditMaterialViewModel()
         {
             // Initialize the status options from the enum
             StatusOptions = new SelectList(

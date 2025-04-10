@@ -19,6 +19,7 @@ namespace MRIV.Controllers
     public class MaterialsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly KtdaleaveContext _ktdacontext;
         private readonly VendorService _vendorService;
         private readonly IStationCategoryService _stationCategoryService;
         private readonly IEmployeeService _employeeService;
@@ -27,12 +28,15 @@ namespace MRIV.Controllers
             RequisitionContext context, 
             VendorService vendorService,
             IStationCategoryService stationCategoryService,
-            IEmployeeService employeeService)
+            IEmployeeService employeeService,
+            KtdaleaveContext ktdacontext)
         {
             _context = context;
             _vendorService = vendorService;
             _stationCategoryService = stationCategoryService;
             _employeeService = employeeService;
+            _ktdacontext = ktdacontext;
+
         }
 
         // GET: Materials
@@ -50,19 +54,37 @@ namespace MRIV.Controllers
             }
 
             // Create base query
-            var query = _context.Materials.AsQueryable();
+            var query = _context.Materials
+                 .Include(m => m.MaterialCategory)  // Ensure MaterialCategory is loaded
+                 .AsQueryable();
 
             // Create filter view model with explicit type for the array
             ViewBag.Filters = await query.CreateFiltersAsync(
                 new Expression<Func<Material, object>>[] {
             // Select which properties to create filters for
-            m => m.MaterialCategory,
             m => m.CurrentLocationId,
             m => m.Status,
                     // Add other properties as needed
                 },
                 filters
             );
+            // Add custom MaterialCategory filter
+            var categoryFilter = new FilterDefinition
+            {
+                PropertyName = "MaterialCategoryId",
+                DisplayName = "Material Category",
+                Options = await _context.MaterialCategories
+                    .OrderBy(c => c.Name)
+                    .Select(c => new SelectListItem
+                    {
+                        Value = c.Id.ToString(),
+                        Text = c.Name,
+                        Selected = filters.ContainsKey("MaterialCategoryId") &&
+                                  filters["MaterialCategoryId"] == c.Id.ToString()
+                    })
+                    .ToListAsync()
+            };
+            ViewBag.Filters.Filters.Insert(0, categoryFilter);
 
             // Apply filters to query
             query = query.ApplyFilters(filters);
@@ -132,19 +154,39 @@ namespace MRIV.Controllers
             
             // Get the user's current location/station for context
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            Department loggedInUserDepartment = null;
+            Station loggedInUserStation = null;
+
             if (!string.IsNullOrEmpty(payrollNo))
             {
                 var (employee, department, userStation) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                loggedInUserDepartment = department;
+                loggedInUserStation = userStation;
+
+                // Set the department ID from the logged-in user
+                if (department != null)
+                {
+                    var departmentId = Convert.ToInt32(department.DepartmentId);
+                    viewModel.Material.DepartmentId = departmentId;
+                   
+                }
             }
             
             // Load material categories
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name");
+            
+            // Load material subcategories (empty initially, will be populated via AJAX)
+            viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
             
             // Load vendors
             viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name");
             
             // Load station categories for location selection
             viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            // Load all departments and set the logged-in user's department as the default
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
             
             // Set default status
             viewModel.Material.Status = MaterialStatus.GoodCondition;
@@ -173,6 +215,23 @@ namespace MRIV.Controllers
             string uniqueCode = $"{baseCode}-{DateTime.Now.Millisecond:D3}";
 
             return Json(uniqueCode);
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSubcategoriesForCategory(int categoryId)
+        {
+            if (categoryId <= 0)
+            {
+                return Json(new List<object>());
+            }
+
+            var subcategories = await _context.MaterialSubCategories
+                .Where(sc => sc.MaterialCategoryId == categoryId)
+                .OrderBy(sc => sc.Name)
+                .Select(sc => new { value = sc.Id, text = sc.Name })
+                .ToListAsync();
+
+            return Json(subcategories);
         }
 
         [HttpGet]
@@ -206,6 +265,38 @@ namespace MRIV.Controllers
                         viewModel.Material.Code = $"MC-{viewModel.Material.MaterialCategoryId}-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
                     }
                     
+                    // Set the StationCategory from the selected location category
+                    viewModel.Material.StationCategory = viewModel.SelectedLocationCategory;
+                    
+                    // Set the Station based on the selected location
+                    if (!string.IsNullOrEmpty(viewModel.Material.CurrentLocationId))
+                    {
+                        // If the station category is "headoffice", append "HQ" to the station
+                        if (viewModel.SelectedLocationCategory?.ToLower() == "headoffice")
+                        {
+                            viewModel.Material.Station = $"HQ-{viewModel.Material.CurrentLocationId}";
+                        }
+                        else
+                        {
+                            viewModel.Material.Station = viewModel.Material.CurrentLocationId;
+                        }
+                    }
+                    
+                    // If department ID is not set, get it from the logged-in user
+                    if (!viewModel.Material.DepartmentId.HasValue)
+                    {
+                        var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+                        if (!string.IsNullOrEmpty(payrollNo))
+                        {
+                            var (employee, department, _) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                            if (department != null)
+                            {
+                                var departmentId = Convert.ToInt32(department.DepartmentId);
+                                viewModel.Material.DepartmentId = departmentId;
+                            }
+                        }
+                    }
+                    
                     // Save the material to the database
                     _context.Add(viewModel.Material);
                     await _context.SaveChangesAsync();
@@ -224,8 +315,28 @@ namespace MRIV.Controllers
             // If we got this far, something failed, redisplay form
             // Reload dropdown lists
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", viewModel.Material.MaterialCategoryId);
+            
+            // Load material subcategories for the selected category
+            if (viewModel.Material.MaterialCategoryId > 0)
+            {
+                viewModel.MaterialSubcategories = new SelectList(
+                    await _context.MaterialSubCategories
+                        .Where(sc => sc.MaterialCategoryId == viewModel.Material.MaterialCategoryId)
+                        .OrderBy(sc => sc.Name)
+                        .ToListAsync(),
+                    "Id", "Name", viewModel.Material.MaterialSubcategoryId);
+            }
+            else
+            {
+                viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
+            }
+            
             viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", viewModel.Material.VendorId);
             viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            // Reload departments
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
             
             if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
             {
@@ -244,13 +355,59 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            var material = await _context.Materials.FindAsync(id);
+            var material = await _context.Materials
+                .Include(m => m.MaterialCategory)
+                .FirstOrDefaultAsync(m => m.Id == id);
+                
             if (material == null)
             {
                 return NotFound();
             }
-            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", material.MaterialCategoryId);
-            return View(material);
+            
+            var viewModel = new EditMaterialViewModel
+            {
+                Material = material
+            };
+            
+            // Set the selected location category based on the material's StationCategory
+            viewModel.SelectedLocationCategory = material.StationCategory;
+            
+            // Load material categories
+            viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", material.MaterialCategoryId);
+            
+            // Load material subcategories for the selected category
+            if (material.MaterialCategoryId > 0)
+            {
+                viewModel.MaterialSubcategories = new SelectList(
+                    await _context.MaterialSubCategories
+                        .Where(sc => sc.MaterialCategoryId == material.MaterialCategoryId)
+                        .OrderBy(sc => sc.Name)
+                        .ToListAsync(),
+                    "Id", "Name", material.MaterialSubcategoryId);
+            }
+            else
+            {
+                viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
+            }
+            
+            // Load vendors
+            viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", material.VendorId);
+            
+            // Load station categories for location selection
+            viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            // Load location options if a station category is selected
+            if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
+            {
+                viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
+                    viewModel.SelectedLocationCategory, material.CurrentLocationId);
+            }
+            
+            // Load all departments
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", material.DepartmentId);
+            
+            return View(viewModel);
         }
 
         // POST: Materials/Edit/5
@@ -258,9 +415,9 @@ namespace MRIV.Controllers
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,MaterialCategoryId,Code,Name,Description,CurrentLocationId,VendorId,Status")] Material material)
+        public async Task<IActionResult> Edit(int id, EditMaterialViewModel viewModel)
         {
-            if (id != material.Id)
+            if (id != viewModel.Material.Id)
             {
                 return NotFound();
             }
@@ -269,12 +426,36 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    _context.Update(material);
+                    // Set the StationCategory from the selected location category
+                    viewModel.Material.StationCategory = viewModel.SelectedLocationCategory;
+                    
+                    // Set the Station based on the selected location
+                    if (!string.IsNullOrEmpty(viewModel.Material.CurrentLocationId))
+                    {
+                        // If the station category is "headoffice", append "HQ" to the station
+                        if (viewModel.SelectedLocationCategory?.ToLower() == "headoffice")
+                        {
+                            viewModel.Material.Station = $"HQ-{viewModel.Material.CurrentLocationId}";
+                        }
+                        else
+                        {
+                            viewModel.Material.Station = viewModel.Material.CurrentLocationId;
+                        }
+                    }
+                    
+                    // Update the material in the database
+                    viewModel.Material.UpdatedAt = DateTime.UtcNow;
+                    _context.Update(viewModel.Material);
                     await _context.SaveChangesAsync();
+                    
+                    // Set success message
+                    TempData["SuccessMessage"] = $"Material '{viewModel.Material.Name}' updated successfully.";
+                    
+                    return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!MaterialExists(material.Id))
+                    if (!MaterialExists(viewModel.Material.Id))
                     {
                         return NotFound();
                     }
@@ -283,10 +464,45 @@ namespace MRIV.Controllers
                         throw;
                     }
                 }
-                return RedirectToAction(nameof(Index));
+                catch (Exception ex)
+                {
+                    ModelState.AddModelError("", $"Error updating material: {ex.Message}");
+                }
             }
-            ViewData["MaterialCategoryId"] = new SelectList(_context.MaterialCategories, "Id", "Name", material.MaterialCategoryId);
-            return View(material);
+            
+            // If we got this far, something failed, redisplay form
+            // Reload dropdown lists
+            viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", viewModel.Material.MaterialCategoryId);
+            
+            // Load material subcategories for the selected category
+            if (viewModel.Material.MaterialCategoryId > 0)
+            {
+                viewModel.MaterialSubcategories = new SelectList(
+                    await _context.MaterialSubCategories
+                        .Where(sc => sc.MaterialCategoryId == viewModel.Material.MaterialCategoryId)
+                        .OrderBy(sc => sc.Name)
+                        .ToListAsync(),
+                    "Id", "Name", viewModel.Material.MaterialSubcategoryId);
+            }
+            else
+            {
+                viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
+            }
+            
+            viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", viewModel.Material.VendorId);
+            viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
+            
+            // Reload departments
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
+            
+            if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
+            {
+                viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
+                    viewModel.SelectedLocationCategory, viewModel.Material.CurrentLocationId);
+            }
+            
+            return View(viewModel);
         }
 
         // GET: Materials/Delete/5

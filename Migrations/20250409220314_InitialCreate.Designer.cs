@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    [Migration("20250327165115_NotificationModel")]
-    partial class NotificationModel
+    [Migration("20250409220314_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -144,8 +144,16 @@ namespace MRIV.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.Property<string>("CurrentLocationId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -154,12 +162,26 @@ namespace MRIV.Migrations
                     b.Property<int>("MaterialCategoryId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaterialSubcategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Station")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StationCategory")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int?>("Status")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("VendorId")
                         .HasMaxLength(50)
@@ -168,6 +190,8 @@ namespace MRIV.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MaterialCategoryId");
+
+                    b.HasIndex("MaterialSubcategoryId");
 
                     b.ToTable("Materials");
                 });
@@ -196,6 +220,85 @@ namespace MRIV.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("MaterialCategories");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialCondition", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ApprovalId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Condition")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InspectedBy")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime?>("InspectionDate")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("MaterialId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("RequisitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RequisitionItemId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovalId");
+
+                    b.HasIndex("MaterialId");
+
+                    b.HasIndex("RequisitionId");
+
+                    b.HasIndex("RequisitionItemId");
+
+                    b.ToTable("MaterialCondition");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MaterialCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialCategoryId");
+
+                    b.ToTable("MaterialSubCategories");
                 });
 
             modelBuilder.Entity("MRIV.Models.Notification", b =>
@@ -771,6 +874,52 @@ namespace MRIV.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MRIV.Models.MaterialSubcategory", "MaterialSubcategory")
+                        .WithMany("Materials")
+                        .HasForeignKey("MaterialSubcategoryId");
+
+                    b.Navigation("MaterialCategory");
+
+                    b.Navigation("MaterialSubcategory");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialCondition", b =>
+                {
+                    b.HasOne("MRIV.Models.Approval", "Approval")
+                        .WithMany()
+                        .HasForeignKey("ApprovalId");
+
+                    b.HasOne("MRIV.Models.Material", "Material")
+                        .WithMany()
+                        .HasForeignKey("MaterialId");
+
+                    b.HasOne("MRIV.Models.Requisition", "Requisition")
+                        .WithMany()
+                        .HasForeignKey("RequisitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("MRIV.Models.RequisitionItem", "RequisitionItem")
+                        .WithMany()
+                        .HasForeignKey("RequisitionItemId");
+
+                    b.Navigation("Approval");
+
+                    b.Navigation("Material");
+
+                    b.Navigation("Requisition");
+
+                    b.Navigation("RequisitionItem");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
+                {
+                    b.HasOne("MRIV.Models.MaterialCategory", "MaterialCategory")
+                        .WithMany("Subcategories")
+                        .HasForeignKey("MaterialCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("MaterialCategory");
                 });
 
@@ -808,6 +957,13 @@ namespace MRIV.Migrations
                 });
 
             modelBuilder.Entity("MRIV.Models.MaterialCategory", b =>
+                {
+                    b.Navigation("Materials");
+
+                    b.Navigation("Subcategories");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
                 {
                     b.Navigation("Materials");
                 });

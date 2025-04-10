@@ -141,8 +141,16 @@ namespace MRIV.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("GETUTCDATE()");
+
                     b.Property<string>("CurrentLocationId")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("int");
 
                     b.Property<string>("Description")
                         .HasMaxLength(500)
@@ -151,12 +159,26 @@ namespace MRIV.Migrations
                     b.Property<int>("MaterialCategoryId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("MaterialSubcategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("Station")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("StationCategory")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int?>("Status")
                         .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
 
                     b.Property<string>("VendorId")
                         .HasMaxLength(50)
@@ -165,6 +187,8 @@ namespace MRIV.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("MaterialCategoryId");
+
+                    b.HasIndex("MaterialSubcategoryId");
 
                     b.ToTable("Materials");
                 });
@@ -245,6 +269,33 @@ namespace MRIV.Migrations
                     b.HasIndex("RequisitionItemId");
 
                     b.ToTable("MaterialCondition");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int>("MaterialCategoryId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MaterialCategoryId");
+
+                    b.ToTable("MaterialSubCategories");
                 });
 
             modelBuilder.Entity("MRIV.Models.Notification", b =>
@@ -820,7 +871,13 @@ namespace MRIV.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("MRIV.Models.MaterialSubcategory", "MaterialSubcategory")
+                        .WithMany("Materials")
+                        .HasForeignKey("MaterialSubcategoryId");
+
                     b.Navigation("MaterialCategory");
+
+                    b.Navigation("MaterialSubcategory");
                 });
 
             modelBuilder.Entity("MRIV.Models.MaterialCondition", b =>
@@ -850,6 +907,17 @@ namespace MRIV.Migrations
                     b.Navigation("Requisition");
 
                     b.Navigation("RequisitionItem");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
+                {
+                    b.HasOne("MRIV.Models.MaterialCategory", "MaterialCategory")
+                        .WithMany("Subcategories")
+                        .HasForeignKey("MaterialCategoryId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MaterialCategory");
                 });
 
             modelBuilder.Entity("MRIV.Models.RequisitionItem", b =>
@@ -886,6 +954,13 @@ namespace MRIV.Migrations
                 });
 
             modelBuilder.Entity("MRIV.Models.MaterialCategory", b =>
+                {
+                    b.Navigation("Materials");
+
+                    b.Navigation("Subcategories");
+                });
+
+            modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
                 {
                     b.Navigation("Materials");
                 });
