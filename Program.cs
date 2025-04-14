@@ -22,6 +22,7 @@ builder.Services.AddScoped<IDepartmentService ,DepartmentService>();
 builder.Services.AddScoped<IStationCategoryService, StationCategoryService>();
 builder.Services.AddScoped<VendorService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
+builder.Services.AddScoped<IEmailService, EmailService>();
 
 builder.Services.AddHttpContextAccessor();
 

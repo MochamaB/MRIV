@@ -77,6 +77,29 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link menu-link @(currentController == "Notifications" || currentController == "NotificationTemplates" ? "active" : "")"
+                               href="#sidebarNotifications"
+                   data-bs-toggle="collapse"
+                   role="button"
+                   aria-expanded="@(currentController == "Notifications" || currentController == "NotificationTemplates" ? "true" : "false")"
+                   aria-controls="sidebarNotifications">  <!-- Changed from sidebarMaterials -->
+                   <i class="ri-notification-2-line"></i> <span data-key="t-Notifications">Notifications</span>
+                </a>
+                <div class="menu-dropdown collapse @(currentController == "Notifications" || currentController == "NotificationTemplates" ? "show" : "")"
+                     id="sidebarNotifications">
+                    <!-- Changed from sidebarMaterials -->
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="/Notifications/" class="nav-link @(currentController == "Notifications" ? "active" : "")" data-key="t-notifications"> All Notifications</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/NotificationTemplates/" class="nav-link @(currentController == "NotificationTemplates" ? "active" : "")" data-key="t-notification-templates">Notification Templates</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
+
             <li class="menu-title" asp-authorize-role="Admin"><i class="ri-more-fill"></i> <span data-key="t-administration">Administration</span></li>
 
             <li class="nav-item" asp-authorize-role="Admin">

@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 
 namespace MRIV.Services
@@ -23,11 +23,13 @@ namespace MRIV.Services
     {
         private readonly RequisitionContext _context;
         private readonly KtdaleaveContext _ktdaContext;
+        private readonly IEmailService _emailService;
 
-        public NotificationService(RequisitionContext context, KtdaleaveContext ktdaContext)
+        public NotificationService(RequisitionContext context, KtdaleaveContext ktdaContext, IEmailService emailService)
         {
             _context = context;
             _ktdaContext = ktdaContext;
+            _emailService = emailService;
         }
 
         public async Task CreateNotificationAsync(string templateName, Dictionary<string, string> parameters, string recipientId)
@@ -68,6 +70,21 @@ namespace MRIV.Services
 
             _context.Notifications.Add(notification);
             await _context.SaveChangesAsync();
+            
+            // Send email notification if we have the user's email
+            var user = await _ktdaContext.EmployeeBkps.FirstOrDefaultAsync(e => e.PayrollNo == recipientId);
+            if (user != null && !string.IsNullOrEmpty(user.EmailAddress))
+            {
+                try
+                {
+                    await _emailService.SendTemplatedEmailAsync(user.EmailAddress, templateName, parameters);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't fail the notification creation
+                    Console.WriteLine($"Failed to send email: {ex.Message}");
+                }
+            }
         }
 
         public async Task CreateNotificationForRoleAsync(string templateName, Dictionary<string, string> parameters, string role)
@@ -94,13 +111,16 @@ namespace MRIV.Services
         public async Task<List<Notification>> GetUserNotificationsAsync(string userId, bool unreadOnly = false)
         {
             var query = _context.Notifications
-                .Where(n => n.RecipientId == userId)
-                .OrderByDescending(n => n.CreatedAt);
+                .Where(n => n.RecipientId == userId);
 
             if (unreadOnly)
-                query = (IOrderedQueryable<Notification>)query.Where(n => n.ReadAt == null);
+            {
+                query = query.Where(n => n.ReadAt == null);
+            }
 
-            return await query.ToListAsync();
+            return await query
+                .OrderByDescending(n => n.CreatedAt)
+                .ToListAsync();
         }
 
         public async Task MarkAsReadAsync(int notificationId)
@@ -121,12 +141,11 @@ namespace MRIV.Services
 
         private string ProcessTemplate(string template, Dictionary<string, string> parameters)
         {
-            string result = template;
             foreach (var param in parameters)
             {
-                result = result.Replace($"{{{param.Key}}}", param.Value);
+                template = template.Replace($"{{{param.Key}}}", param.Value);
             }
-            return result;
+            return template;
         }
     }
 }

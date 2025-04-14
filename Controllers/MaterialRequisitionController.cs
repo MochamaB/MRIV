@@ -1000,6 +1000,9 @@ namespace MRIV.Controllers
                     _context.Approvals.AddRange(approvalSteps); // Add all steps at once
                     await _context.SaveChangesAsync();
 
+                    // 4. Send notifications to requisition creator and first approver
+                    await SendRequisitionNotifications(requisition, requisitionItems, approvalSteps);
+
                     // Commit the transaction
                     await transaction.CommitAsync();
 
@@ -1029,6 +1032,60 @@ namespace MRIV.Controllers
 
                 TempData["ErrorMessage"] = "An error occurred while saving the requisition. Please try again.";
                 return RedirectToAction("WizardSummary");
+            }
+        }
+
+        // Helper method to send notifications for a new requisition
+        private async Task SendRequisitionNotifications(Requisition requisition, List<RequisitionItem> requisitionItems, List<Approval> approvalSteps)
+        {
+            try
+            {
+                // Get creator information
+                var creatorPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+                var creatorName = HttpContext.Session.GetString("EmployeeName");
+                
+                if (string.IsNullOrEmpty(creatorPayrollNo) || string.IsNullOrEmpty(creatorName))
+                {
+                    Console.WriteLine("Creator information not found in session");
+                    return;
+                }
+                
+                // Get department information
+                var department = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId);
+                var departmentName = department?.DepartmentName ?? "Unknown Department";
+                
+                // Get delivery station information
+                var deliveryStation = requisition.DeliveryStation;
+                var deliveryStationName = deliveryStation ?? "Unknown Location";
+                
+                // Create parameters for notification templates
+                var parameters = new Dictionary<string, string>
+                {
+                    { "RequisitionId", requisition.Id.ToString() },
+                    { "Creator", creatorName },
+                    { "Department", departmentName },
+                    { "ItemCount", requisitionItems.Count.ToString() },
+                    { "Date", DateTime.Now.ToString("MMMM dd, yyyy") },
+                    { "DeliveryStation", deliveryStationName },
+                    { "EntityId", requisition.Id.ToString() },
+                    { "EntityType", "Requisition" },
+                    { "URL", Url.Action("Details", "Requisitions", new { id = requisition.Id }, Request.Scheme) }
+                };
+                
+                // 1. Send notification to the creator
+                await _notificationService.CreateNotificationAsync("RequisitionCreated", parameters, creatorPayrollNo);
+                
+                // 2. Send notification to the first approver (if available)
+                var firstApprovalStep = approvalSteps.OrderBy(a => a.StepNumber).FirstOrDefault();
+                if (firstApprovalStep != null && !string.IsNullOrEmpty(firstApprovalStep.PayrollNo))
+                {
+                    await _notificationService.CreateNotificationAsync("ApprovalRequested", parameters, firstApprovalStep.PayrollNo);
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log the error but don't throw to prevent disrupting the main flow
+                Console.WriteLine($"Error sending notifications: {ex.Message}");
             }
         }
 

@@ -1,0 +1,181 @@
+@model MRIV.Models.NotificationTemplate
+
+@{
+    ViewData["Title"] = "Template Details";
+}
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header align-items-center d-flex">
+                <h4 class="card-title mb-0 flex-grow-1">@Model.Name</h4>
+                <span class="badge bg-light text-muted fs-13">Type: @(string.IsNullOrEmpty(Model.NotificationType) ? "General" : Model.NotificationType)</span>
+                <div class="flex-shrink-0">
+                    <div class="dropdown">
+                        <a class="btn btn-soft-primary btn-sm ms-5" href="@Url.Action("Edit", new { id = Model.Id })">
+                            <i class="ri-edit-box-line align-middle"></i> Edit Template
+                        </a>
+                        <a class="btn btn-soft-secondary btn-sm ms-2" href="@Url.Action("Index")">
+                            <i class="ri-list-check align-middle"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+               
+
+                <!-- Email Preview Section -->
+                <div class="row">
+                    <div class="col-lg-12">
+                       
+                            <div class="card-header align-items-center d-flex bg-light">
+                                <h4 class="card-title mb-0 flex-grow-1">Template Preview</h4>
+                            </div>
+                            <div class="card-body">
+                                <!-- Email Template Preview -->
+                                <div class="border rounded">
+                                    <div class="p-4">
+                                        <table class="table table-borderless mb-0">
+                                            <tbody>
+                                                <tr>
+                                                    <td>
+                                                        <div class="d-flex align-items-center justify-content-center">
+                                                            <img src="~/assets/images/ktda-logo2.png" alt="KTDA Logo" height="60" class="me-3">
+                                                            <div class="ms-2">
+                                                                <h5 class="fw-bold mb-1">KTDA Material Requisition System</h5>
+                                                                <p class="text-muted mb-0">noreply@ktda.com</p>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="p-4 border-top">
+                                        <div class="mb-4 text-center">
+                                            <h5 class="fw-bold">@Model.TitleTemplate</h5>
+                                        </div>
+                                        <div class="email-content px-4">
+                                            <p style="font-size: 14px; line-height: 1.6;">@Html.Raw(Model.MessageTemplate.Replace("\n", "<br>"))</p>
+                                        </div>
+                                    </div>
+                                    <div class="p-4 border-top">
+                                        <div class="hstack gap-2 justify-content-center">
+                                        <a href="#" class="btn btn-outline-primary">View Details</a>
+                                            <a href="#" class="btn btn-outline-danger">Dismiss</a>
+                                        </div>
+                                    </div>
+                                    <div class="p-4 border-top">
+                                        <div class="text-center text-muted">
+                                            <p class="mb-1">This is an automated message from the KTDA Material Requisition System.</p>
+                                            <p class="mb-0"> @DateTime.Now.Year KTDA. All rights reserved.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- End Email Template Preview -->
+                            </div>
+                       
+                    </div>
+                </div>
+
+                <!-- Template Variables Section -->
+                <div class="row mt-4">
+                    <div class="col-lg-12">
+                        <div class="card border shadow-none">
+                            <div class="card-header align-items-center d-flex bg-light">
+                                <h4 class="card-title mb-0 flex-grow-1">Available Template Variables</h4>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-striped mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Variable</th>
+                                                <th>Description</th>
+                                                <th>Example Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td><code>{RequisitionId}</code></td>
+                                                <td>The ID of the requisition</td>
+                                                <td>REQ-2025-001</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{Creator}</code></td>
+                                                <td>Name of the person who created the requisition</td>
+                                                <td>John Doe</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{Department}</code></td>
+                                                <td>Department name</td>
+                                                <td>IT Department</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{Date}</code></td>
+                                                <td>Date of the action</td>
+                                                <td>April 14, 2025</td>
+                                            </tr>
+                                            <tr>
+                                                <td><code>{Status}</code></td>
+                                                <td>Status of the requisition</td>
+                                                <td>Approved</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .email-content {
+        max-width: 800px;
+        margin: 0 auto;
+        background-color: #ffffff;
+        padding: 15px 0;
+    }
+    
+    .email-content p {
+        font-size: 16px;
+        line-height: 1.6;
+        color: #333;
+        margin-bottom: 15px;
+    }
+    
+    .table td {
+        vertical-align: middle;
+    }
+    
+    /* Improve badge highlighting for template variables */
+    .badge.bg-soft-primary {
+       
+        color: #556ee6 !important;
+        font-weight: 700;
+        padding: 4px 8px;
+    }
+</style>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Highlight template variables in the preview
+            const messageElement = document.querySelector('.email-content p');
+            const titleElement = document.querySelector('.p-4.border-top h4');
+            
+            if (messageElement) {
+                messageElement.innerHTML = messageElement.innerHTML.replace(/\{([^}]+)\}/g, '<span class="badge bg-soft-primary text-primary">{$1}</span>');
+            }
+            
+            if (titleElement) {
+                titleElement.innerHTML = titleElement.innerHTML.replace(/\{([^}]+)\}/g, '<span class="badge bg-soft-primary text-primary">{$1}</span>');
+            }
+        });
+    </script>
+}
