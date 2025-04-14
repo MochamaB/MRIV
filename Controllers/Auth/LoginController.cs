@@ -94,8 +94,9 @@ namespace MRIV.Controllers.Auth
             // Clear the session
             HttpContext.Session.Clear();
 
-            // Redirect to the login page
-            return View("~/Views/Auth/Login.cshtml");
+            // Redirect to the home/login page instead of returning a view
+            // This will change the URL in the browser to the root URL
+            return RedirectToAction("Index", "Login");
         }
 
 

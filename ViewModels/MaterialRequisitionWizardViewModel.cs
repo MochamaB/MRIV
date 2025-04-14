@@ -38,6 +38,8 @@ namespace MRIV.ViewModels
         public List<RequisitionItem> RequisitionItems { get; set; } = new();
         public List<MaterialCategory> MaterialCategories { get; set; } = new();
         public MaterialCategory? MaterialCategory { get; set; }
+        public List<MaterialSubcategory> MaterialSubcategories { get; set; } = new();
+        public MaterialSubcategory? MaterialSubcategory { get; set; }
         public List<Material> Materials { get; set; } = new List<Material>();
 
         public List<ApprovalStepViewModel>? ApprovalSteps { get; set; }

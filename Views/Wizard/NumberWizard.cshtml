@@ -1,4 +1,4 @@
-﻿@{
+@{
     ViewData["Title"] = "Create Requisition Wizard";
     var currentStep = ViewBag.CurrentStep as string;
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
@@ -91,9 +91,29 @@
                         font-weight: 600;
                         color: #324721;
                     }
+    
+    .wizard-close-btn {
+        position: absolute;
+        top: 10px;
+        right: 20px;
+        cursor: pointer;
+        background: transparent;
+        border: none;
+        z-index: 100;
+    }
+    
+    .wizard-close-btn i {
+        font-size: 1.8rem;
+        color: #dc3545;
+    }
 
 </style>
-<div class=" contwrapper">
+<div class="contwrapper position-relative">
+    <!-- Close Button -->
+    <button type="button" class="wizard-close-btn" id="closeWizardBtn">
+        <i class="mdi mdi-close-circle"></i>
+    </button>
+    
     <!-- Top Navigation -->
     <div class="numberwizard progresschart">
         <ul>
@@ -112,6 +132,26 @@
         @await Html.PartialAsync($"{Model.PartialBasePath}_{Model.Steps.FirstOrDefault(s => s.IsActive)?.StepName.Replace(" ", "").Replace("&", "")}.cshtml")
     </div>
 </div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="closeWizardModal" tabindex="-1" aria-labelledby="closeWizardModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header modal-headercustom">
+                <h5 class="modal-title" id="closeWizardModalLabel" style="color:white;">Close Wizard</h5>
+                <button type="button" class="btn-close text-white" style="filter: invert(1);" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to close the wizard? All unsaved data will be lost.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmCloseWizard">Close Wizard</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @section Scripts {
     <!-- Wizard Navigation Script -->
     <script>
@@ -166,6 +206,90 @@
 
             // Initial Navigation Button Update
             updateNavButtons();
+            
+            // Close Wizard Button Click
+            $("#closeWizardBtn").click(function() {
+                $('#closeWizardModal').modal('show');
+            });
+            
+            // Confirm Close Wizard
+            $("#confirmCloseWizard").click(function() {
+                // Clear wizard session data
+                $.ajax({
+                    url: '/MaterialRequisition/ClearWizardSession',
+                    type: 'POST',
+                    headers: {
+                        'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                    },
+                    success: function() {
+                        // Redirect to requisitions list
+                        window.location.href = '/Requisitions';
+                    },
+                    error: function() {
+                        // Just redirect even if clearing session failed
+                        window.location.href = '/Requisitions';
+                    }
+                });
+            });
+            
+            // Intercept only sidebar navigation links
+            $(document).on('click', '#navbar-nav a, .navbar-brand', function(e) {
+                // Store the href
+                const href = $(this).attr('href');
+                
+                // If it's an internal link (not external) and not a wizard navigation link
+                if (href && !href.startsWith('#') && !href.startsWith('javascript') && 
+                    !$(this).hasClass('no-confirm')) {
+                    e.preventDefault();
+                    
+                    // Show the modal
+                    $('#closeWizardModal').modal('show');
+                    
+                    // Update the confirm button to navigate to this link
+                    $('#confirmCloseWizard').off('click').on('click', function() {
+                        // Clear wizard session data
+                        $.ajax({
+                            url: '/MaterialRequisition/ClearWizardSession',
+                            type: 'POST',
+                            headers: {
+                                'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                            },
+                            success: function() {
+                                // Navigate to the clicked link
+                                window.location.href = href;
+                            },
+                            error: function() {
+                                // Just navigate even if clearing session failed
+                                window.location.href = href;
+                            }
+                        });
+                    });
+                    
+                    return false;
+                }
+            });
+            
+            // Also handle the logo click
+            $('.logo').on('click', function(e) {
+                e.preventDefault();
+                $('#closeWizardModal').modal('show');
+                
+                $('#confirmCloseWizard').off('click').on('click', function() {
+                    $.ajax({
+                        url: '/MaterialRequisition/ClearWizardSession',
+                        type: 'POST',
+                        headers: {
+                            'RequestVerificationToken': $('input[name="__RequestVerificationToken"]').val()
+                        },
+                        success: function() {
+                            window.location.href = '/';
+                        },
+                        error: function() {
+                            window.location.href = '/';
+                        }
+                    });
+                });
+            });
         });
     </script>
 
@@ -482,4 +606,3 @@
 }
 
            
-

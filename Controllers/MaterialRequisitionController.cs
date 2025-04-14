@@ -590,6 +590,7 @@ namespace MRIV.Controllers
                 // Search for materials matching the search term and available/currently at the issue station
                 var query = _context.Materials
                     .Include(m => m.MaterialCategory)
+                      .Include(m => m.MaterialSubcategory)
                     .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));
                     
                 // Only filter by location if we have a valid issue station
@@ -628,6 +629,8 @@ namespace MRIV.Controllers
                     description = m.Description,
                     categoryId = m.MaterialCategoryId,
                     categoryName = m.MaterialCategory?.Name,
+                    subcategoryId = m.MaterialSubcategoryId,
+                    subcategoryName = m.MaterialSubcategory?.Name,
                     vendorId = m.VendorId,
                     vendorName = m.VendorId != null && vendorData.ContainsKey(m.VendorId) ? vendorData[m.VendorId] : null
                 }));
@@ -646,6 +649,20 @@ namespace MRIV.Controllers
                 // Return an empty result for non-AJAX requests
                 return Json(new { error = ex.Message });
             }
+        }
+
+        [HttpGet]
+        public async Task<IActionResult> GetSubcategoriesForCategory(int categoryId)
+        {
+            var subcategories = await _context.MaterialSubCategories
+                .Where(ms => ms.MaterialCategoryId == categoryId)
+                .Select(ms => new {
+                    value = ms.Id,
+                    text = ms.Name
+                })
+                .ToListAsync();
+
+            return Json(subcategories);
         }
 
         [HttpPost]
@@ -671,6 +688,14 @@ namespace MRIV.Controllers
                     item.Material.Description = item.Description;
                     item.Material.CurrentLocationId = requisition?.IssueStation;
                     item.Material.Status = (MaterialStatus)(int)item.Condition;
+                    item.Material.StationCategory = requisition?.IssueStationCategory;
+                    item.Material.Station = requisition?.IssueStation;
+                    item.Material.DepartmentId = requisition?.DepartmentId;
+                    var categoryId = item.Material.MaterialCategoryId;
+                    var subcategoryId = item.Material.MaterialSubcategoryId;
+
+                    // Log the values
+                    Console.WriteLine($"Saving Material Category: {categoryId}, Subcategory: {subcategoryId}");
                 }
                 else
                 {
@@ -876,6 +901,25 @@ namespace MRIV.Controllers
 
         }
         [HttpPost]
+        [HttpPost]
+        public IActionResult ClearWizardSession()
+        {
+            try
+            {
+                // Clear wizard-related session data
+                HttpContext.Session.Remove("WizardRequisition");
+                HttpContext.Session.Remove("WizardRequisitionItems");
+                HttpContext.Session.Remove("WizardTicket");
+                HttpContext.Session.Remove("WizardApprovers");
+                
+                return Json(new { success = true });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, error = ex.Message });
+            }
+        }
+
         [HttpPost]
         public async Task<IActionResult> CompleteWizard(string direction = null)
         {

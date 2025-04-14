@@ -126,8 +126,11 @@
                     </div>
                     <!-- Material info badges -->
                     <div id="badgeContainer_@index" class="mt-2 mb-1 @(string.IsNullOrEmpty(Model.Material?.Code) ? "d-none" : "")">
-                        <span id="selectedMaterialCategory_@index" class="badge bg-warning text-dark me-2">
+                        <span id="selectedMaterialCategory_@index" class="badge bg-warning text-dark me-2 mb-1">
                             @(Model.Material != null && Model.Material.MaterialCategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialCategoryId)?.Name : "")
+                        </span>
+                        <span id="selectedMaterialSubcategory_@index" class="badge bg-warning text-dark me-2 mb-1">
+                            @(Model.Material != null && Model.Material.MaterialSubcategoryId != 0 ? materialCategories.FirstOrDefault(c => c.Id == Model.Material.MaterialSubcategoryId)?.Name : "")
                         </span>
                         <span id="selectedMaterialCode_@index" class="badge bg-warning text-dark me-2 mb-1">
                             @(Model.Material?.Code ?? "")
@@ -155,7 +158,7 @@
                         <div class="col-md-12">
                             <div class="form-group">
                                 <label class="control-label">Material Category</label><span class="requiredlabel">*</span>
-                                <select  name="RequisitionItems[@index].Material.MaterialCategoryId" class="formcontrol2 materialCategoryId" data-index="@index">
+                                <select name="RequisitionItems[@index].Material.MaterialCategoryId" class="formcontrol2 materialCategoryId" data-index="@index">
                                     <option value="">Select Category</option>
                                     @foreach (var category in materialCategories)
                                     {
@@ -164,10 +167,26 @@
                                 </select>
                                 <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
                             </div>
+                            <!-- Inside the modal-body div, after the Material Category field -->
+                            <div class="form-group">
+                                <label class="control-label">Material Subcategory</label><span class="requiredlabel">*</span>
+                                <select asp-for="Material.MaterialSubcategoryId" name="RequisitionItems[@index].Material.MaterialSubcategoryId"
+                                        class="formcontrol2 materialSubcategoryId"
+                                        data-index="@index">
+                                    <option value="">Select Subcategory</option>
+                                    @if (Model.Material?.MaterialSubcategoryId != null && Model.Material.MaterialSubcategoryId > 0)
+                                    {
+                                        <option value="@Model.Material.MaterialSubcategoryId" selected>
+                                            @(Model.Material.MaterialSubcategory?.Name ?? "")
+                                        </option>
+                                    }
+                                </select>
+                                <span asp-validation-for="Material.MaterialSubcategoryId" class="text-danger"></span>
+                            </div>
                             <div class="form-group">
                                 <label class="control-label">Enter Code / Serial No OR Generate Code</label><span class="requiredlabel">*</span>
                                 <div class="input-group">
-                                    <input type="text" name="RequisitionItems[@index].Material.Code" class="form-control materialCode" data-index="@index">
+                                    <input type="text" asp-for="Material.Code" name="RequisitionItems[@index].Material.Code" value="@(Model.Material?.Code ?? "")" class="form-control materialCode" data-index="@index">
                                     <button type="button" class="btn btn-outline-primary generateCodeBtn" data-index="@index">
                                         Generate Code
                                     </button>
@@ -176,7 +195,7 @@
                             </div>
                             <div class="form-group">
                                 <label class="control-label">Vendor <i>(Optional)</i></label>
-                                <select name="RequisitionItems[@index].Material.VendorId" class="formcontrol2 materialVendor" data-index="@index">
+                                <select asp-for="Material.VendorId" name="RequisitionItems[@index].Material.VendorId" class="formcontrol2 materialVendor" data-index="@index">
                                     <option value="">Select Vendor</option>
                                     @foreach (var vendor in vendors)
                                     {
@@ -185,6 +204,11 @@
                                 </select>
                                 <span asp-validation-for="Material.VendorId" class="text-danger"></span>
                             </div>
+                            
+                            <!-- Hidden fields for StationCategory, Station, and DepartmentId -->
+                            <input type="hidden" name="RequisitionItems[@index].Material.StationCategory" id="stationCategory_@index" />
+                            <input type="hidden" name="RequisitionItems[@index].Material.Station" id="station_@index" />
+                            <input type="hidden" name="RequisitionItems[@index].Material.DepartmentId" id="departmentId_@index" />
                         </div>
                     </div>
                 </div>

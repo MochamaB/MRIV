@@ -59,6 +59,9 @@ else
                    data-description="@material.Description"
                    data-category-id="@material.MaterialCategoryId"
                    data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
+                   data-subcategory-id="@material.MaterialSubcategoryId"
+                   data-subcategory-name="@(material.MaterialSubcategory?.Name ?? "Unknown")"
+                   data-condition ="@material.Status"
                    data-vendor-id="@material.VendorId"
                    data-vendor-name="@vendorName">
                     <strong>@material.Code</strong> - @material.Name
@@ -80,6 +83,9 @@ else
                            data-description="@material.Description"
                            data-category-id="@material.MaterialCategoryId"
                            data-category-name="@(material.MaterialCategory?.Name ?? "Unknown")"
+                           data-subcategory-id="@material.MaterialSubcategoryId"
+                           data-subcategory-name="@(material.MaterialSubcategory?.Name ?? "Unknown")"
+                           data-condition="@material.Status"
                            data-vendor-id="@material.VendorId"
                            data-vendor-name="@vendorName">
                             Select

@@ -130,6 +130,7 @@ $(document).ready(function () {
         // Update badge container and badges with consistent ID format
         $row.find('[id^=badgeContainer_]').attr('id', `badgeContainer_${newIndex}`);
         $row.find('[id^=selectedMaterialCategory_]').attr('id', `selectedMaterialCategory_${newIndex}`);
+        $row.find('[id^=selectedMaterialSubcategory_]').attr('id', `selectedMaterialSubcategory_${newIndex}`);
         $row.find('[id^=selectedMaterialCode_]').attr('id', `selectedMaterialCode_${newIndex}`);
         $row.find('[id^=selectedMaterialVendor_]').attr('id', `selectedMaterialVendor_${newIndex}`);
     }
@@ -156,12 +157,14 @@ $(document).ready(function () {
 
         // Reset badges
         $row.find('[id^=selectedMaterialCategory_]').text('Category: None');    
+        $row.find('[id^=selectedMaterialSubcategory_]').text('Subcategory: None'); 
         $row.find('[id^=selectedMaterialCode_]').text('SNo.: None');
         $row.find('[id^=selectedMaterialVendor_]').text('Vendor: None');        
 
         // Reset modal inputs
         $row.find('.materialCode').val('');
         $row.find('.materialCategoryId').val(''); // Empty by default
+        $row.find('.materialSubcategoryId').val(''); // Empty by default
         $row.find('.materialVendor').val('');
     }
 
@@ -213,6 +216,47 @@ $(document).ready(function () {
 
     // Setup modal events (save button, generate code)
     function setupModalEvents() {
+    // Handle material category change to load subcategories
+    $('#itemsAccordion').off('change', '.materialCategoryId').on('change', '.materialCategoryId', function () {
+        var $select = $(this);
+        var categoryId = $select.val();
+        var $row = $select.closest('.item-row');
+        var index = $row.data('index');
+        var $subcategorySelect = $row.find('.materialSubcategoryId');
+
+        // Clear and disable subcategory dropdown
+        $subcategorySelect.empty().append('<option value="">Select Subcategory</option>').prop('readonly', true);
+
+        if (categoryId) {
+            // Get anti-forgery token
+            const token = $('input[name="__RequestVerificationToken"]').val();
+
+            // Get subcategories for the selected category
+            $.ajax({
+                url: '/MaterialRequisition/GetSubcategoriesForCategory',
+                type: 'GET',
+                data: { categoryId: categoryId },
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function (data) {
+                    $subcategorySelect.empty().append('<option value="">Select Subcategory</option>');
+
+                    // Add options from the server
+                    $.each(data, function (i, item) {
+                        $subcategorySelect.append($('<option></option>').val(item.value).text(item.text));
+                    });
+
+                    // Enable the dropdown
+                    $subcategorySelect.prop('readonly', false);
+                    updateBackground($subcategorySelect[0]);
+                },
+                error: function () {
+                    console.error('Error loading subcategories');
+                }
+            });
+        }
+    });
         // Use event delegation for modal buttons
         $('#itemsAccordion').off('click', '.saveInventoryDetailsBtn').on('click', '.saveInventoryDetailsBtn', function () {
             // Get the button and its container
@@ -225,6 +269,7 @@ $(document).ready(function () {
 
             // Get form elements within this specific modal
             const $categorySelect = $modal.find('.materialCategoryId');
+            const $subcategorySelect = $modal.find('.materialSubcategoryId');
             const $codeInput = $modal.find('.materialCode');
             const $vendorSelect = $modal.find('.materialVendor');
 
@@ -237,6 +282,11 @@ $(document).ready(function () {
             if (!$categorySelect.val()) {
                 $categorySelect.closest('.form-group').find('.text-danger')     
                     .text('Category is required');
+                isValid = false;
+            }
+            if (!$subcategorySelect.val()) {
+                $subcategorySelect.closest('.form-group').find('.text-danger')
+                    .text('Subcategory is required');
                 isValid = false;
             }
 
@@ -273,26 +323,38 @@ $(document).ready(function () {
                         $button.prop('disabled', false).text('Save Material');
                     } else {
                         // Code doesn't exist, proceed with saving
-                        saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect);
+                        saveMaterialDetails($button, $modal, $row, index, $categorySelect, $subcategorySelect, $codeInput, $vendorSelect);
                     }
                 },
                 error: function() {
                     // Error checking code, proceed anyway
-                    saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect);
+                    saveMaterialDetails($button, $modal, $row, index, $categorySelect, $subcategorySelect, $codeInput, $vendorSelect);
                 }
             });
         });
         
         // Function to save material details after validation
-        function saveMaterialDetails($button, $modal, $row, index, $categorySelect, $codeInput, $vendorSelect) {
+        function saveMaterialDetails($button, $modal, $row, index, $categorySelect, $subcategorySelect, $codeInput, $vendorSelect) {
             // Update badge container visibility
             const $badgeContainer = $row.find('[id^="badgeContainer_"]');       
             $badgeContainer.removeClass('d-none');
 
             // Update badge content
             $row.find('[id^="selectedMaterialCategory_"]').text(`Category: ${$categorySelect.find('option:selected').text()}`);
+            $row.find('[id^="selectedMaterialSubcategory_"]').text(`Subcategory: ${$subcategorySelect.find('option:selected').text()}`);
             $row.find('[id^="selectedMaterialCode_"]').text(`SNo.: ${$codeInput.val()}`);
             $row.find('[id^="selectedMaterialVendor_"]').text(`Vendor: ${$vendorSelect.find('option:selected').text() || 'None'}`);
+
+            // Set hidden fields for StationCategory, Station, and DepartmentId from the requisition data
+            // These values will be populated from the requisition when the form is submitted
+            const requisitionStationCategory = $('#issueStationCategory').val();
+            const requisitionStation = $('#issueStation').val();
+            const requisitionDepartmentId = $('#departmentId').val();
+            
+            // Set the hidden fields
+            $row.find(`#stationCategory_${index}`).val(requisitionStationCategory);
+            $row.find(`#station_${index}`).val(requisitionStation);
+            $row.find(`#departmentId_${index}`).val(requisitionDepartmentId);
 
             // Enable SaveToInventory checkbox
             let $checkbox = $row.find('input[type="checkbox"]');
@@ -353,6 +415,7 @@ $(document).ready(function () {
 
             // Get form elements
             const $categorySelect = $modal.find('.materialCategoryId');
+            const $subcategorySelect = $modal.find('.materialSubcategoryId');
             const $codeInput = $modal.find('.materialCode');
            
 
@@ -366,7 +429,12 @@ $(document).ready(function () {
                     .text('Please select a category first');
                 return;
             }
-
+            // Validate subcategory selection
+            if (!$subcategorySelect.val()) {
+                $subcategorySelect.closest('.form-group').find('.text-danger')
+                    .text('Please select a subcategory first');
+                return;
+            }
             // Get category ID from the select
             const categoryId = $categorySelect.val();
             console.log('Selected categoryId:', categoryId);
@@ -547,83 +615,98 @@ $(document).ready(function () {
         
         // Function to attach event handlers to material selection buttons
         function attachMaterialSelectionHandlers() {
-            $('.material-result, .select-material').off('click').on('click', function(e) {
+            $('.material-result, .select-material').off('click').on('click', function (e) {
                 e.preventDefault();
                 e.stopPropagation(); // Prevent event bubbling
-                
+
                 const $this = $(this);
                 const materialId = $this.data('id');
                 const materialName = $this.data('name');
                 const materialCode = $this.data('code');
                 const materialDescription = $this.data('description');
+                const materialStatus = $this.data('condition');  // Get condition from data attribute
                 const categoryId = $this.data('category-id');
                 const categoryName = $this.data('category-name');
+                const subcategoryId = $this.data('subcategory-id');
+                const subcategoryName = $this.data('subcategory-name');
                 const vendorId = $this.data('vendor-id');
                 const vendorName = $this.data('vendor-name');
-                
+
+                // First, close the search results container
+                $resultsContainer.hide();
+                $clearButton.addClass('d-none');
+                $searchInput.val('');
+
                 // Find the currently open accordion
                 const $openAccordion = $('.accordion-collapse.show');
                 const $currentRow = $openAccordion.closest('.item-row');
                 const index = $currentRow.data('index');
-                
+
                 // Check if the current row is already populated
                 const currentName = $openAccordion.find(`[name="RequisitionItems[${index}].Name"]`).val();
-                
+
                 // If the current row is already populated, create a new row
                 if (currentName && currentName.trim() !== '') {
                     // Trigger the add new item button click
                     $('#addNewItemBtn').click();
-                    
+
                     // Now get the newly created row (which should be open)
                     const $newOpenAccordion = $('.accordion-collapse.show');
                     const $newRow = $newOpenAccordion.closest('.item-row');
                     const newIndex = $newRow.data('index');
-                    
+
                     // Fill in the material details for the new row
-                    populateMaterialDetails($newOpenAccordion, newIndex, materialName, materialId, materialCode, 
-                        materialDescription, categoryId, categoryName, vendorId, vendorName);
+                    populateMaterialDetails($newOpenAccordion, newIndex, materialName, materialId, materialCode,
+                        materialDescription, materialStatus, categoryId, categoryName,
+                        subcategoryId, subcategoryName, vendorId, vendorName);
                 } else {
                     // Use the current row
-                    populateMaterialDetails($openAccordion, index, materialName, materialId, materialCode, 
-                        materialDescription, categoryId, categoryName, vendorId, vendorName);
+                    populateMaterialDetails($openAccordion, index, materialName, materialId, materialCode,
+                        materialDescription, materialStatus, categoryId, categoryName,
+                        subcategoryId, subcategoryName, vendorId, vendorName);
                 }
-                
-                // Close the dropdown - use direct DOM manipulation to ensure it's hidden
-                $resultsContainer.css('display', 'none');
-                $clearButton.addClass('d-none');
-                $searchInput.val('');
             });
         }
-        
         // Helper function to populate material details in a row
-        function populateMaterialDetails($accordion, index, name, id, code, description, categoryId, categoryName, vendorId, vendorName) {
+        // Fix in setupMaterialSearch function in myscript_new.js
+        // Modify the populateMaterialDetails function:
+
+        function populateMaterialDetails($accordion, index, name, id, code, description, status, categoryId, categoryName, subcategoryId, subcategoryName, vendorId, vendorName) {
             // Fill in the material details
             $accordion.find(`[name="RequisitionItems[${index}].Name"]`).val(name);
             $accordion.find(`[name="RequisitionItems[${index}].MaterialId"]`).val(id);
             $accordion.find(`[name="RequisitionItems[${index}].MaterialCode"]`).val(code);
-            
+
             // Set the description if available
             if (description) {
                 $accordion.find(`[name="RequisitionItems[${index}].Description"]`).val(description);
             }
-            
+
+            // Set the condition/status if available
+            if (status) {
+                $accordion.find(`[name="RequisitionItems[${index}].Condition"]`).val(status);
+               
+            }
+
             // Update hidden fields for material data
             $accordion.find(`[name="RequisitionItems[${index}].Material.Id"]`).val(id);
             $accordion.find(`[name="RequisitionItems[${index}].Material.Code"]`).val(code);
             $accordion.find(`[name="RequisitionItems[${index}].Material.MaterialCategoryId"]`).val(categoryId);
+            $accordion.find(`[name="RequisitionItems[${index}].Material.MaterialSubcategoryId"]`).val(subcategoryId);
             $accordion.find(`[name="RequisitionItems[${index}].Material.VendorId"]`).val(vendorId);
-            
+
             // Get the row element
             const $row = $accordion.closest('.item-row');
-            
+
             // Update badges
             const $badgeContainer = $row.find(`#badgeContainer_${index}`);
             $badgeContainer.removeClass('d-none');
-            
-            // Format badges with proper content
+
+            // Format badges with proper content - use the names passed, not the IDs
             $accordion.find(`#selectedMaterialCategory_${index}`).text(`Category: ${categoryName || 'Unknown'}`);
+            $accordion.find(`#selectedMaterialSubcategory_${index}`).text(`Subcategory: ${subcategoryName || 'Unknown'}`);
             $accordion.find(`#selectedMaterialCode_${index}`).text(`SNo.: ${code || 'No Code'}`);
-            
+
             // Set vendor badge
             if (vendorId) {
                 // Use the vendor name from data attribute if available, otherwise get from dropdown
@@ -636,38 +719,48 @@ $(document).ready(function () {
             } else {
                 $accordion.find(`#selectedMaterialVendor_${index}`).addClass('d-none');
             }
-            
+
             // Populate and make modal fields readonly
             const $modal = $row.find(`#inventoryModal_${index}`);
-            
+
             // Set category dropdown
             const $categorySelect = $modal.find(`.materialCategoryId`);
             $categorySelect.val(categoryId);
             $categorySelect.prop('disabled', true);
-            
+
+            // Set subcategory dropdown
+            const $subcategorySelect = $modal.find(`.materialSubcategoryId`);
+            // Need to append the option if it doesn't exist
+            if ($subcategorySelect.find(`option[value="${subcategoryId}"]`).length === 0) {
+                $subcategorySelect.append($('<option></option>').val(subcategoryId).text(subcategoryName));
+            }
+            $subcategorySelect.val(subcategoryId);
+            $subcategorySelect.prop('readonly', true);
+
             // Set code field
             const $codeInput = $modal.find(`.materialCode`);
             $codeInput.val(code);
             $codeInput.prop('readonly', true);
-            
+
             // Disable generate code button
             const $generateCodeBtn = $modal.find(`.generateCodeBtn`);
             $generateCodeBtn.prop('disabled', true);
-            
+
             // Set vendor dropdown
             const $vendorSelect = $modal.find(`.materialVendor`);
             $vendorSelect.val(vendorId);
             $vendorSelect.prop('disabled', true);
-            
+
             // Enable SaveToInventory checkbox
             const $checkbox = $row.find('input[type="checkbox"]');
             if ($checkbox.length > 0) {
                 $checkbox.prop('disabled', false).prop('checked', true);
                 $checkbox.closest('.form-check-label').css('display', 'block');
             }
-            
+
             // Update background colors for readonly fields
             updateBackground($categorySelect[0]);
+            updateBackground($subcategorySelect[0]);
             updateBackground($codeInput[0]);
             updateBackground($vendorSelect[0]);
         }
@@ -730,7 +823,10 @@ $(document).ready(function () {
     }
 
     // Handle form submission
-    $('#wizardRequisitionItems').off('submit').on('submit', function (e) {      
+    $('#wizardRequisitionItems').off('submit').on('submit', function (e) {    
+        // Enable all disabled select elements before submission
+        $(this).find('select:disabled').prop('disabled', false);
+
         if ($('input[name="direction"]').val() === 'previous') {
             return true;
         }
