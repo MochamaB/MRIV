@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -19,19 +19,22 @@ namespace MRIV.Controllers
     public class RequisitionsController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly KtdaleaveContext _ktdaleavecontext;
         private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
         private readonly VendorService _vendorService;
 
         public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService,
-            IApprovalService approvalService, VendorService vendorService)
+            IApprovalService approvalService, VendorService vendorService, KtdaleaveContext ktdaleavecontext)
         {
             _context = context;
             _employeeService = employeeService;
             _departmentService = departmentService;
             _approvalService = approvalService;
             _vendorService = vendorService;
+            _ktdaleavecontext = ktdaleavecontext;
+
         }
 
         // GET: Requisitions
@@ -177,13 +180,59 @@ namespace MRIV.Controllers
             }
 
             var requisition = await _context.Requisitions
+                .Include(r => r.RequisitionItems)
+                  .ThenInclude(ri => ri.Material)
+                .Include(r => r.Approvals.OrderBy(a => a.StepNumber))
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (requisition == null)
             {
                 return NotFound();
             }
 
-            return View(requisition);
+            // Create the view model
+            var viewModel = new RequisitionDetailsViewModel
+            {
+                Requisition = requisition,
+                EmployeeDetail = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo),
+                DepartmentDetail = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId),
+                RequisitionItems = requisition.RequisitionItems?.ToList(),
+              
+            };
+
+            // Get issue and delivery station details
+            if (!string.IsNullOrEmpty(requisition.IssueStation))
+            {
+                viewModel.IssueStation = await _departmentService.GetLocationNameAsync(requisition.IssueStation);
+            }
+
+            if (!string.IsNullOrEmpty(requisition.DeliveryStation))
+            {
+                if (requisition.DispatchType?.ToLower() == "vendor")
+                {
+                    viewModel.Vendor = await _vendorService.GetVendorByIdAsync(requisition.DispatchVendor);
+                }
+                else
+                {
+                    viewModel.DispatchEmployee = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
+                   
+                }
+            }
+
+            // Get dispatch employee details if available
+            if (!string.IsNullOrEmpty(requisition.DeliveryStation))
+            {
+                viewModel.DeliveryStation = await _departmentService.GetLocationNameAsync(requisition.DeliveryStation);
+            }
+
+            // Convert approval steps to view models
+            var vendors = await _vendorService.GetVendorsAsync();
+            if (requisition.Approvals != null)
+            {
+                viewModel.ApprovalSteps = await _approvalService.ConvertToViewModelsAsync(requisition.Approvals.ToList(), requisition, vendors);
+            }
+
+            return View(viewModel);
         }
 
         // GET: Requisitions/Create

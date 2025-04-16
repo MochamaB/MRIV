@@ -56,7 +56,7 @@
                             @foreach (var item in Model)
                             {
                                 <tr>
-                                    <td>@item.Id</td>
+                                    <td><a href="@Url.Action("Details", "Requisitions", new { id = item.Id })" class="table fw-bold">@item.Id</a></td>
                                     <td>
                                         @(item.TicketId == 0 ? "Inter Factory Borrowing" : item.TicketId.ToString())
                                     </td>

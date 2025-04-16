@@ -1,132 +1,295 @@
-﻿@model MRIV.Models.Requisition
+@using MRIV.Enums
+@using MRIV.Helpers
+@model MRIV.ViewModels.RequisitionDetailsViewModel
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Requisition Details";
 }
+<style>
+    .nav-tabs .nav-item .nav-link.active {
+        background: transparent;
+        color: #326408;
+        border-bottom: 3px solid #326408;
+    }
+    .nav-tabs .nav-item .nav-link {
+        font-style: normal;
+        font-weight: 700;
+        font-size: 17px;
+        line-height: 18px;
+        color: #212121;
+        padding: 22px 14px 14px 20px;
+        border: none;
+        font-family: "Manrope", sans-serif;
+        background: transparent;
+    }
+    .table > thead {
+        vertical-align: bottom;
+        background-color: #dee2e6;
+        text-align: center;
+    }
+    .table.select-table th {
+        color: #326408;
+        font-style: normal;
+        font-weight: bold;
+        font-size: 13px;
+        line-height: 15px;
+        text-transform: uppercase;
+        padding-right: 5px;
+        padding-left: 0.5rem;
+    }
+</style>
 
-<h1>Details</h1>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card" style="padding: 1.5rem;">
+            <div class="card-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs nav-border-top nav-border-top-primary mb-3" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#summary" role="tab" aria-selected="false">
+                            <i class="ri-file-list-3-line align-middle me-1"></i> Requisition Summary
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#materials" role="tab" aria-selected="false">
+                            <i class="ri-printer-line align-middle me-1"></i> Requisition Voucher
+                        </a>
+                    </li>
+                </ul>
 
-<div>
-    <h4>Requisition</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.TicketId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.TicketId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DepartmentId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DepartmentId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.PayrollNo)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.PayrollNo)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IssueStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IssueStationCategory)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IssueStation)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IssueStation)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DeliveryStationCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DeliveryStationCategory)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DeliveryStation)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DeliveryStation)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Remarks)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Remarks)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DispatchType)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DispatchType)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DispatchPayrollNo)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DispatchPayrollNo)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.DispatchVendor)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.DispatchVendor)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CollectorName)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CollectorName)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CollectorId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CollectorId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CompleteDate)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CompleteDate)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CreatedAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CreatedAt)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UpdatedAt)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UpdatedAt)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.IsExternal)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.IsExternal)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.ForwardToAdmin)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.ForwardToAdmin)
-        </dd>
-    </dl>
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane active" id="summary" role="tabpanel">
+                        <div class="row">
+                            <!-- Requisition Details Section -->
+                            <div class="col-md-7">
+                                <div class="contwrapper">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <h6 class="mb-0"><b>Material Requisition Details</b></h6>
+                                        @if (Model.Requisition?.Status != null)
+                                        {
+                                            <span class="badge @BadgeHelper.GetRequisitionStatusBadgeClass(Model.Requisition.Status.Value)">
+                                                @Model.Requisition.Status.ToString()
+                                            </span>
+                                        }
+                                    </div>
+                                    <hr>
+                                    <dl class="row">
+                                        <dt class="col-sm-6">Ticket Number</dt>
+                                        <dd class="col-sm-6">
+                                            @if (Model.Requisition?.TicketId == 0)
+                                            {
+                                                <span>Inter Factory Borrowing</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@Model.Requisition?.TicketId</span>
+                                            }
+                                        </dd>
+
+                                        <dt class="col-sm-6">Department</dt>
+                                        <dd class="col-sm-6">@Model.DepartmentDetail?.DepartmentName</dd>
+
+                                        <dt class="col-sm-6">Requisition By</dt>
+                                        <dd class="col-sm-6">@Model.EmployeeDetail?.Fullname</dd>
+
+                                        <dt class="col-sm-6">Issue Station Category</dt>
+                                        <dd class="col-sm-6">
+                                            @if (Model.Requisition?.IssueStationCategory?.ToLower() == "headoffice")
+                                            {
+                                                <span>Head Office</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="text-transform: capitalize;">@Model.Requisition?.IssueStationCategory</span>
+                                            }
+                                        </dd>
+
+                                        <dt class="col-sm-6">Issue Station</dt>
+                                        <dd class="col-sm-6">@Model.IssueStation</dd>
+
+                                        <dt class="col-sm-6">Delivery Station Category</dt>
+                                        <dd class="col-sm-6">
+                                            @if (Model.Requisition?.DeliveryStationCategory?.ToLower() == "headoffice")
+                                            {
+                                                <span>Head Office</span>
+                                            }
+                                            else
+                                            {
+                                                <span style="text-transform: capitalize;">@Model.Requisition?.DeliveryStationCategory</span>
+                                            }
+                                        </dd>
+
+                                        <dt class="col-sm-6">Delivery Station</dt>
+                                        <dd class="col-sm-6">
+                                            @if (Model.Requisition?.DeliveryStationCategory?.ToLower() == "vendor")
+                                            {
+                                                @Model.Vendor?.Name
+                                            }
+                                            else
+                                            {
+                                                @Model.DeliveryStation
+                                            }
+                                        </dd>
+
+                                        @if (!string.IsNullOrEmpty(Model.Requisition?.Remarks))
+                                        {
+                                            <dt class="col-sm-6">Remarks</dt>
+                                            <dd class="col-sm-6">@Model.Requisition?.Remarks</dd>
+                                        }
+                                        <!-- DispatchType handling -->
+                                        @if (Model.Requisition?.DispatchType != null)
+                                            {
+                                        <dt class="col-sm-6">Dispatched By</dt>
+                                        <dd class="col-sm-6">
+                                            @if (Model.Requisition.DispatchType?.ToLower() == "admin")
+                                            {
+                                                <span>Admin Department</span>
+                                            <dt class="col-sm-6">Admin Dispatch</dt>
+                                            <dd class="col-sm-6">@Model.DispatchEmployee?.Fullname</dd> <!-- Show the full name of the dispatcher -->
+                                            }
+                                            else if (Model.Requisition.DispatchType?.ToLower() == "vendor")
+                                            {
+                                            <span> Vendor</span>
+                                            <dt class="col-sm-6">Vendor Name</dt>
+                                            <dd class="col-sm-6">@Model.Vendor?.Name</dd> <!-- Show the vendor's name -->
+                                            }
+                                        </dd>
+                                        }
+                                        <dt class="col-sm-6">Collected By</dt>
+                                        <dd class="col-sm-6"> @Model.Requisition.CollectorName</dd>
+                                        <dt class="col-sm-6">Collecter ID</dt>
+                                        <dd class="col-sm-6"> @Model.Requisition.CollectorId</dd>
+
+                                        <dt class="col-sm-6">Created At</dt>
+                                        <dd class="col-sm-6">@Model.Requisition?.CreatedAt?.ToString("dd MMM yyyy HH:mm")</dd>
+                                    </dl>
+                                </div>
+                            </div>
+
+                            <!-- Approvals Section -->
+                            <div class="col-md-5">
+                                <div class="contwrapper" style="background-color: #ffffa8;border: 1px solid #fcb900;">
+                                    <h6><b>Approvals</b></h6>
+                                    <hr>
+                                    @if (Model.ApprovalSteps != null && Model.ApprovalSteps.Any())
+                                    {
+                                        <ul class="bullet-line-list">
+                                            @foreach (var step in Model.ApprovalSteps)
+                                            {
+                                                <li>
+                                                    <div class="col-md-12 d-flex justify-content-between">
+                                                        <div class="col-md-12">
+                                                            <h6 class="text-information">
+                                                                <b>@step.StepNumber. @step.ApprovalStep</b>
+                                                            </h6>
+                                                            <hr />
+                                                            <p class="text-muted mb-2 fw-bold">
+                                                                <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
+                                                            </p>
+                                                            <p class="text-muted">
+                                                                <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>
+                                                                @step.EmployeeName (@step.PayrollNo)
+                                                            </p>
+
+                                                            @if (step.ApprovalStep != "Vendor Dispatch")
+                                                            {
+                                                                <p class="text-muted">
+                                                                    <b>DEPARTMENT:</b> @step.DepartmentName
+                                                                </p>
+                                                            }
+
+
+                                                            <p class="text-muted">
+                                                                <b>STATUS:</b>
+                                                                <span class=" ms-2 badge @BadgeHelper.GetApprovalsBadgeClass(step.ApprovalStatus)">
+                                                                    @step.ApprovalStatus
+                                                                </span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </li>
+                                            }
+                                        </ul>
+                                    }
+                                    else
+                                    {
+                                        <p>No approval steps configured.</p>
+                                    }
+                                </div>
+                            </div>
+                            <div class="col-md-12">
+                                <!-- Requisition Items -->
+                                <h6 class="pt-4">
+                                    <b>Requisition Items</b>
+                                </h6>
+                                <hr>
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-hover">
+                                        <thead class="table-light" style="text-align:left">
+                                            <tr>
+                                                <th>No</th>
+                                                <th>Name</th>
+                                                <th>Description</th>
+                                                <th>Quantity</th>
+                                                <th>Condition</th>
+                                                <th>Status</th>
+                                                <th>Material SNo</th>
+                                                <th>Vendor</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @if (Model.RequisitionItems != null && Model.RequisitionItems.Any())
+                                            {
+
+                                                int counter = 1;
+                                                <!-- Initialize counter -->
+                                                foreach (var item in Model.RequisitionItems)
+                                                {
+                                                    var vendorName = (item.Material?.VendorId != null)
+                                                    ? Model.Vendors.FirstOrDefault(v => v.VendorID == Convert.ToInt32(item.Material.VendorId))
+                                                    : null;
+                                                    <tr>
+                                                        <td>@counter</td>
+                                                        <td>@item.Name</td>
+                                                        <td style="min-width: 200px;max-width: 200px; word-break: break-word; white-space: normal;">
+                                                            @item.Description</td>
+                                                        <td>@item.Quantity</td>
+                                                        <td>
+                                                            <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.Condition)">
+                                                                @EnumHelper.GetEnumDescription(item.Condition)
+                                                            </span>
+                                                            </td>
+                                                        <td>
+                                                            <span class="badge @BadgeHelper.GetRequisitionItemStatusBadgeClass(item.Status)">
+                                                                @EnumHelper.GetEnumDescription(item.Status)
+                                                            </span>
+                                                            </td>
+                                                        <td>@(item.Material?.Code ?? "N/A")</td>
+                                                        <td>@(vendorName?.Name ?? "N/A")</td>
+                                                    </tr>
+                                                    counter++;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                <tr>
+                                                    <td colspan="7" class="text-center">No items found</td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                    <div class="tab-pane" id="materials" role="tabpanel">
+                        <!-- Materials content will go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+

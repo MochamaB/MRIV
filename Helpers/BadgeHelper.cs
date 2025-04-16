@@ -48,6 +48,18 @@ namespace MRIV.Helpers
                 _ => "badge-secondary"
             };
         }
+
+        public static string GetRequisitionItemStatusBadgeClass(RequisitionItemStatus status)
+        {
+            return status switch
+            {
+                RequisitionItemStatus.PendingApproval => "badge-danger",
+                RequisitionItemStatus.PendingDispatch => "badge-warning",
+                RequisitionItemStatus.Received => "badge-success",
+                RequisitionItemStatus.Returned => "badge-information",
+                _ => "badge-secondary"
+            };
+        }
         public static string GetRequisitionItemConditionBadgeClass(RequisitionItemCondition? status)
         {
             return status switch
