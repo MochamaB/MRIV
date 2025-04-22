@@ -17,8 +17,9 @@ builder.Services.AddDbContext<RequisitionContext>(options =>
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService>();
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
+builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IApprovalService, ApprovalService>();
-builder.Services.AddScoped<IDepartmentService ,DepartmentService>();
+builder.Services.AddScoped<IVisibilityAuthorizeService, VisibilityAuthorizeService>();
 builder.Services.AddScoped<IStationCategoryService, StationCategoryService>();
 builder.Services.AddScoped<VendorService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();

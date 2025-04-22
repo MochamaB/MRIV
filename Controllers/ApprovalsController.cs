@@ -9,9 +9,11 @@ using MRIV.Enums;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
+using MRIV.Attributes;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class ApprovalsController : Controller
     {
         private readonly RequisitionContext _context;
@@ -19,33 +21,69 @@ namespace MRIV.Controllers
         private readonly VendorService _vendorService;
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
+        private readonly IVisibilityAuthorizeService _visibilityService;
         private readonly ILogger<ApprovalService> _logger;
 
-        public ApprovalsController(RequisitionContext context, IEmployeeService employeeService, VendorService vendorService,
-            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, ILogger<ApprovalService> logger)
+        public ApprovalsController(
+            RequisitionContext context, 
+            IEmployeeService employeeService, 
+            VendorService vendorService,
+            IApprovalService approvalService, 
+            IConfiguration configuration, 
+            IDepartmentService departmentService,
+            IVisibilityAuthorizeService visibilityService,
+            ILogger<ApprovalService> logger)
         {
             _context = context;
             _employeeService = employeeService;
             _vendorService = vendorService;
             _approvalService = approvalService;
             _departmentService = departmentService;
+            _visibilityService = visibilityService;
             _logger = logger;
-
         }
 
         // GET: Approvals
         public async Task<IActionResult> Index()
         {
-            var approvals = await _context.Approvals
-                .Include(a => a.Requisition)
+            var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (userPayrollNo == null)
+                return RedirectToAction("Index", "Login");
+            // Start with base query without ordering
+            // Start with base query without ordering
+            var approvals = _context.Approvals
+                .Include(a => a.Requisition);
+
+            // Apply department scope filtering
+            var departmentFiltered = await _visibilityService.ApplyDepartmentScopeAsync(approvals, userPayrollNo);
+
+            // Get the result of department filtering
+            var departmentFilteredList = await departmentFiltered.ToListAsync();
+
+            // Get the logged in user's role
+            var user = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
+            var userRole = user?.Role ?? string.Empty;
+
+            // Filter approvals by role parameter
+            var allowedApprovals = new List<Approval>();
+            foreach (var approval in departmentFilteredList)
+            {
+                if (await _visibilityService.UserHasRoleForStep(approval.StepConfigId, userRole) || approval.PayrollNo == userPayrollNo || userRole == "Admin")
+                {
+                    allowedApprovals.Add(approval);
+                }
+            }
+
+            // Since allowedApprovals is now in-memory, ordering is also in-memory
+            var approvalsList = allowedApprovals
                 .OrderBy(a => a.RequisitionId)
                 .ThenBy(a => a.StepNumber)
-                .ToListAsync();
+                .ToList();
 
             // Convert approvals to view models
             var viewModels = new List<ApprovalStepViewModel>();
 
-            foreach (var approval in approvals)
+            foreach (var approval in approvalsList)
             {
                 // Get employee and department information
                 var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
@@ -54,9 +92,8 @@ namespace MRIV.Controllers
                 // Create the view model
                 viewModels.Add(new ApprovalStepViewModel
                 {
-                    // Existing approval properties
-                    Id = approval.Id, // You may need to add this property to your view model
-                    RequisitionId = approval.RequisitionId, // You may need to add this property
+                    Id = approval.Id,
+                    RequisitionId = approval.RequisitionId,
                     StepNumber = approval.StepNumber,
                     ApprovalStep = approval.ApprovalStep,
                     PayrollNo = approval.PayrollNo,
@@ -65,9 +102,7 @@ namespace MRIV.Controllers
                     DepartmentName = department?.DepartmentName ?? "Unknown Department",
                     ApprovalStatus = approval.ApprovalStatus,
                     CreatedAt = approval.CreatedAt,
-
-                    // Add employee designation if needed
-                    EmployeeDesignation = employee?.Designation ?? "" // You may need to add this property
+                    EmployeeDesignation = employee?.Designation ?? ""
                 });
             }
 
@@ -82,17 +117,58 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (userPayrollNo == null)
+                return RedirectToAction("Index", "Login");
+
             var approval = await _context.Approvals
                 .Include(a => a.Requisition)
-                .Include(a => a.StepConfig)
-                .Include(a => a.WorkflowConfig)
                 .FirstOrDefaultAsync(m => m.Id == id);
+
             if (approval == null)
             {
                 return NotFound();
             }
 
-            return View(approval);
+            // Get the logged in user's info
+            var user = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
+            var userRole = user?.Role ?? string.Empty;
+
+            // Admin can view all
+            if (userRole != "Admin")
+            {
+                // Department check
+                var departmentId = int.Parse(user.Department);
+                if (approval.DepartmentId != departmentId)
+                    return Forbid();
+
+                // Role check
+                if (!await _visibilityService.UserHasRoleForStep(approval.StepConfigId, userRole) &&
+                    approval.PayrollNo != userPayrollNo)
+                    return Forbid();
+            }
+
+            // Get employee and department information
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
+            var department = await _departmentService.GetDepartmentByIdAsync(approval.DepartmentId);
+
+            // Create the view model
+            var viewModel = new ApprovalStepViewModel
+            {
+                Id = approval.Id,
+                RequisitionId = approval.RequisitionId,
+                StepNumber = approval.StepNumber,
+                ApprovalStep = approval.ApprovalStep,
+                PayrollNo = approval.PayrollNo,
+                EmployeeName = employee?.Fullname ?? "Unknown",
+                DepartmentId = approval.DepartmentId,
+                DepartmentName = department?.DepartmentName ?? "Unknown Department",
+                ApprovalStatus = approval.ApprovalStatus,
+                CreatedAt = approval.CreatedAt,
+                EmployeeDesignation = employee?.Designation ?? ""
+            };
+
+            return View(viewModel);
         }
 
         // GET: Approvals/Create
