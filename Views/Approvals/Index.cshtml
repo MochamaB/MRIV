@@ -1,133 +1,141 @@
 @model IEnumerable<MRIV.ViewModels.ApprovalStepViewModel>
 @using MRIV.Enums
 @using MRIV.Helpers
+@using MRIV.ViewModels
 
 @{
     ViewData["Title"] = "Approvals";
-
+    var pagination = ViewBag.Pagination as PaginationViewModel;
+    
     // Group approvals by requisition ID
     var groupedApprovals = Model.GroupBy(a => a.RequisitionId)
         .OrderByDescending(g => g.Key)
         .ToList();
 }
 
-<a asp-action="Create" class="btn btn-primary text-white mb-3 me-0 float-end">
-    <div style="display: flex; align-items: center;">
-        <i class="mdi mdi-plus-circle-outline" style="margin-right: 5px;"></i>
-        <span>Add Approval</span>
-    </div>
-</a>
-<div style="clear: both;"></div>
-<div class="contwrapper">
-    <div class="table-responsive" id="dataTable">
-        <table id="table"
-               data-toggle="table"
-               data-icon-size="sm"
-               data-buttons-class="primary"
-               data-toolbar-align="right"
-               data-buttons-align="left"
-               data-search-align="left"
-               data-sort-order="asc"
-               data-search="true"
-               data-mobile-responsive="true"
-               data-sticky-header="true"
-               data-pagination="true"
-               data-page-list="[100, 200, 250, 500, ALL]"
-               data-page-size="100"
-               data-show-footer="false"
-               data-side-pagination="client"
-               data-show-export="true"
-               class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Req ID</th>
-                    <th>Step</th>
-                    <th>Approval Step</th>
-                    <th>Approver Details</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach (var group in groupedApprovals)
-                {
-                    var requisitionId = group.Key;
-                    var approvalSteps = group.OrderBy(a => a.StepNumber).ToList();
-                    var rowCount = approvalSteps.Count;
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1"></h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
 
-                    for (int i = 0; i < rowCount; i++)
-                    {
-                        var item = approvalSteps[i];
-                        var isLastInGroup = (i == rowCount - 1);
+                            <!-- Filter Toggle Button -->
+                            @await Html.PartialAsync("_FilterToggleButton")
 
-                        <tr style="@(isLastInGroup ? "border-bottom: 3px solid #b4b6c1;" : "")">
-                            @if (i == 0)
+                            <!-- Add other action buttons here -->
+                           
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters Partial View -->
+            @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>ReqID</th>
+                                <th>Step</th>
+                                <th>Approval Step</th>
+                                <th>Approver</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in groupedApprovals)
                             {
-                                <td rowspan="@rowCount" style="vertical-align: middle; background-color: #f9f9f9; text-align: center; font-weight: bold;">
-                                    <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@requisitionId">
-                                        @requisitionId
-                                    </a>
-                                </td>
-                            }
-                            <td>
-                                @item.StepNumber
-                            </td>
-                            <td>
-                                @item.ApprovalStep
-                            </td>
-                            <td>
-                                <div>
-                                    <strong>@item.EmployeeName</strong>
-                                    @if (!string.IsNullOrEmpty(item.EmployeeDesignation))
-                                    {
-                                        <span> - @item.EmployeeDesignation</span>
-                                    }
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.ApprovalStatus)">
-                                    @EnumHelper.GetEnumDescription(item.ApprovalStatus)
-                                </span>
-                            </td>
-                            <td>
-                                @if (item.ApprovalStatus == ApprovalStatus.PendingApproval)
-                                {
-                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
-                                        <i class="mdi mdi-check-circle mdi-24px text-primary" style="vertical-align: middle;"></i> Approve
-                                    </a>
-                                }
-                                else if (item.ApprovalStatus == ApprovalStatus.PendingDispatch)
-                                {
-                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-success">
-                                        <i class="mdi mdi-truck-delivery mdi-24px text-success" style="vertical-align: middle;"></i> Dispatch
-                                    </a>
-                                }
-                                else if (item.ApprovalStatus == ApprovalStatus.PendingReceive)
-                                {
-                                    <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-info">
-                                        <i class="mdi mdi-package-variant-closed-check mdi-24px text-info" style="vertical-align: middle;"></i> Receive
-                                    </a>
-                                }
-                                else if (item.ApprovalStatus == ApprovalStatus.NotStarted)
-                                {
-                                    <span class="text-muted">Awaiting earlier approvals</span>
-                                }
-                                else
-                                {
-                                    <span>@EnumHelper.GetEnumDescription(item.ApprovalStatus)</span>
-                                }
-                            </td>
-                            <td>
+                                var requisitionId = group.Key;
+                                var approvalSteps = group.OrderBy(a => a.StepNumber).ToList();
+                                var rowCount = approvalSteps.Count;
 
-                                <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                                <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                                <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
-                            </td>
-                        </tr>
-                    }
+                                for (int i = 0; i < rowCount; i++)
+                                {
+                                    var item = approvalSteps[i];
+                                    var isLastInGroup = (i == rowCount - 1);
+
+                                    <tr style="@(isLastInGroup ? "border-bottom: 3px solid #b4b6c1;" : "")">
+                                        @if (i == 0)
+                                        {
+                                            <td rowspan="@rowCount" style="vertical-align: middle; background-color: #f9f9f9; text-align: center; font-weight: bold;">
+                                                <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@requisitionId">
+                                                    @requisitionId
+                                                </a>
+                                            </td>
+                                        }
+                                        <td>@item.StepNumber</td>
+                                        <td>@item.ApprovalStep</td>
+                                        <td>
+                                            <div>
+                                                <strong>@item.EmployeeName</strong>
+                                                @if (!string.IsNullOrEmpty(item.EmployeeDesignation))
+                                                {
+                                                    <span> - @item.EmployeeDesignation</span>
+                                                }
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.ApprovalStatus)">
+                                                @EnumHelper.GetEnumDescription(item.ApprovalStatus)
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (item.ApprovalStatus == ApprovalStatus.PendingApproval)
+                                            {
+                                                <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
+                                                    <i class="mdi mdi-check-circle mdi-24px text-primary" style="vertical-align: middle;"></i> Approve
+                                                </a>
+                                            }
+                                            else if (item.ApprovalStatus == ApprovalStatus.PendingDispatch)
+                                            {
+                                                <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-success">
+                                                    <i class="mdi mdi-truck-delivery mdi-24px text-success" style="vertical-align: middle;"></i> Dispatch
+                                                </a>
+                                            }
+                                            else if (item.ApprovalStatus == ApprovalStatus.PendingReceive)
+                                            {
+                                                <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-info">
+                                                    <i class="mdi mdi-package-variant-closed-check mdi-24px text-info" style="vertical-align: middle;"></i> Receive
+                                                </a>
+                                            }
+                                            else if (item.ApprovalStatus == ApprovalStatus.NotStarted)
+                                            {
+                                                <span class="text-muted">Awaiting earlier approvals</span>
+                                            }
+                                            else
+                                            {
+                                                <span>@EnumHelper.GetEnumDescription(item.ApprovalStatus)</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                                            <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                                            <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Pagination -->
+                @if (pagination != null)
+                {
+                    @await Html.PartialAsync("_Pagination", pagination)
                 }
-            </tbody>
-        </table>
+            </div>
+        </div>
     </div>
 </div>

@@ -44,60 +44,135 @@ namespace MRIV.Controllers
         }
 
         // GET: Approvals
-        public async Task<IActionResult> Index()
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
         {
             var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             if (userPayrollNo == null)
                 return RedirectToAction("Index", "Login");
-            // Start with base query without ordering
-            // Start with base query without ordering
+
+            // Ensure valid pagination parameters
+            page = page < 1 ? 1 : page;
+            pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
+
+            // Get filter values from request query string
+            var filters = new Dictionary<string, string>();
+            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
+            {
+                if (!string.IsNullOrEmpty(Request.Query[key]))
+                {
+                    filters[key] = Request.Query[key];
+                }
+            }
+
+            // Start with base query
             var approvals = _context.Approvals
-                .Include(a => a.Requisition);
+                .Include(a => a.Requisition)
+                .AsQueryable();
 
             // Apply department scope filtering
             var departmentFiltered = await _visibilityService.ApplyDepartmentScopeAsync(approvals, userPayrollNo);
 
-            // Get the result of department filtering
-            var departmentFilteredList = await departmentFiltered.ToListAsync();
+            // Apply ApprovalStatus filter if present
+            if (filters.TryGetValue("ApprovalStatus", out var approvalStatusStr) &&
+                Enum.TryParse<ApprovalStatus>(approvalStatusStr, out var approvalStatus))
+            {
+                departmentFiltered = departmentFiltered.Where(a => a.ApprovalStatus == approvalStatus);
+            }
+
+            // Get total count for pagination
+            var totalItems = await departmentFiltered.CountAsync();
+
+            // Apply pagination
+            var pagedApprovals = await departmentFiltered
+                //.OrderByDescending(a => a.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
 
             // Get the logged in user's role
             var user = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
             var userRole = user?.Role ?? string.Empty;
 
-            // Filter approvals by role parameter
+            // Filter approvals by role parameter and restrictToPayroll condition
             var allowedApprovals = new List<Approval>();
-            foreach (var approval in departmentFilteredList)
+            foreach (var approval in pagedApprovals)
             {
-                if (await _visibilityService.UserHasRoleForStep(approval.StepConfigId, userRole) || approval.PayrollNo == userPayrollNo || userRole == "Admin")
+                bool restrictToPayroll = await _visibilityService.ShouldRestrictToPayrollAsync(approval.StepConfigId);
+                if (restrictToPayroll)
+                {
+                    if (userRole == "Admin" || approval.PayrollNo == userPayrollNo)
+                    {
+                        allowedApprovals.Add(approval);
+                    }
+                }
+                else
                 {
                     allowedApprovals.Add(approval);
                 }
             }
 
-            // Since allowedApprovals is now in-memory, ordering is also in-memory
-            var approvalsList = allowedApprovals
-                .OrderBy(a => a.RequisitionId)
-                .ThenBy(a => a.StepNumber)
-                .ToList();
+            // Prepare filter view model for ApprovalStatus
+            var approvalStatusOptions = Enum.GetValues(typeof(ApprovalStatus))
+                .Cast<ApprovalStatus>()
+                .Select(s => new SelectListItem
+                {
+                    Value = ((int)s).ToString(),
+                    Text = s.ToString(),
+                    Selected = filters.TryGetValue("ApprovalStatus", out var selected) && selected == ((int)s).ToString()
+                }).ToList();
 
-            // Convert approvals to view models
-            var viewModels = new List<ApprovalStepViewModel>();
-
-            foreach (var approval in approvalsList)
+            var filterViewModel = new MRIV.ViewModels.FilterViewModel
             {
-                // Get employee and department information
+                Filters = new List<MRIV.ViewModels.FilterDefinition>
+                {
+                    new MRIV.ViewModels.FilterDefinition
+                    {
+                        PropertyName = "ApprovalStatus",
+                        DisplayName = "Approval Status",
+                        Options = approvalStatusOptions
+                    }
+                }
+            };
+            ViewBag.Filters = filterViewModel;
+
+            // Create pagination view model
+            var paginationModel = new MRIV.ViewModels.PaginationViewModel
+            {
+                TotalItems = totalItems,
+                ItemsPerPage = pageSize,
+                CurrentPage = page,
+                Action = "Index",
+                Controller = "Approvals",
+                RouteData = filters
+            };
+            ViewBag.Pagination = paginationModel;
+
+            // Prepare view models
+            var viewModels = new List<MRIV.ViewModels.ApprovalStepViewModel>();
+            foreach (var approval in allowedApprovals)
+            {
                 var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
                 var department = await _departmentService.GetDepartmentByIdAsync(approval.DepartmentId);
-
-                // Create the view model
-                viewModels.Add(new ApprovalStepViewModel
+                string displayName;
+                if (employee == null && (approval.ApprovalStep?.ToLower().Contains("vendor") == true ||
+                                       approval.ApprovalStep?.ToLower().Contains("dispatch") == true))
+                {
+                    // Get vendor by ID (using PayrollNo as the ID in this case)
+                    var vendor = await _vendorService.GetVendorByIdAsync(approval.PayrollNo);
+                    displayName = vendor?.Name ?? "Unknown Vendor"; // Assuming the Vendor class has a Name property
+                }
+                else
+                {
+                    displayName = employee?.Fullname ?? "Unknown";
+                }
+                viewModels.Add(new MRIV.ViewModels.ApprovalStepViewModel
                 {
                     Id = approval.Id,
                     RequisitionId = approval.RequisitionId,
                     StepNumber = approval.StepNumber,
                     ApprovalStep = approval.ApprovalStep,
                     PayrollNo = approval.PayrollNo,
-                    EmployeeName = employee?.Fullname ?? "Unknown",
+                    EmployeeName = displayName,
                     DepartmentId = approval.DepartmentId,
                     DepartmentName = department?.DepartmentName ?? "Unknown Department",
                     ApprovalStatus = approval.ApprovalStatus,
@@ -220,7 +295,8 @@ namespace MRIV.Controllers
             
             // Check if the approval status allows editing (only NotStarted, PendingApproval, or OnHold)
             if ((int)approval.ApprovalStatus != (int)ApprovalStatus.NotStarted && 
-                (int)approval.ApprovalStatus != (int)ApprovalStatus.PendingApproval && 
+                (int)approval.ApprovalStatus != (int)ApprovalStatus.PendingApproval &&
+                (int)approval.ApprovalStatus != (int)ApprovalStatus.PendingReceive &&
                 (int)approval.ApprovalStatus != (int)ApprovalStatus.OnHold)
             {
                 TempData["ErrorMessage"] = $"Cannot edit approver for step with status '{approval.ApprovalStatus}'. Only steps with status 'Not Started', 'Pending Approval', or 'On Hold' can be edited.";

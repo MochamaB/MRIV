@@ -8,6 +8,7 @@ namespace MRIV.Services
     {
         Task<IQueryable<T>> ApplyDepartmentScopeAsync<T>(IQueryable<T> query, string userPayrollNo) where T : class;
         Task<bool> UserHasRoleForStep(int? stepConfigId, string userRole);
+        Task<bool> ShouldRestrictToPayrollAsync(int? stepConfigId);
     }
 
     public class VisibilityAuthorizeService : IVisibilityAuthorizeService
@@ -68,6 +69,30 @@ namespace MRIV.Services
 
                 return allowedRoles.Contains(userRole, StringComparer.OrdinalIgnoreCase);
             }
+            return false;
+        }
+
+        public async Task<bool> ShouldRestrictToPayrollAsync(int? stepConfigId)
+        {
+            if (!stepConfigId.HasValue)
+                return false;
+
+            var stepConfig = await _context.WorkflowStepConfigs
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.Id == stepConfigId.Value);
+
+            if (stepConfig != null &&
+                stepConfig.Conditions != null &&
+                stepConfig.Conditions.TryGetValue("restrictToPayroll", out var restrictValue))
+            {
+                // Since TryGetValue returns a string, we need to parse it
+                if (bool.TryParse(restrictValue.ToString(), out var parsed))
+                    return parsed;
+
+                // Alternative checks if the string is "true" or "false" (case-insensitive)
+                return string.Equals(restrictValue.ToString(), "true", StringComparison.OrdinalIgnoreCase);
+            }
+
             return false;
         }
     }

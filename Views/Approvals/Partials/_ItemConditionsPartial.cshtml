@@ -8,47 +8,50 @@
         <hr style="border:2px solid black" />
     </div>
 
-        <div class="row">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Requisition Number:</label>
-                    <p>@Model.RequisitionNumber</p>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold" >Issue Point :</label>
-                <p style="text-transform:capitalize">@Model.IssueStationCategory</p>
-                </div>
-                 <div class="mb-3">
-                    <label class="form-label fw-bold">Requesting Station:</label>
-                    <p>@Model.RequestingStation</p>
-                </div>
-               
-            </div>
-            <div class="col-md-6">
-            <div class="mb-3">
-                <label class="form-label fw-bold">Request Date:</label>
-                <p>@Model.RequestDate.ToShortDateString()</p>
-            </div>
-            <div class="mb-3">
-                <label class="form-label fw-bold">Delivery Point:</label>
-                <p style="text-transform:capitalize">@Model.DeliveryStationCategory</p>
-            </div>
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Delivery Station:</label>
-                <p style="text-transform:capitalize">@Model.DeliveryStation</p>
-                </div>
-                <div class="mb-3">
-                   
-                    <p>
-                    <a class="table" asp-controller="Requisitions" asp-action="Details" asp-route-id="@Model.RequisitionId">
-                        View More Details <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i>
-                    </a>
-                    </p>
-                </div>
-            </div>
-        </div>
+      <dl class="row">
+    <dt class="col-sm-6">Requisition Number</dt>
+    <dd class="col-sm-6">@Model.RequisitionNumber</dd>
 
-</div>
+    <dt class="col-sm-6">Issue Point</dt>
+    <dd class="col-sm-6">
+        @if (Model.IssueStationCategory?.ToLower() == "headoffice")
+        {
+            <span>Head Office</span>
+        }
+        else
+        {
+            <span style="text-transform: capitalize;">@Model.IssueStationCategory</span>
+        }
+    </dd>
+
+    <dt class="col-sm-6">Requesting Station</dt>
+    <dd class="col-sm-6">@Model.RequestingStation</dd>
+
+    <dt class="col-sm-6">Request Date</dt>
+    <dd class="col-sm-6">@Model.RequestDate.ToShortDateString()</dd>
+
+    <dt class="col-sm-6">Delivery Point</dt>
+    <dd class="col-sm-6">
+        @if (Model.DeliveryStationCategory?.ToLower() == "headoffice")
+        {
+            <span>Head Office</span>
+        }
+        else
+        {
+            <span style="text-transform: capitalize;">@Model.DeliveryStationCategory</span>
+        }
+    </dd>
+
+    <dt class="col-sm-6">Delivery Station</dt>
+    <dd class="col-sm-6" style="text-transform: capitalize;">@Model.DeliveryStation</dd>
+
+    <dt class="col-sm-6">More Details</dt>
+    <dd class="col-sm-6">
+        <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@Model.RequisitionId">
+            View More Details <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i>
+        </a>
+    </dd>
+</dl>
 
 
 <div class="col-md-12 d-flex justify-content-between align-items-center mb-1">
