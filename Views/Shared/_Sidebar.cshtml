@@ -7,6 +7,7 @@
     
     // Get current controller name for active menu highlighting
     var currentController = ViewContext.RouteData.Values["controller"].ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
 }
 
 <div id="scrollbar">
@@ -16,9 +17,24 @@
             <li class="menu-title"><span data-key="t-menu">MAIN MENU</span></li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link @(currentController == "Dashboard" ? "active" : "")" href="/Dashboard/">
-                    <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboard">Dashboard</span>
+                <a class="nav-link menu-link @(currentController == "Dashboard" ? "active" : "")" 
+                   href="#sidebarDashboards" 
+                   data-bs-toggle="collapse" 
+                   role="button" 
+                   aria-expanded="@(currentController == "Dashboard" ? "true" : "false")" 
+                   aria-controls="sidebarDashboards">
+                    <i class="ri-dashboard-2-line"></i> <span data-key="t-dashboards">Dashboards</span>
                 </a>
+                <div class="menu-dropdown collapse @(currentController == "Dashboard" ? "show" : "")" id="sidebarDashboards">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="/Dashboard/MyRequisitions" class="nav-link @(currentController == "Dashboard" && currentAction == "MyRequisitions" ? "active" : "")" data-key="t-my-requisitions-dashboard">My Requisitions</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/Dashboard/Department" class="nav-link @(currentController == "Dashboard" && currentAction == "Department" ? "active" : "")" data-key="t-department-dashboard">Department Dashboard</a>
+                        </li>
+                    </ul>
+                </div>
             </li>
 
             <li class="nav-item">
