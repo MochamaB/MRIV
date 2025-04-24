@@ -1,0 +1,240 @@
+@using MRIV.Enums
+@model MRIV.ViewModels.DepartmentDashboardViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+@{
+    ViewData["Title"] = "Department Dashboard - MRIV";
+}
+
+<!-- start page title -->
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">@Model.DepartmentName Department Dashboard</h4>
+        </div>
+    </div>
+</div>
+<!-- end page title -->
+
+<div class="row">
+    <!-- Total Department Requisitions Widget -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Total Requisitions</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.TotalDepartmentRequisitions">@Model.TotalDepartmentRequisitions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-success mb-0"><i class="ri-arrow-up-line align-middle"></i> 12.45 % </span> vs. previous month
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-primary-subtle rounded-circle fs-2">
+                                <i data-feather="briefcase" class="text-primary material-shadow"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Department Requisitions Widget -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Pending Requisitions</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.PendingDepartmentRequisitions">@Model.PendingDepartmentRequisitions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-danger mb-0" style="font-size:12px;"><i class="ri-arrow-down-line align-middle"></i> 2.17 % </span> vs. previous month
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-warning-subtle rounded-circle fs-2 material-shadow">
+                                <i data-feather="activity" class="text-warning"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completed Department Requisitions Widget -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Completed Requisitions</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.CompletedDepartmentRequisitions">@Model.CompletedDepartmentRequisitions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-success mb-0"><i class="ri-arrow-up-line align-middle"></i> 8.63 % </span> vs. previous month
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-success-subtle rounded-circle fs-2 material-shadow">
+                                <i data-feather="check-circle" class="text-success"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cancelled Department Requisitions Widget -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Cancelled Requisitions</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.CancelledDepartmentRequisitions">@Model.CancelledDepartmentRequisitions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-danger mb-0"><i class="ri-arrow-down-line align-middle"></i> 0.35 % </span> vs. previous month
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-danger-subtle rounded-circle fs-2 material-shadow">
+                                <i data-feather="x-circle" class="text-danger"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Department Requisitions -->
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card">
+            <div class="card-header align-items-center d-flex">
+                <h4 class="card-title mb-0 flex-grow-1">Recent Department Requisitions</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive table-card">
+                    <table class="table table-borderless table-hover table-nowrap align-middle mb-0">
+                        <thead class="table-light">
+                            <tr class="text-muted">
+                                <th scope="col">ID</th>
+                                <th scope="col">Employee</th>
+                                <th scope="col">Issue Station</th>
+                                <th scope="col">Delivery Station</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Date</th>
+                                <th scope="col">Items</th>
+                                <th scope="col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.RecentDepartmentRequisitions != null && Model.RecentDepartmentRequisitions.Any())
+                            {
+                                @foreach (var requisition in Model.RecentDepartmentRequisitions)
+                                {
+                                    <tr>
+                                        <td>@requisition.Id</td>
+                                        <td>@requisition.EmployeeName</td>
+                                        <td>@requisition.IssueStation</td>
+                                        <td>@requisition.DeliveryStation</td>
+                                        <td>
+                                            @{
+                                                string badgeClass = "bg-secondary";
+                                                
+                                                switch (requisition.Status)
+                                                {
+                                                    case RequisitionStatus.NotStarted:
+                                                        badgeClass = "bg-warning";
+                                                        break;
+                                                    case RequisitionStatus.PendingDispatch:
+                                                        badgeClass = "bg-info";
+                                                        break;
+                                                    case RequisitionStatus.PendingReceipt:
+                                                        badgeClass = "bg-primary";
+                                                        break;
+                                                    case RequisitionStatus.Completed:
+                                                        badgeClass = "bg-success";
+                                                        break;
+                                                    case RequisitionStatus.Cancelled:
+                                                        badgeClass = "bg-danger";
+                                                        break;
+                                                }
+                                            }
+                                            <span class="badge @badgeClass">@requisition.StatusDescription</span>
+                                        </td>
+                                        <td>@(requisition.CreatedAt.HasValue ? requisition.CreatedAt.Value.ToString("dd MMM yyyy") : "-")</td>
+                                        <td>@requisition.ItemCount</td>
+                                        <td>
+                                            <a href="@Url.Action("Details", "Requisitions", new { id = requisition.Id })" class="btn btn-sm btn-soft-primary">View</a>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="8" class="text-center">No recent department requisitions found</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Initialize counter animation
+            var counterElements = document.querySelectorAll('.counter-value');
+            
+            counterElements.forEach(function(element) {
+                var target = parseInt(element.getAttribute('data-target'));
+                var duration = 1000; // 1 second
+                var start = 0;
+                var increment = Math.ceil(target / 50); // Adjust for smoother animation
+                
+                var startTime = null;
+                
+                function animate(currentTime) {
+                    if (!startTime) startTime = currentTime;
+                    var progress = (currentTime - startTime) / duration;
+                    
+                    if (progress > 1) progress = 1;
+                    
+                    var currentValue = Math.floor(progress * target);
+                    element.textContent = currentValue;
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        element.textContent = target;
+                    }
+                }
+                
+                requestAnimationFrame(animate);
+            });
+        });
+    </script>
+}
