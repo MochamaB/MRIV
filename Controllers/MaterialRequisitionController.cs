@@ -587,16 +587,19 @@ namespace MRIV.Controllers
                 var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
                 var issueStationId = requisition?.IssueStation;
 
-                // Search for materials matching the search term and available/currently at the issue station
+                // Search for materials matching the search term
                 var query = _context.Materials
                     .Include(m => m.MaterialCategory)
-                      .Include(m => m.MaterialSubcategory)
+                    .Include(m => m.MaterialSubcategory)
                     .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));
                     
                 // Only filter by location if we have a valid issue station
                 if (!string.IsNullOrEmpty(issueStationId))
                 {
-                    query = query.Where(m => m.CurrentLocationId == issueStationId);
+                    // Join with MaterialAssignments to filter by current location
+                    query = query.Where(m => m.MaterialAssignments.Any(ma => 
+                        ma.Station == issueStationId && 
+                        ma.IsActive == true));
                 }
                 
                 var materials = await query.Take(10).ToListAsync();
@@ -686,11 +689,11 @@ namespace MRIV.Controllers
                 {
                     item.Material.Name = item.Name;
                     item.Material.Description = item.Description;
-                    item.Material.CurrentLocationId = requisition?.IssueStation;
+                    // Set the material status based on the condition
                     item.Material.Status = (MaterialStatus)(int)item.Condition;
-                    item.Material.StationCategory = requisition?.IssueStationCategory;
-                    item.Material.Station = requisition?.IssueStation;
-                    item.Material.DepartmentId = requisition?.DepartmentId;
+                    
+                    // We'll create MaterialAssignment in CompleteWizard when we have the Material ID
+                    // Just store the category information for now
                     var categoryId = item.Material.MaterialCategoryId;
                     var subcategoryId = item.Material.MaterialSubcategoryId;
 
@@ -718,7 +721,6 @@ namespace MRIV.Controllers
 
             // Move to the next step
             return RedirectToAction("ApproversReceivers");
-
         }
 
         public async Task<IActionResult> ApproversReceiversAsync()
@@ -976,6 +978,46 @@ namespace MRIV.Controllers
                                 _context.Materials.Add(item.Material);
                                 await _context.SaveChangesAsync(); // Generate MaterialId
                                 item.MaterialId = item.Material.Id;
+                                
+                                // Create initial MaterialAssignment for new material
+                                var materialAssignment = new MaterialAssignment
+                                {
+                                    MaterialId = item.Material.Id,
+                                    PayrollNo = requisition.PayrollNo,
+                                    AssignmentDate = DateTime.UtcNow,
+                                    StationCategory = requisition.IssueStationCategory,
+                                    Station = requisition.IssueStation,
+                                    DepartmentId = requisition.DepartmentId,
+                                    AssignmentType = AssignmentType.New,
+                                    RequisitionId = requisition.Id,
+                                    AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                    IsActive = true
+                                };
+                                _context.MaterialAssignments.Add(materialAssignment);
+                                
+                                // Create initial condition record
+                                var materialCondition = new MaterialCondition
+                                {
+                                    MaterialId = item.Material.Id,
+                                    RequisitionId = requisition.Id,
+                                    RequisitionItemId = item.Id,
+                                    ConditionCheckType = ConditionCheckType.Initial,
+                                    Stage = "Creation",
+                                    Condition = item.Material.Status,
+                                    FunctionalStatus = FunctionalStatus.FullyFunctional,
+                                    CosmeticStatus = CosmeticStatus.Excellent,
+                                    InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                    InspectionDate = DateTime.UtcNow,
+                                    Notes = "Initial condition at creation"
+                                };
+                                _context.MaterialConditions.Add(materialCondition);
+                                
+                                // Save to get IDs for the assignment and condition
+                                await _context.SaveChangesAsync();
+                                
+                                // Link the condition to the assignment
+                                materialCondition.MaterialAssignmentId = materialAssignment.Id;
+                                _context.MaterialConditions.Update(materialCondition);
                             }
                         }
                         else

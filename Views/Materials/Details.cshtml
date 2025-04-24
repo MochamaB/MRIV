@@ -1,60 +1,453 @@
-﻿@model MRIV.Models.Material
+@using MRIV.Enums
+@using MRIV.Helpers
+@model MRIV.Models.Material
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Material Details";
+    var vendorNames = ViewBag.VendorNames as Dictionary<string, string>;
+    var activeAssignment = Model.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
+    var latestCondition = Model.MaterialConditions?.OrderByDescending(mc => mc.InspectionDate).FirstOrDefault();
 }
 
-<h1>Details</h1>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Material Details</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a asp-action="Edit" asp-route-id="@Model?.Id" class="btn btn-primary">
+                                <i class="ri-edit-line align-bottom me-1"></i> Edit Material
+                            </a>
+                            <a asp-action="Index" class="btn btn-light">
+                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Material Header -->
+                <div class="row mb-4">
+                    <div class="col-md-8">
+                        <h4 class="mb-1">@Model.Name</h4>
+                        <div class="text-muted">
+                            <span class="badge bg-secondary">@Model.Code</span>
+                            <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(Model.Status)">
+                                @EnumHelper.GetEnumDescription(Model.Status)
+                            </span>
+                        </div>
+                        <p class="mt-2">@Model.Description</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="d-flex flex-column align-items-md-end">
+                            <span class="text-muted">Category: <strong>@Model.MaterialCategory?.Name</strong></span>
+                            @if (Model.MaterialSubcategory != null)
+                            {
+                                <span class="text-muted">Subcategory: <strong>@Model.MaterialSubcategory.Name</strong></span>
+                            }
+                        </div>
+                    </div>
+                </div>
 
-<div>
-    <h4>Material</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Code)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Code)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.CurrentLocationId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.CurrentLocationId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.VendorId)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.VendorId)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Status)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Status)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.MaterialCategory)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.MaterialCategory.Name)
-        </dd>
-    </dl>
+                <!-- Tabs -->
+                <ul class="nav nav-tabs nav-tabs-custom nav-success mb-3" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#basic-info" role="tab">
+                            Basic Info
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#assignment-info" role="tab">
+                            Location & Assignment
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#condition-info" role="tab">
+                            Condition History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="tab" href="#warranty-info" role="tab">
+                            Warranty & Lifecycle
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Tab Content -->
+                <div class="tab-content">
+                    <!-- Basic Info Tab -->
+                    <div class="tab-pane active" id="basic-info" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Material Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">Material ID</dt>
+                                            <dd class="col-sm-8">@Model.Id</dd>
+                                            
+                                            <dt class="col-sm-4">Code</dt>
+                                            <dd class="col-sm-8">@Model.Code</dd>
+                                            
+                                            <dt class="col-sm-4">Name</dt>
+                                            <dd class="col-sm-8">@Model.Name</dd>
+                                            
+                                            <dt class="col-sm-4">Category</dt>
+                                            <dd class="col-sm-8">@Model.MaterialCategory?.Name</dd>
+                                            
+                                            <dt class="col-sm-4">Subcategory</dt>
+                                            <dd class="col-sm-8">@(Model.MaterialSubcategory?.Name ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Status</dt>
+                                            <dd class="col-sm-8">
+                                                <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(Model.Status)">
+                                                    @EnumHelper.GetEnumDescription(Model.Status)
+                                                </span>
+                                            </dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Supplier Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">Vendor/Supplier</dt>
+                                            <dd class="col-sm-8">
+                                                @{
+                                                    var vendorName = "None";
+                                                    if (!string.IsNullOrEmpty(Model.VendorId) && vendorNames.TryGetValue(Model.VendorId, out string name))
+                                                    {
+                                                        vendorName = name;
+                                                    }
+                                                }
+                                                @vendorName
+                                            </dd>
+                                            
+                                            <dt class="col-sm-4">Manufacturer</dt>
+                                            <dd class="col-sm-8">@(Model.Manufacturer ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Model Number</dt>
+                                            <dd class="col-sm-8">@(Model.ModelNumber ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Serial Number</dt>
+                                            <dd class="col-sm-8">@(Model.SerialNumber ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Asset Tag</dt>
+                                            <dd class="col-sm-8">@(Model.AssetTag ?? "N/A")</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Location & Assignment Tab -->
+                    <div class="tab-pane" id="assignment-info" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Current Assignment</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @if (activeAssignment != null)
+                                        {
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-4">Location</dt>
+                                                <dd class="col-sm-8">@activeAssignment.Station</dd>
+                                                
+                                                <dt class="col-sm-4">Location Category</dt>
+                                                <dd class="col-sm-8">@activeAssignment.StationCategory</dd>
+                                                
+                                                <dt class="col-sm-4">Department ID</dt>
+                                                <dd class="col-sm-8">@activeAssignment.DepartmentId</dd>
+                                                
+                                                <dt class="col-sm-4">Assigned To</dt>
+                                                <dd class="col-sm-8">@activeAssignment.PayrollNo</dd>
+                                                
+                                                <dt class="col-sm-4">Assignment Type</dt>
+                                                <dd class="col-sm-8">@EnumHelper.GetEnumDescription(activeAssignment.AssignmentType)</dd>
+                                                
+                                                <dt class="col-sm-4">Assignment Date</dt>
+                                                <dd class="col-sm-8">@activeAssignment.AssignmentDate.ToString("yyyy-MM-dd")</dd>
+                                                
+                                                <dt class="col-sm-4">Assigned By</dt>
+                                                <dd class="col-sm-8">@activeAssignment.AssignedByPayrollNo</dd>
+                                            </dl>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-info mb-0">
+                                                This material is not currently assigned to any location.
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Assignment History</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @if (Model.MaterialAssignments != null && Model.MaterialAssignments.Any())
+                                        {
+                                            <div class="timeline-2">
+                                                @foreach (var assignment in Model.MaterialAssignments.OrderByDescending(a => a.AssignmentDate).Take(5))
+                                                {
+                                                    <div class="timeline-item">
+                                                        <div class="timeline-badge @(assignment.IsActive ? "bg-success" : "bg-light")"></div>
+                                                        <div class="timeline-content">
+                                                            <div class="d-flex">
+                                                                <div class="flex-grow-1">
+                                                                    <h5 class="fw-semibold">@assignment.Station</h5>
+                                                                    <p class="text-muted mb-0">
+                                                                        @EnumHelper.GetEnumDescription(assignment.AssignmentType) - 
+                                                                        @assignment.StationCategory
+                                                                    </p>
+                                                                    <p class="text-muted mb-0">
+                                                                        Assigned to: @assignment.PayrollNo
+                                                                    </p>
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-end">
+                                                                    <p class="mb-0">@assignment.AssignmentDate.ToString("yyyy-MM-dd")</p>
+                                                                    @if (assignment.ReturnDate.HasValue)
+                                                                    {
+                                                                        <p class="text-muted mb-0">Returned: @assignment.ReturnDate.Value.ToString("yyyy-MM-dd")</p>
+                                                                    }
+                                                                    else if (assignment.IsActive)
+                                                                    {
+                                                                        <span class="badge bg-success">Current</span>
+                                                                    }
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-info mb-0">
+                                                No assignment history available.
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Condition History Tab -->
+                    <div class="tab-pane" id="condition-info" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Current Condition</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @if (latestCondition != null)
+                                        {
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-4">Condition</dt>
+                                                <dd class="col-sm-8">
+                                                    <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(latestCondition.Condition)">
+                                                        @EnumHelper.GetEnumDescription(latestCondition.Condition)
+                                                    </span>
+                                                </dd>
+                                                
+                                                <dt class="col-sm-4">Functional Status</dt>
+                                                <dd class="col-sm-8">
+                                                    @if (latestCondition.FunctionalStatus.HasValue)
+                                                    {
+                                                        <span class="badge @BadgeHelper.GetFunctionalStatusBadgeClass(latestCondition.FunctionalStatus.Value)">
+                                                            @EnumHelper.GetEnumDescription(latestCondition.FunctionalStatus.Value)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>N/A</span>
+                                                    }
+                                                </dd>
+                                                
+                                                <dt class="col-sm-4">Cosmetic Status</dt>
+                                                <dd class="col-sm-8">
+                                                    @if (latestCondition.CosmeticStatus.HasValue)
+                                                    {
+                                                        <span class="badge @BadgeHelper.GetCosmeticStatusBadgeClass(latestCondition.CosmeticStatus.Value)">
+                                                            @EnumHelper.GetEnumDescription(latestCondition.CosmeticStatus.Value)
+                                                        </span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span>N/A</span>
+                                                    }
+                                                </dd>
+                                                
+                                                <dt class="col-sm-4">Check Type</dt>
+                                                <dd class="col-sm-8">@EnumHelper.GetEnumDescription(latestCondition.ConditionCheckType)</dd>
+                                                
+                                                <dt class="col-sm-4">Stage</dt>
+                                                <dd class="col-sm-8">@latestCondition.Stage</dd>
+                                                
+                                                <dt class="col-sm-4">Inspection Date</dt>
+                                                <dd class="col-sm-8"> @(latestCondition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not inspected")</dd>
+                                                
+                                                <dt class="col-sm-4">Inspected By</dt>
+                                                <dd class="col-sm-8">@latestCondition.InspectedBy</dd>
+                                                
+                                                @if (!string.IsNullOrEmpty(latestCondition.Notes))
+                                                {
+                                                    <dt class="col-sm-4">Notes</dt>
+                                                    <dd class="col-sm-8">@latestCondition.Notes</dd>
+                                                }
+                                            </dl>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-info mb-0">
+                                                No condition records available.
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Condition History</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        @if (Model.MaterialConditions != null && Model.MaterialConditions.Any())
+                                        {
+                                            <div class="timeline-2">
+                                                @foreach (var condition in Model.MaterialConditions.OrderByDescending(c => c.InspectionDate).Take(5))
+                                                {
+                                                    <div class="timeline-item">
+                                                        <div class="timeline-badge @BadgeHelper.GetMaterialStatusBadgeClass(condition.Condition)"></div>
+                                                        <div class="timeline-content">
+                                                            <div class="d-flex">
+                                                                <div class="flex-grow-1">
+                                                                    <h5 class="fw-semibold">@EnumHelper.GetEnumDescription(condition.ConditionCheckType)</h5>
+                                                                    <p class="text-muted mb-0">
+                                                                        Stage: @condition.Stage
+                                                                    </p>
+                                                                    <p class="text-muted mb-0">
+                                                                        Condition: 
+                                                                        <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(condition.Condition)">
+                                                                            @EnumHelper.GetEnumDescription(condition.Condition)
+                                                                        </span>
+                                                                    </p>
+                                                                    @if (!string.IsNullOrEmpty(condition.Notes))
+                                                                    {
+                                                                        <p class="text-muted mt-1 mb-0">
+                                                                            <small>@condition.Notes</small>
+                                                                        </p>
+                                                                    }
+                                                                </div>
+                                                                <div class="flex-shrink-0 text-end">
+                                                                    <p class="mb-0"> @(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not inspected")</p>
+                                                                    <p class="text-muted mb-0">By: @condition.InspectedBy</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="alert alert-info mb-0">
+                                                No condition history available.
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Warranty & Lifecycle Tab -->
+                    <div class="tab-pane" id="warranty-info" role="tabpanel">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Purchase & Warranty Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">Purchase Date</dt>
+                                            <dd class="col-sm-8">@(Model.PurchaseDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Purchase Price</dt>
+                                            <dd class="col-sm-8">@(Model.PurchasePrice?.ToString("C") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Warranty Start</dt>
+                                            <dd class="col-sm-8">@(Model.WarrantyStartDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Warranty End</dt>
+                                            <dd class="col-sm-8">@(Model.WarrantyEndDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Warranty Terms</dt>
+                                            <dd class="col-sm-8">@(Model.WarrantyTerms ?? "N/A")</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card border">
+                                    <div class="card-header bg-soft-light">
+                                        <h5 class="card-title mb-0">Lifecycle Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <dl class="row mb-0">
+                                            <dt class="col-sm-4">Expected Lifespan</dt>
+                                            <dd class="col-sm-8">@(Model.ExpectedLifespanMonths?.ToString() ?? "N/A") months</dd>
+                                            
+                                            <dt class="col-sm-4">Maintenance Interval</dt>
+                                            <dd class="col-sm-8">@(Model.MaintenanceIntervalMonths?.ToString() ?? "N/A") months</dd>
+                                            
+                                            <dt class="col-sm-4">Last Maintenance</dt>
+                                            <dd class="col-sm-8">@(Model.LastMaintenanceDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Next Maintenance</dt>
+                                            <dd class="col-sm-8">@(Model.NextMaintenanceDate?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                            
+                                            <dt class="col-sm-4">Created At</dt>
+                                            <dd class="col-sm-8">@Model.CreatedAt.ToString("yyyy-MM-dd")</dd>
+                                            
+                                            <dt class="col-sm-4">Last Updated</dt>
+                                            <dd class="col-sm-8">@(Model.UpdatedAt?.ToString("yyyy-MM-dd") ?? "N/A")</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
-</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Activate Bootstrap tabs
+            $('a[data-bs-toggle="tab"]').on('click', function (e) {
+                e.preventDefault();
+                $(this).tab('show');
+            });
+        });
+    </script>
+}

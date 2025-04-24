@@ -4,10 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using MRIV.Models.Interfaces;
 
 namespace MRIV.Models
 {
-    public class Requisition
+    public class Requisition : IHasMedia
     {
         [Key]
         public int Id { get; set; }
@@ -82,5 +83,12 @@ namespace MRIV.Models
         // Navigation properties
         public virtual ICollection<RequisitionItem>? RequisitionItems { get; set; }
         public virtual ICollection<Approval>? Approvals { get; set; }
+
+        // Add this property to implement the interface
+        [NotMapped] // If you don't want this in the database table
+        public virtual ICollection<MediaFile> Media { get; set; } = new List<MediaFile>();
+        public int? MaterialAssignmentId { get; set; }
+        [ForeignKey("MaterialAssignmentId")]
+        public virtual MaterialAssignment? MaterialAssignment { get; set; }
     }
 }

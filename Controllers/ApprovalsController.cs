@@ -871,7 +871,7 @@ namespace MRIV.Controllers
                 if (materialConditionId.HasValue)
                 {
                     // Update existing condition
-                    var existingCondition = await _context.MaterialCondition.FindAsync(materialConditionId.Value);
+                    var existingCondition = await _context.MaterialConditions.FindAsync(materialConditionId.Value);
                     if (existingCondition != null)
                     {
                         _logger.LogInformation($"Updating existing condition ID: {existingCondition.Id}");
@@ -1018,14 +1018,14 @@ namespace MRIV.Controllers
         private async Task<MaterialCondition> FindMaterialCondition(int requisitionItemId, int approvalId, int requisitionId)
         {
             // First check if there's a condition for this approval step
-            var condition = await _context.MaterialCondition
+            var condition = await _context.MaterialConditions
                 .Where(mc => mc.RequisitionItemId == requisitionItemId && mc.ApprovalId == approvalId)
                 .FirstOrDefaultAsync();
 
             // If no condition found for this approval, check if there's any condition for this item from any approval
             if (condition == null)
             {
-                condition = await _context.MaterialCondition
+                condition = await _context.MaterialConditions
                     .Where(mc => mc.RequisitionItemId == requisitionItemId && mc.RequisitionId == requisitionId)
                     .OrderByDescending(mc => mc.InspectionDate)
                     .FirstOrDefaultAsync();

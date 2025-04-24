@@ -1,11 +1,11 @@
-﻿@using MRIV.Enums
+@using MRIV.Enums
 @using MRIV.Helpers
 @using MRIV.ViewModels
 @model IEnumerable<MRIV.Models.Material>
 
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Materials";
     var vendorNames = ViewBag.VendorNames as Dictionary<string, string>;
     var pagination = ViewBag.Pagination as PaginationViewModel;
 }
@@ -15,7 +15,7 @@
     <div class="card">
         <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
             <div class="d-flex align-items-center">
-                <h5 class="card-title mb-0 flex-grow-1"></h5>
+                <h5 class="card-title mb-0 flex-grow-1">Materials Inventory</h5>
                 <div class="flex-shrink-0">
                     <div class="d-flex gap-2 flex-wrap">
                         <div class="search-box">
@@ -60,7 +60,7 @@
                                 @Html.DisplayNameFor(model => model.Description)
                             </th>
                             <th>
-                                @Html.DisplayNameFor(model => model.CurrentLocationId)
+                                Current Location
                             </th>
                             <th>
                                 @Html.DisplayNameFor(model => model.VendorId)
@@ -75,6 +75,8 @@
                     <tbody>
                         @foreach (var item in Model)
                         {
+                            var activeAssignment = item.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
+                            
                             <tr>
                                 <td>
                                     @Html.DisplayFor(modelItem => item.Id)
@@ -92,7 +94,15 @@
                                     @Html.DisplayFor(modelItem => item.Description)
                                 </td>
                                 <td>
-                                    @Html.DisplayFor(modelItem => item.CurrentLocationId)
+                                    @if (activeAssignment != null)
+                                    {
+                                        <span>@activeAssignment.Station</span>
+                                        <small class="d-block text-muted">@activeAssignment.StationCategory</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">Not assigned</span>
+                                    }
                                 </td>
                                 <td>
                                     @{
@@ -105,11 +115,9 @@
                                     @vendorName
                                 </td>
                                 <td>
-
                                     <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
                                         @EnumHelper.GetEnumDescription(item.Status)
                                     </span>
-
                                 </td>
 
                                 <td>
@@ -131,6 +139,3 @@
     </div>
 </div>
 </div>
-
-
-

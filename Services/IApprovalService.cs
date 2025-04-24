@@ -852,13 +852,7 @@ namespace MRIV.Services
                             if (item.MaterialId.HasValue)
                             {
                                 // Update the material's current location
-                                var material = await _context.Materials.FindAsync(item.MaterialId.Value);
-                                if (material != null)
-                                {
-                                    material.CurrentLocationId = deliveryStationLocation;
-                                  //  material.UpdatedAt = DateTime.Now;
-                                    _context.Update(material);
-                                }
+                                
                             }
                         }
                         

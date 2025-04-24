@@ -33,6 +33,11 @@ namespace MRIV.Data
                             {
                                 { "roles", "Hod,supervisor,Admin,HR" } // Multiple allowed roles
                                          // Additional filter parameter
+                            },
+                            Conditions = new Dictionary<string, string>
+                            {
+                                { "restrictToPayroll", "true" } // Only one with payroll can view
+                                         // Additional filter parameter
                             }
                         },
                         new WorkflowStepConfig
@@ -65,6 +70,11 @@ namespace MRIV.Data
                             {
                                 { "roles", "Hod,supervisor,Admin,HR" } // Multiple allowed roles
                                 // Additional filter parameter
+                            },
+                            Conditions = new Dictionary<string, string>
+                            {
+                                { "restrictToPayroll", "true" } // Only one with payroll can view
+                                         // Additional filter parameter
                             }
                         },
                         new WorkflowStepConfig
@@ -123,7 +133,12 @@ namespace MRIV.Data
                             StepName = "Supervisor Approval",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
-                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor" }, { "station", "HQ" } }
+                            { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } },
+                            Conditions = new Dictionary<string, string>
+                            {
+                                { "restrictToPayroll", "true" } // Only one with payroll can view
+                                         // Additional filter parameter
+                            }
                         },
                         new WorkflowStepConfig
                         {

@@ -26,7 +26,7 @@ public partial class RequisitionContext : DbContext
 
     public DbSet<MaterialSubcategory> MaterialSubCategories { get; set; }
 
-    public DbSet<MaterialCondition> MaterialCondition { get; set; }
+    public DbSet<MaterialCondition> MaterialConditions { get; set; }
 
     public DbSet<Approval> Approvals { get; set; }
 
@@ -36,6 +36,9 @@ public partial class RequisitionContext : DbContext
 
     public virtual DbSet<Notification> Notifications { get; set; }
     public virtual DbSet<NotificationTemplate> NotificationTemplates { get; set; }
+    public DbSet<MaterialAssignment> MaterialAssignments { get; set; }
+
+    public DbSet<MediaFile> MediaFiles { get; set; }
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -98,7 +101,38 @@ public partial class RequisitionContext : DbContext
 
 
         });
+        // Add to OnModelCreating in RequisitionContext.cs
+        modelBuilder.Entity<MaterialAssignment>(entity =>
+        {
+            entity.HasOne(ma => ma.Material)
+                  .WithMany(m => m.MaterialAssignments)
+                  .HasForeignKey(ma => ma.MaterialId);
 
+            entity.Property(ma => ma.AssignmentType)
+                  .HasConversion<int>();
+        });
+
+        modelBuilder.Entity<MaterialCondition>(entity =>
+        {
+            entity.HasOne(mc => mc.Material)
+                  .WithMany(m => m.MaterialConditions)
+                  .HasForeignKey(mc => mc.MaterialId);
+
+            entity.HasOne(mc => mc.MaterialAssignment)
+                  .WithMany(ma => ma.MaterialConditions)
+                  .HasForeignKey(mc => mc.MaterialAssignmentId);
+
+            entity.Property(mc => mc.ConditionCheckType)
+                  .HasConversion<int>();
+
+            entity.Property(mc => mc.FunctionalStatus)
+                  .HasConversion<int>();
+
+            entity.Property(mc => mc.CosmeticStatus)
+                  .HasConversion<int>();
+        });
+        modelBuilder.Entity<MediaFile>()
+    .HasIndex(m => new { m.ModelType, m.ModelId });
 
         OnModelCreatingPartial(modelBuilder);
 

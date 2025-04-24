@@ -56,18 +56,19 @@ namespace MRIV.Controllers
             // Create base query
             var query = _context.Materials
                  .Include(m => m.MaterialCategory)  // Ensure MaterialCategory is loaded
+                 .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))  // Include active assignments
                  .AsQueryable();
 
             // Create filter view model with explicit type for the array
             ViewBag.Filters = await query.CreateFiltersAsync(
                 new Expression<Func<Material, object>>[] {
-            // Select which properties to create filters for
-            m => m.CurrentLocationId,
-            m => m.Status,
+                    // Select which properties to create filters for
+                    m => m.Status,
                     // Add other properties as needed
                 },
                 filters
             );
+            
             // Add custom MaterialCategory filter
             var categoryFilter = new FilterDefinition
             {
@@ -85,9 +86,35 @@ namespace MRIV.Controllers
                     .ToListAsync()
             };
             ViewBag.Filters.Filters.Insert(0, categoryFilter);
+            
+            // Add location filter based on MaterialAssignments
+            var locationFilter = new FilterDefinition
+            {
+                PropertyName = "Location",
+                DisplayName = "Current Location",
+                Options = await _context.MaterialAssignments
+                    .Where(ma => ma.IsActive)
+                    .Select(ma => ma.Station)
+                    .Distinct()
+                    .OrderBy(s => s)
+                    .Select(s => new SelectListItem
+                    {
+                        Value = s,
+                        Text = s,
+                        Selected = filters.ContainsKey("Location") && filters["Location"] == s
+                    })
+                    .ToListAsync()
+            };
+            ViewBag.Filters.Filters.Add(locationFilter);
 
             // Apply filters to query
             query = query.ApplyFilters(filters);
+            
+            // Apply location filter if present
+            if (filters.TryGetValue("Location", out var location) && !string.IsNullOrEmpty(location))
+            {
+                query = query.Where(m => m.MaterialAssignments.Any(ma => ma.IsActive && ma.Station == location));
+            }
 
             // Get total count for pagination
             var totalItems = await query.CountAsync();
@@ -95,6 +122,7 @@ namespace MRIV.Controllers
             // Apply pagination and ordering
             var materials = await query
                 .Include(m => m.MaterialCategory)
+                .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
@@ -118,7 +146,7 @@ namespace MRIV.Controllers
                 ItemsPerPage = pageSize,
                 CurrentPage = page,
                 Action = "Index",
-                Controller = "Requisitions",
+                Controller = "Materials",
                 RouteData = filters
             };
 
@@ -138,11 +166,27 @@ namespace MRIV.Controllers
 
             var material = await _context.Materials
                 .Include(m => m.MaterialCategory)
+                .Include(m => m.MaterialSubcategory)
+                .Include(m => m.MaterialAssignments.OrderByDescending(ma => ma.AssignmentDate))
+                .Include(m => m.MaterialConditions.OrderByDescending(mc => mc.InspectionDate))
                 .FirstOrDefaultAsync(m => m.Id == id);
+                
             if (material == null)
             {
                 return NotFound();
             }
+            
+            // Get all vendors in one batch
+            var allVendors = await _vendorService.GetVendorsAsync();
+
+            // Create a dictionary of vendor IDs to names
+            var vendorNames = allVendors.ToDictionary(
+                v => v.VendorID.ToString(),
+                v => v.Name
+            );
+
+            // Pass the dictionary to the view
+            ViewBag.VendorNames = vendorNames;
 
             return View(material);
         }
@@ -167,8 +211,11 @@ namespace MRIV.Controllers
                 if (department != null)
                 {
                     var departmentId = Convert.ToInt32(department.DepartmentId);
-                    viewModel.Material.DepartmentId = departmentId;
-                   
+                    viewModel.Assignment.DepartmentId = departmentId;
+                    
+                    // Set the assignment's PayrollNo to the current user
+                    viewModel.Assignment.PayrollNo = payrollNo;
+                    viewModel.Assignment.AssignedByPayrollNo = payrollNo;
                 }
             }
             
@@ -186,7 +233,7 @@ namespace MRIV.Controllers
             
             // Load all departments and set the logged-in user's department as the default
             var departments = await _ktdacontext.Departments.ToListAsync();
-            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
             
             // Set default status
             viewModel.Material.Status = MaterialStatus.GoodCondition;
@@ -265,40 +312,44 @@ namespace MRIV.Controllers
                         viewModel.Material.Code = $"MC-{viewModel.Material.MaterialCategoryId}-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
                     }
                     
-                    // Set the StationCategory from the selected location category
-                    viewModel.Material.StationCategory = viewModel.SelectedLocationCategory;
-                    
-                    // Set the Station based on the selected location
-                    if (!string.IsNullOrEmpty(viewModel.Material.CurrentLocationId))
-                    {
-                        // If the station category is "headoffice", append "HQ" to the station
-                        if (viewModel.SelectedLocationCategory?.ToLower() == "headoffice")
-                        {
-                            viewModel.Material.Station = $"HQ-{viewModel.Material.CurrentLocationId}";
-                        }
-                        else
-                        {
-                            viewModel.Material.Station = viewModel.Material.CurrentLocationId;
-                        }
-                    }
-                    
-                    // If department ID is not set, get it from the logged-in user
-                    if (!viewModel.Material.DepartmentId.HasValue)
-                    {
-                        var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
-                        if (!string.IsNullOrEmpty(payrollNo))
-                        {
-                            var (employee, department, _) = await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
-                            if (department != null)
-                            {
-                                var departmentId = Convert.ToInt32(department.DepartmentId);
-                                viewModel.Material.DepartmentId = departmentId;
-                            }
-                        }
-                    }
-                    
                     // Save the material to the database
                     _context.Add(viewModel.Material);
+                    await _context.SaveChangesAsync();
+                    
+                    // Create a new MaterialAssignment
+                    var assignment = new MaterialAssignment
+                    {
+                        MaterialId = viewModel.Material.Id,
+                        PayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "Unknown",
+                        AssignmentDate = DateTime.UtcNow,
+                        StationCategory = viewModel.SelectedLocationCategory,
+                        Station = viewModel.CurrentLocationId,
+                        DepartmentId = viewModel.Assignment.DepartmentId,
+                        AssignmentType = AssignmentType.New,
+                        AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                        IsActive = true,
+                        Notes = "Initial assignment at creation"
+                    };
+                    
+                    _context.MaterialAssignments.Add(assignment);
+                    await _context.SaveChangesAsync();
+                    
+                    // Create initial condition record
+                    var condition = new MaterialCondition
+                    {
+                        MaterialId = viewModel.Material.Id,
+                        MaterialAssignmentId = assignment.Id,
+                        ConditionCheckType = ConditionCheckType.Initial,
+                        Stage = "Creation",
+                        Condition = viewModel.Material.Status,
+                        FunctionalStatus = FunctionalStatus.FullyFunctional,
+                        CosmeticStatus = CosmeticStatus.Excellent,
+                        InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                        InspectionDate = DateTime.UtcNow,
+                        Notes = "Initial condition at creation"
+                    };
+                    
+                    _context.MaterialConditions.Add(condition);
                     await _context.SaveChangesAsync();
                     
                     // Set success message
@@ -336,12 +387,12 @@ namespace MRIV.Controllers
             
             // Reload departments
             var departments = await _ktdacontext.Departments.ToListAsync();
-            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
             
             if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
             {
                 viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
-                    viewModel.SelectedLocationCategory, viewModel.Material.CurrentLocationId);
+                    viewModel.SelectedLocationCategory, viewModel.CurrentLocationId);
             }
             
             return View(viewModel);
@@ -357,6 +408,9 @@ namespace MRIV.Controllers
 
             var material = await _context.Materials
                 .Include(m => m.MaterialCategory)
+                .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))
+                .Include(m => m.MaterialAssignments.OrderByDescending(ma => ma.AssignmentDate).Take(5))
+                .Include(m => m.MaterialConditions.OrderByDescending(mc => mc.InspectionDate).Take(5))
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
             if (material == null)
@@ -366,11 +420,30 @@ namespace MRIV.Controllers
             
             var viewModel = new EditMaterialViewModel
             {
-                Material = material
+                Material = material,
+                AssignmentHistory = material.MaterialAssignments?.OrderByDescending(ma => ma.AssignmentDate),
+                ConditionHistory = material.MaterialConditions?.OrderByDescending(mc => mc.InspectionDate)
             };
             
-            // Set the selected location category based on the material's StationCategory
-            viewModel.SelectedLocationCategory = material.StationCategory;
+            // Get the active assignment
+            var activeAssignment = material.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
+            if (activeAssignment != null)
+            {
+                viewModel.Assignment = activeAssignment;
+                viewModel.SelectedLocationCategory = activeAssignment.StationCategory;
+                viewModel.CurrentLocationId = activeAssignment.Station;
+            }
+            
+            // Initialize a new condition record
+            viewModel.Condition = new MaterialCondition
+            {
+                MaterialId = material.Id,
+                MaterialAssignmentId = activeAssignment?.Id,
+                ConditionCheckType = ConditionCheckType.Periodic,
+                Stage = "Update",
+                Condition = material.Status,
+                InspectionDate = DateTime.UtcNow
+            };
             
             // Load material categories
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", material.MaterialCategoryId);
@@ -400,12 +473,12 @@ namespace MRIV.Controllers
             if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
             {
                 viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
-                    viewModel.SelectedLocationCategory, material.CurrentLocationId);
+                    viewModel.SelectedLocationCategory, viewModel.CurrentLocationId);
             }
             
-            // Load all departments
+            // Load departments
             var departments = await _ktdacontext.Departments.ToListAsync();
-            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", material.DepartmentId);
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", activeAssignment?.DepartmentId);
             
             return View(viewModel);
         }
@@ -426,31 +499,123 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    // Set the StationCategory from the selected location category
-                    viewModel.Material.StationCategory = viewModel.SelectedLocationCategory;
-                    
-                    // Set the Station based on the selected location
-                    if (!string.IsNullOrEmpty(viewModel.Material.CurrentLocationId))
+                    // Get the existing material with its active assignment
+                    var existingMaterial = await _context.Materials
+                        .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))
+                        .FirstOrDefaultAsync(m => m.Id == id);
+                        
+                    if (existingMaterial == null)
                     {
-                        // If the station category is "headoffice", append "HQ" to the station
-                        if (viewModel.SelectedLocationCategory?.ToLower() == "headoffice")
-                        {
-                            viewModel.Material.Station = $"HQ-{viewModel.Material.CurrentLocationId}";
-                        }
-                        else
-                        {
-                            viewModel.Material.Station = viewModel.Material.CurrentLocationId;
-                        }
+                        return NotFound();
                     }
                     
-                    // Update the material in the database
-                    viewModel.Material.UpdatedAt = DateTime.UtcNow;
-                    _context.Update(viewModel.Material);
+                    // Get the active assignment
+                    var activeAssignment = existingMaterial.MaterialAssignments?.FirstOrDefault();
+                    
+                    // Update basic material properties
+                    existingMaterial.Name = viewModel.Material.Name;
+                    existingMaterial.Description = viewModel.Material.Description;
+                    existingMaterial.MaterialCategoryId = viewModel.Material.MaterialCategoryId;
+                    existingMaterial.MaterialSubcategoryId = viewModel.Material.MaterialSubcategoryId;
+                    existingMaterial.Code = viewModel.Material.Code;
+                    existingMaterial.VendorId = viewModel.Material.VendorId;
+                    existingMaterial.Status = viewModel.Material.Status;
+                    existingMaterial.UpdatedAt = DateTime.UtcNow;
+                    
+                    // Add new warranty and lifecycle properties
+                    existingMaterial.PurchaseDate = viewModel.Material.PurchaseDate;
+                    existingMaterial.PurchasePrice = viewModel.Material.PurchasePrice;
+                    existingMaterial.WarrantyStartDate = viewModel.Material.WarrantyStartDate;
+                    existingMaterial.WarrantyEndDate = viewModel.Material.WarrantyEndDate;
+                    existingMaterial.WarrantyTerms = viewModel.Material.WarrantyTerms;
+                    existingMaterial.ExpectedLifespanMonths = viewModel.Material.ExpectedLifespanMonths;
+                    existingMaterial.MaintenanceIntervalMonths = viewModel.Material.MaintenanceIntervalMonths;
+                    existingMaterial.LastMaintenanceDate = viewModel.Material.LastMaintenanceDate;
+                    existingMaterial.NextMaintenanceDate = viewModel.Material.NextMaintenanceDate;
+                    existingMaterial.Manufacturer = viewModel.Material.Manufacturer;
+                    existingMaterial.ModelNumber = viewModel.Material.ModelNumber;
+                    existingMaterial.SerialNumber = viewModel.Material.SerialNumber;
+                    existingMaterial.AssetTag = viewModel.Material.AssetTag;
+                    existingMaterial.Specifications = viewModel.Material.Specifications;
+                    
+                    // Update the material
+                    _context.Update(existingMaterial);
+                    
+                    // Check if location has changed
+                    bool locationChanged = activeAssignment == null ||
+                                          activeAssignment.StationCategory != viewModel.SelectedLocationCategory ||
+                                          activeAssignment.Station != viewModel.CurrentLocationId;
+                                          
+                    if (locationChanged)
+                    {
+                        // If there's an active assignment, close it
+                        if (activeAssignment != null)
+                        {
+                            activeAssignment.IsActive = false;
+                            activeAssignment.ReturnDate = DateTime.UtcNow;
+                            _context.Update(activeAssignment);
+                        }
+                        
+                        // Create a new assignment
+                        var newAssignment = new MaterialAssignment
+                        {
+                            MaterialId = existingMaterial.Id,
+                            PayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "Unknown",
+                            AssignmentDate = DateTime.UtcNow,
+                            StationCategory = viewModel.SelectedLocationCategory,
+                            Station = viewModel.CurrentLocationId,
+                            DepartmentId = viewModel.Assignment.DepartmentId,
+                            AssignmentType = AssignmentType.Transfer,
+                            AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                            IsActive = true,
+                            Notes = "Updated location during edit"
+                        };
+                        
+                        _context.MaterialAssignments.Add(newAssignment);
+                        await _context.SaveChangesAsync(); // Save to get the new assignment ID
+                        
+                        // Create a condition record for the transfer
+                        var transferCondition = new MaterialCondition
+                        {
+                            MaterialId = existingMaterial.Id,
+                            MaterialAssignmentId = newAssignment.Id,
+                            ConditionCheckType = ConditionCheckType.Assignment,
+                            Stage = "Transfer",
+                            Condition = existingMaterial.Status,
+                            FunctionalStatus = viewModel.Condition.FunctionalStatus,
+                            CosmeticStatus = viewModel.Condition.CosmeticStatus,
+                            InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                            InspectionDate = DateTime.UtcNow,
+                            Notes = viewModel.Condition.Notes ?? "Location updated during edit"
+                        };
+                        
+                        _context.MaterialConditions.Add(transferCondition);
+                    }
+                    else if (viewModel.Condition != null && 
+                            (viewModel.Condition.FunctionalStatus.HasValue || 
+                             viewModel.Condition.CosmeticStatus.HasValue || 
+                             !string.IsNullOrEmpty(viewModel.Condition.Notes)))
+                    {
+                        // Create a condition record for the update if condition data was provided
+                        var updateCondition = new MaterialCondition
+                        {
+                            MaterialId = existingMaterial.Id,
+                            MaterialAssignmentId = activeAssignment?.Id,
+                            ConditionCheckType = ConditionCheckType.Periodic,
+                            Stage = "Update",
+                            Condition = existingMaterial.Status,
+                            FunctionalStatus = viewModel.Condition.FunctionalStatus,
+                            CosmeticStatus = viewModel.Condition.CosmeticStatus,
+                            InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                            InspectionDate = DateTime.UtcNow,
+                            Notes = viewModel.Condition.Notes ?? "Condition updated during edit"
+                        };
+                        
+                        _context.MaterialConditions.Add(updateCondition);
+                    }
+                    
                     await _context.SaveChangesAsync();
-                    
-                    // Set success message
-                    TempData["SuccessMessage"] = $"Material '{viewModel.Material.Name}' updated successfully.";
-                    
+                    TempData["SuccessMessage"] = "Material updated successfully.";
                     return RedirectToAction(nameof(Index));
                 }
                 catch (DbUpdateConcurrencyException)
@@ -464,17 +629,12 @@ namespace MRIV.Controllers
                         throw;
                     }
                 }
-                catch (Exception ex)
-                {
-                    ModelState.AddModelError("", $"Error updating material: {ex.Message}");
-                }
             }
             
             // If we got this far, something failed, redisplay form
             // Reload dropdown lists
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", viewModel.Material.MaterialCategoryId);
             
-            // Load material subcategories for the selected category
             if (viewModel.Material.MaterialCategoryId > 0)
             {
                 viewModel.MaterialSubcategories = new SelectList(
@@ -484,23 +644,18 @@ namespace MRIV.Controllers
                         .ToListAsync(),
                     "Id", "Name", viewModel.Material.MaterialSubcategoryId);
             }
-            else
-            {
-                viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
-            }
             
             viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", viewModel.Material.VendorId);
             viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
             
-            // Reload departments
-            var departments = await _ktdacontext.Departments.ToListAsync();
-            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Material.DepartmentId);
-            
             if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
             {
                 viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
-                    viewModel.SelectedLocationCategory, viewModel.Material.CurrentLocationId);
+                    viewModel.SelectedLocationCategory, viewModel.CurrentLocationId);
             }
+            
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
             
             return View(viewModel);
         }

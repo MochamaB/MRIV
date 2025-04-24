@@ -29,6 +29,29 @@ namespace MRIV.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MediaFiles",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    FileName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
+                    MimeType = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: false),
+                    FilePath = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    Collection = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: true),
+                    ModelType = table.Column<string>(type: "nvarchar(450)", nullable: false),
+                    ModelId = table.Column<int>(type: "int", nullable: false),
+                    FileSize = table.Column<long>(type: "bigint", nullable: false),
+                    Alt = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CustomProperties = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MediaFiles", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Notifications",
                 columns: table => new
                 {
@@ -63,37 +86,6 @@ namespace MRIV.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_NotificationTemplates", x => x.Id);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "Requisitions",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "int", nullable: false)
-                        .Annotation("SqlServer:Identity", "1, 1"),
-                    TicketId = table.Column<int>(type: "int", nullable: false),
-                    DepartmentId = table.Column<int>(type: "int", nullable: false),
-                    PayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
-                    IssueStationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    IssueStation = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    DeliveryStationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    DeliveryStation = table.Column<string>(type: "nvarchar(max)", nullable: false),
-                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
-                    DispatchType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    DispatchPayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
-                    DispatchVendor = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    CollectorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    CollectorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Status = table.Column<int>(type: "int", nullable: true),
-                    CompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    IsExternal = table.Column<bool>(type: "bit", nullable: true),
-                    ForwardToAdmin = table.Column<bool>(type: "bit", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Requisitions", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
@@ -183,11 +175,21 @@ namespace MRIV.Migrations
                     Code = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
                     Name = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
                     Description = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
-                    StationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
-                    Station = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
-                    DepartmentId = table.Column<int>(type: "int", nullable: true),
-                    CurrentLocationId = table.Column<string>(type: "nvarchar(max)", nullable: true),
                     VendorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    PurchaseDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    PurchasePrice = table.Column<decimal>(type: "decimal(18,2)", nullable: true),
+                    WarrantyStartDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    WarrantyEndDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    WarrantyTerms = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    ExpectedLifespanMonths = table.Column<int>(type: "int", nullable: true),
+                    MaintenanceIntervalMonths = table.Column<int>(type: "int", nullable: true),
+                    LastMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    NextMaintenanceDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    Manufacturer = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ModelNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    SerialNumber = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AssetTag = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    Specifications = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
                     Status = table.Column<int>(type: "int", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false, defaultValueSql: "GETUTCDATE()"),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
@@ -231,12 +233,6 @@ namespace MRIV.Migrations
                 {
                     table.PrimaryKey("PK_Approvals", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_Approvals_Requisitions_RequisitionId",
-                        column: x => x.RequisitionId,
-                        principalTable: "Requisitions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
                         name: "FK_Approvals_WorkflowConfigs_WorkflowConfigId",
                         column: x => x.WorkflowConfigId,
                         principalTable: "WorkflowConfigs",
@@ -245,6 +241,74 @@ namespace MRIV.Migrations
                         name: "FK_Approvals_WorkflowStepConfigs_StepConfigId",
                         column: x => x.StepConfigId,
                         principalTable: "WorkflowStepConfigs",
+                        principalColumn: "Id");
+                });
+
+            migrationBuilder.CreateTable(
+                name: "MaterialAssignments",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    MaterialId = table.Column<int>(type: "int", nullable: false),
+                    PayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    AssignmentDate = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    ReturnDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    StationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Station = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    DepartmentId = table.Column<int>(type: "int", nullable: true),
+                    SpecificLocation = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    AssignmentType = table.Column<int>(type: "int", nullable: false),
+                    RequisitionId = table.Column<int>(type: "int", nullable: true),
+                    AssignedByPayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    IsActive = table.Column<bool>(type: "bit", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MaterialAssignments", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MaterialAssignments_Materials_MaterialId",
+                        column: x => x.MaterialId,
+                        principalTable: "Materials",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "Requisitions",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "int", nullable: false)
+                        .Annotation("SqlServer:Identity", "1, 1"),
+                    TicketId = table.Column<int>(type: "int", nullable: false),
+                    DepartmentId = table.Column<int>(type: "int", nullable: false),
+                    PayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: false),
+                    IssueStationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    IssueStation = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    DeliveryStationCategory = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
+                    DeliveryStation = table.Column<string>(type: "nvarchar(max)", nullable: false),
+                    Remarks = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: false),
+                    DispatchType = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    DispatchPayrollNo = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
+                    DispatchVendor = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    CollectorName = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    CollectorId = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: true),
+                    Status = table.Column<int>(type: "int", nullable: true),
+                    CompleteDate = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    IsExternal = table.Column<bool>(type: "bit", nullable: true),
+                    ForwardToAdmin = table.Column<bool>(type: "bit", nullable: true),
+                    MaterialAssignmentId = table.Column<int>(type: "int", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_Requisitions", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Requisitions_MaterialAssignments_MaterialAssignmentId",
+                        column: x => x.MaterialAssignmentId,
+                        principalTable: "MaterialAssignments",
                         principalColumn: "Id");
                 });
 
@@ -282,46 +346,56 @@ namespace MRIV.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "MaterialCondition",
+                name: "MaterialConditions",
                 columns: table => new
                 {
                     Id = table.Column<int>(type: "int", nullable: false)
                         .Annotation("SqlServer:Identity", "1, 1"),
                     MaterialId = table.Column<int>(type: "int", nullable: true),
-                    RequisitionId = table.Column<int>(type: "int", nullable: false),
+                    MaterialAssignmentId = table.Column<int>(type: "int", nullable: true),
+                    RequisitionId = table.Column<int>(type: "int", nullable: true),
                     RequisitionItemId = table.Column<int>(type: "int", nullable: true),
                     ApprovalId = table.Column<int>(type: "int", nullable: true),
+                    ConditionCheckType = table.Column<int>(type: "int", nullable: false),
                     Stage = table.Column<string>(type: "nvarchar(max)", nullable: false),
                     Condition = table.Column<int>(type: "int", nullable: true),
-                    Notes = table.Column<string>(type: "nvarchar(max)", nullable: true),
-                    InspectedBy = table.Column<string>(type: "nvarchar(max)", nullable: true),
+                    FunctionalStatus = table.Column<int>(type: "int", nullable: true),
+                    CosmeticStatus = table.Column<int>(type: "int", nullable: true),
+                    ComponentStatuses = table.Column<string>(type: "nvarchar(1000)", maxLength: 1000, nullable: true),
+                    Notes = table.Column<string>(type: "nvarchar(500)", maxLength: 500, nullable: true),
+                    InspectedBy = table.Column<string>(type: "nvarchar(20)", maxLength: 20, nullable: true),
                     InspectionDate = table.Column<DateTime>(type: "datetime2", nullable: true),
-                    PhotoUrl = table.Column<string>(type: "nvarchar(max)", nullable: true)
+                    ActionRequired = table.Column<string>(type: "nvarchar(100)", maxLength: 100, nullable: true),
+                    ActionDueDate = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_MaterialCondition", x => x.Id);
+                    table.PrimaryKey("PK_MaterialConditions", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_MaterialCondition_Approvals_ApprovalId",
+                        name: "FK_MaterialConditions_Approvals_ApprovalId",
                         column: x => x.ApprovalId,
                         principalTable: "Approvals",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_MaterialCondition_Materials_MaterialId",
+                        name: "FK_MaterialConditions_MaterialAssignments_MaterialAssignmentId",
+                        column: x => x.MaterialAssignmentId,
+                        principalTable: "MaterialAssignments",
+                        principalColumn: "Id");
+                    table.ForeignKey(
+                        name: "FK_MaterialConditions_Materials_MaterialId",
                         column: x => x.MaterialId,
                         principalTable: "Materials",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_MaterialCondition_RequisitionItems_RequisitionItemId",
+                        name: "FK_MaterialConditions_RequisitionItems_RequisitionItemId",
                         column: x => x.RequisitionItemId,
                         principalTable: "RequisitionItems",
                         principalColumn: "Id");
                     table.ForeignKey(
-                        name: "FK_MaterialCondition_Requisitions_RequisitionId",
+                        name: "FK_MaterialConditions_Requisitions_RequisitionId",
                         column: x => x.RequisitionId,
                         principalTable: "Requisitions",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        principalColumn: "Id");
                 });
 
             migrationBuilder.InsertData(
@@ -351,23 +425,38 @@ namespace MRIV.Migrations
                 column: "WorkflowConfigId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaterialCondition_ApprovalId",
-                table: "MaterialCondition",
-                column: "ApprovalId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_MaterialCondition_MaterialId",
-                table: "MaterialCondition",
+                name: "IX_MaterialAssignments_MaterialId",
+                table: "MaterialAssignments",
                 column: "MaterialId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaterialCondition_RequisitionId",
-                table: "MaterialCondition",
+                name: "IX_MaterialAssignments_RequisitionId",
+                table: "MaterialAssignments",
                 column: "RequisitionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_MaterialCondition_RequisitionItemId",
-                table: "MaterialCondition",
+                name: "IX_MaterialConditions_ApprovalId",
+                table: "MaterialConditions",
+                column: "ApprovalId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaterialConditions_MaterialAssignmentId",
+                table: "MaterialConditions",
+                column: "MaterialAssignmentId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaterialConditions_MaterialId",
+                table: "MaterialConditions",
+                column: "MaterialId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaterialConditions_RequisitionId",
+                table: "MaterialConditions",
+                column: "RequisitionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MaterialConditions_RequisitionItemId",
+                table: "MaterialConditions",
                 column: "RequisitionItemId");
 
             migrationBuilder.CreateIndex(
@@ -386,6 +475,11 @@ namespace MRIV.Migrations
                 column: "MaterialCategoryId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_MediaFiles_ModelType_ModelId",
+                table: "MediaFiles",
+                columns: new[] { "ModelType", "ModelId" });
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RequisitionItems_MaterialId",
                 table: "RequisitionItems",
                 column: "MaterialId");
@@ -396,16 +490,43 @@ namespace MRIV.Migrations
                 column: "RequisitionId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Requisitions_MaterialAssignmentId",
+                table: "Requisitions",
+                column: "MaterialAssignmentId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_WorkflowStepConfigs_WorkflowConfigId",
                 table: "WorkflowStepConfigs",
                 column: "WorkflowConfigId");
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_Approvals_Requisitions_RequisitionId",
+                table: "Approvals",
+                column: "RequisitionId",
+                principalTable: "Requisitions",
+                principalColumn: "Id",
+                onDelete: ReferentialAction.Cascade);
+
+            migrationBuilder.AddForeignKey(
+                name: "FK_MaterialAssignments_Requisitions_RequisitionId",
+                table: "MaterialAssignments",
+                column: "RequisitionId",
+                principalTable: "Requisitions",
+                principalColumn: "Id");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropForeignKey(
+                name: "FK_MaterialAssignments_Requisitions_RequisitionId",
+                table: "MaterialAssignments");
+
             migrationBuilder.DropTable(
-                name: "MaterialCondition");
+                name: "MaterialConditions");
+
+            migrationBuilder.DropTable(
+                name: "MediaFiles");
 
             migrationBuilder.DropTable(
                 name: "Notifications");
@@ -426,13 +547,16 @@ namespace MRIV.Migrations
                 name: "WorkflowStepConfigs");
 
             migrationBuilder.DropTable(
-                name: "Materials");
+                name: "WorkflowConfigs");
 
             migrationBuilder.DropTable(
                 name: "Requisitions");
 
             migrationBuilder.DropTable(
-                name: "WorkflowConfigs");
+                name: "MaterialAssignments");
+
+            migrationBuilder.DropTable(
+                name: "Materials");
 
             migrationBuilder.DropTable(
                 name: "MaterialSubCategories");

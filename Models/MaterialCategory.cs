@@ -1,8 +1,10 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
+using MRIV.Models.Interfaces;
 
 namespace MRIV.Models
 {
-    public class MaterialCategory
+    public class MaterialCategory : IHasMedia
     {
         [Key]
         public int Id { get; set; }
@@ -21,5 +23,8 @@ namespace MRIV.Models
         // Navigation property
         public virtual ICollection<MaterialSubcategory>? Subcategories { get; set; }
         public virtual ICollection<Material>? Materials { get; set; }
+        // Add this property to implement the interface
+        [NotMapped] // If you don't want this in the database table
+        public virtual ICollection<MediaFile> Media { get; set; } = new List<MediaFile>();
     }
 }

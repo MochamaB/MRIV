@@ -1,4 +1,5 @@
-﻿using MRIV.Enums;
+using MRIV.Enums;
+using MRIV.Models;
 
 namespace MRIV.Helpers
 {
@@ -73,6 +74,29 @@ namespace MRIV.Helpers
                 RequisitionItemCondition.Disposed => "badge-secondary",
                 null => "badge-light", // Handle null case (optional)
                 _ => "bg-primary" // Default class
+            };
+        }
+        
+        public static string GetFunctionalStatusBadgeClass(FunctionalStatus status)
+        {
+            return status switch
+            {
+                FunctionalStatus.FullyFunctional => "badge-success",
+                FunctionalStatus.PartiallyFunctional => "badge-warning",
+                FunctionalStatus.NonFunctional => "badge-danger",
+                _ => "badge-secondary" // Default class
+            };
+        }
+        
+        public static string GetCosmeticStatusBadgeClass(CosmeticStatus status)
+        {
+            return status switch
+            {
+                CosmeticStatus.Excellent => "badge-success",
+                CosmeticStatus.Good => "badge-active",
+                CosmeticStatus.Fair => "badge-warning",
+                CosmeticStatus.Poor => "badge-danger",
+                _ => "badge-secondary" // Default class
             };
         }
     }

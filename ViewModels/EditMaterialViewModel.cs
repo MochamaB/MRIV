@@ -9,6 +9,12 @@ namespace MRIV.ViewModels
     {
         // Material properties
         public Material Material { get; set; } = new Material();
+        
+        // Material Assignment properties
+        public MaterialAssignment Assignment { get; set; } = new MaterialAssignment();
+        
+        // Material Condition for recording changes
+        public MaterialCondition Condition { get; set; } = new MaterialCondition();
 
         // Dropdown lists for the form
         public SelectList? MaterialCategories { get; set; }
@@ -18,9 +24,22 @@ namespace MRIV.ViewModels
         public SelectList? Departments { get; set; }
         public SelectList? Vendors { get; set; }
         public SelectList? StatusOptions { get; set; }
+        public SelectList? AssignmentTypeOptions { get; set; }
+        public SelectList? FunctionalStatusOptions { get; set; }
+        public SelectList? CosmeticStatusOptions { get; set; }
 
         // Helper properties for the form
         public string? SelectedLocationCategory { get; set; }
+        
+        // For compatibility with existing views
+        [Display(Name = "Current Location")]
+        public string? CurrentLocationId { get; set; }
+        
+        // Assignment history
+        public IEnumerable<MaterialAssignment>? AssignmentHistory { get; set; }
+        
+        // Condition history
+        public IEnumerable<MaterialCondition>? ConditionHistory { get; set; }
         
         // Constructor to initialize the status options
         public EditMaterialViewModel()
@@ -29,6 +48,27 @@ namespace MRIV.ViewModels
             StatusOptions = new SelectList(
                 Enum.GetValues(typeof(MaterialStatus))
                     .Cast<MaterialStatus>()
+                    .Select(s => new { Value = (int)s, Text = s.ToString() }),
+                "Value", "Text");
+                
+            // Initialize assignment type options
+            AssignmentTypeOptions = new SelectList(
+                Enum.GetValues(typeof(AssignmentType))
+                    .Cast<AssignmentType>()
+                    .Select(s => new { Value = (int)s, Text = s.ToString() }),
+                "Value", "Text");
+                
+            // Initialize functional status options
+            FunctionalStatusOptions = new SelectList(
+                Enum.GetValues(typeof(FunctionalStatus))
+                    .Cast<FunctionalStatus>()
+                    .Select(s => new { Value = (int)s, Text = s.ToString() }),
+                "Value", "Text");
+                
+            // Initialize cosmetic status options
+            CosmeticStatusOptions = new SelectList(
+                Enum.GetValues(typeof(CosmeticStatus))
+                    .Cast<CosmeticStatus>()
                     .Select(s => new { Value = (int)s, Text = s.ToString() }),
                 "Value", "Text");
         }
