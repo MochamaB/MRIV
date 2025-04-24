@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using MRIV.Models;
 using MRIV.Services;
 
@@ -51,10 +51,21 @@ namespace MRIV.Controllers
         {
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             if (string.IsNullOrEmpty(payrollNo))
-                return PartialView("_NotificationDropdown", new List<Notification>());
+                return Json(new List<object>());
 
             var notifications = await _notificationService.GetUserNotificationsAsync(payrollNo, true);
-            return PartialView("_NotificationDropdown", notifications);
+            var notificationData = notifications.Select(n => new
+            {
+                id = n.Id,
+                title = n.Title,
+                message = n.Message,
+                url = n.URL ?? "#",
+                createdAt = n.CreatedAt,
+                notificationType = n.NotificationType,
+                isRead = n.IsRead
+            });
+
+            return Json(notificationData);
         }
     }
 }

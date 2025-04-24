@@ -211,6 +211,11 @@
         });
     </script>
     
+    <!-- Add moment.js before the closing body tag -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+    <!-- Add notifications.js -->
+    <script src="~/js/notifications.js"></script>
+    
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 

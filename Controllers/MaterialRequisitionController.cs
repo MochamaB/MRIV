@@ -1057,29 +1057,41 @@ namespace MRIV.Controllers
                 // Get delivery station information
                 var deliveryStation = requisition.DeliveryStation;
                 var deliveryStationName = deliveryStation ?? "Unknown Location";
-                
+
                 // Create parameters for notification templates
-                var parameters = new Dictionary<string, string>
-                {
-                    { "RequisitionId", requisition.Id.ToString() },
-                    { "Creator", creatorName },
-                    { "Department", departmentName },
-                    { "ItemCount", requisitionItems.Count.ToString() },
-                    { "Date", DateTime.Now.ToString("MMMM dd, yyyy") },
-                    { "DeliveryStation", deliveryStationName },
-                    { "EntityId", requisition.Id.ToString() },
-                    { "EntityType", "Requisition" },
-                    { "URL", Url.Action("Details", "Requisitions", new { id = requisition.Id }, Request.Scheme) }
-                };
-                
-                // 1. Send notification to the creator
-                await _notificationService.CreateNotificationAsync("RequisitionCreated", parameters, creatorPayrollNo);
-                
+                // Base parameters (common to both notifications)
+                  var baseParameters = new Dictionary<string, string>
+                    {
+                        { "RequisitionId", requisition.Id.ToString() },
+                        { "Creator", creatorName },
+                        { "Department", departmentName },
+                        { "ItemCount", requisitionItems.Count.ToString() },
+                        { "Date", DateTime.Now.ToString("MMMM dd, yyyy") },
+                        { "DeliveryStation", deliveryStationName },
+                        { "EntityId", requisition.Id.ToString() },
+                        { "EntityType", "Requisition" }
+                    };
+
+
+                    // 1. Send notification to the creator
+                    var creatorParameters = new Dictionary<string, string>(baseParameters)
+                        {
+                            { "URL", Url.Action("Details", "Requisitions", new { id = requisition.Id }, Request.Scheme) }
+                        };
+                    await _notificationService.CreateNotificationAsync("RequisitionCreated", creatorParameters, creatorPayrollNo);
+
                 // 2. Send notification to the first approver (if available)
                 var firstApprovalStep = approvalSteps.OrderBy(a => a.StepNumber).FirstOrDefault();
                 if (firstApprovalStep != null && !string.IsNullOrEmpty(firstApprovalStep.PayrollNo))
                 {
-                    await _notificationService.CreateNotificationAsync("ApprovalRequested", parameters, firstApprovalStep.PayrollNo);
+                    var approverParameters = new Dictionary<string, string>(baseParameters)
+                    {
+                        // Link to either Approvals Index or specific approval detail
+                        { "URL", Url.Action("Index", "Approvals", null, Request.Scheme) }
+                        // OR if you want to link to a specific approval:
+                        // { "URL", Url.Action("Details", "Approvals", new { id = firstApprovalStep.Id }, Request.Scheme) }
+                    };
+                    await _notificationService.CreateNotificationAsync("ApprovalRequested", approverParameters, firstApprovalStep.PayrollNo);
                 }
             }
             catch (Exception ex)
