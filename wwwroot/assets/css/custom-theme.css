@@ -131,6 +131,9 @@
 .card {
     padding:  1rem;
 }
+.card .cardview {
+    padding:  1rem;
+}
 .card-body {
     padding: 0rem;
 }

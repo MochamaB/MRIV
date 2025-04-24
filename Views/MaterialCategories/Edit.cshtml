@@ -1,41 +1,123 @@
-﻿@model MRIV.Models.MaterialCategory
+@model MRIV.ViewModels.MaterialCategoryViewModel
 
 @{
-    ViewData["Title"] = "Edit";
+    ViewData["Title"] = "Edit Material Category";
 }
 
-<h1>Edit</h1>
-
-<h4>MaterialCategory</h4>
-<hr />
-<div class="row">
-    <div class="col-md-4">
-        <form asp-action="Edit">
+<div class="card">
+    <div class="card-header mb-2">
+        <h5 class="card-title mb-0">Edit Material Category</h5>
+    </div>
+    <div class="card-body cardview">
+        <form asp-action="Edit" method="post" enctype="multipart/form-data">
             <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-            <input type="hidden" asp-for="Id" />
-            <div class="form-group">
-                <label asp-for="Name" class="control-label"></label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="Description" class="control-label"></label>
-                <input asp-for="Description" class="form-control" />
-                <span asp-validation-for="Description" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <label asp-for="UnitOfMeasure" class="control-label"></label>
-                <input asp-for="UnitOfMeasure" class="form-control" />
-                <span asp-validation-for="UnitOfMeasure" class="text-danger"></span>
-            </div>
-            <div class="form-group">
-                <input type="submit" value="Save" class="btn btn-primary" />
+            <input type="hidden" asp-for="Category.Id" />
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label asp-for="Category.Name" class="control-label"></label><span class="requiredlabel">*</span>
+                        <input asp-for="Category.Name" class="form-control" />
+                        <span asp-validation-for="Category.Name" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label asp-for="Category.Description" class="control-label"></label><span class="requiredlabel">*</span>
+                        <input asp-for="Category.Description" class="form-control" />
+                        <span asp-validation-for="Category.Description" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mb-3">
+                        <label asp-for="Category.UnitOfMeasure" class="control-label"></label><span class="requiredlabel">*</span>
+                        <input asp-for="Category.UnitOfMeasure" class="form-control" />
+                        <span asp-validation-for="Category.UnitOfMeasure" class="text-danger"></span>
+                    </div>
+                    <div class="form-group mt-4">
+                        <input type="submit" value="Save" class="btn btn-primary" />
+                        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label class="control-label">Category Image</label>
+                        
+                        @if (Model.ExistingImage != null)
+                        {
+                            <div class="mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Current Image</h5>
+                                        <img src="/@Model.ExistingImage.FilePath" class="img-fluid rounded" style="max-height: 150px;" alt="@Model.ExistingImage.FileName" />
+                                        <p class="card-text mt-2">
+                                            <small class="text-muted">
+                                                @Model.ExistingImage.FileName (@(Model.ExistingImage.FileSize / 1024) KB)
+                                            </small>
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                        
+                        <div class="dropzone" id="imageDropzone">
+                            <div class="dz-message needsclick">
+                                <div class="mb-3">
+                                    <i class="display-4 text-muted ri-upload-cloud-2-line"></i>
+                                </div>
+                                <h5>Drop files here or click to upload.</h5>
+                            </div>
+                        </div>
+                        <small class="text-muted">Upload a new image to replace the current one. If none is provided, the existing image will be kept.</small>
+                    </div>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
-<div>
-    <a asp-action="Index">Back to List</a>
-</div>
-
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <!-- Dropzone js -->
+    <script src="~/assets/libs/dropzone/dropzone-min.js"></script>
+    
+    <script>
+        // Initialize Dropzone
+        Dropzone.autoDiscover = false;
+        
+        var myDropzone = new Dropzone("#imageDropzone", {
+            url: "#", // Will be ignored as we're using form submit
+            autoProcessQueue: false,
+            uploadMultiple: false,
+            maxFiles: 1,
+            acceptedFiles: "image/*,.svg",
+            addRemoveLinks: true,
+            maxFilesize: 2, // MB
+            init: function() {
+                this.on("addedfile", function(file) {
+                    if (this.files.length > 1) {
+                        this.removeFile(this.files[0]);
+                    }
+                });
+            }
+        });
+        
+        // Handle form submission
+        $("form").on("submit", function(e) {
+            if (myDropzone.files.length > 0) {
+                // Create a new file input element
+                var fileInput = $("<input type='file' name='ImageFile' />");
+                
+                // Create a new FormData object
+                var formData = new FormData();
+                
+                // Append the file from Dropzone to the FormData
+                formData.append("ImageFile", myDropzone.files[0]);
+                
+                // Create a new FileList object
+                var dataTransfer = new DataTransfer();
+                dataTransfer.items.add(myDropzone.files[0]);
+                
+                // Create the file input and append it to the form
+                fileInput.prop("files", dataTransfer.files);
+                $(this).append(fileInput);
+            }
+        });
+    </script>
+}

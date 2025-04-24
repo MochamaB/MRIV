@@ -1,7 +1,7 @@
-﻿@model IEnumerable<MRIV.Models.MaterialCategory>
+@model IEnumerable<MRIV.Models.MaterialCategory>
 
 @{
-    ViewData["Title"] = "Index";
+    ViewData["Title"] = "Material Categories";
 }
 <div class="row">
     <div class="col-lg-12">
@@ -37,6 +37,10 @@
                         <!-- Your table headers and content here -->
                         <thead>
                             <tr>
+                                <th></th>
+                                <th style="width: 80px;">
+                                    Icon
+                                </th>
                                 <th>
                                     @Html.DisplayNameFor(model => model.Name)
                                 </th>
@@ -46,13 +50,26 @@
                                 <th>
                                     @Html.DisplayNameFor(model => model.UnitOfMeasure)
                                 </th>
-                                <th></th>
+                                <th style="width: 120px;">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var item in Model)
                             {
                                 <tr>
+                                    <td>
+                                        @Html.DisplayFor(modelItem => item.Id)
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.Media.Any())
+                                        {
+                                            <img src="/@item.Media.First().FilePath" alt="@item.Name" class="rounded" style="height: 50px; width: 50px; object-fit: contain;" />
+                                        }
+                                        else
+                                        {
+                                            <img src="/uploads/defaultmaterialimage.svg" alt="Default" class="rounded" style="height: 40px; width: 40px; object-fit: contain;" />
+                                        }
+                                    </td>
                                     <td>
                                         @Html.DisplayFor(modelItem => item.Name)
                                     </td>
@@ -63,10 +80,9 @@
                                         @Html.DisplayFor(modelItem => item.UnitOfMeasure)
                                     </td>
                                     <td>
-
-                                        <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                                        <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                                        <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                                        <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                                        <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
                                     </td>
                                 </tr>
                             }
@@ -80,5 +96,3 @@
         </div>
     </div>
 </div>
-
-

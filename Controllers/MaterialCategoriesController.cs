@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,9 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Attributes;
 using MRIV.Models;
+using MRIV.Services;
+using MRIV.ViewModels;
+using Microsoft.AspNetCore.Http;
 
 namespace MRIV.Controllers
 {
@@ -14,16 +17,30 @@ namespace MRIV.Controllers
     public class MaterialCategoriesController : Controller
     {
         private readonly RequisitionContext _context;
+        private readonly IMediaService _mediaService;
 
-        public MaterialCategoriesController(RequisitionContext context)
+        public MaterialCategoriesController(RequisitionContext context, IMediaService mediaService)
         {
             _context = context;
+            _mediaService = mediaService;
         }
 
         // GET: MaterialCategories
         public async Task<IActionResult> Index()
         {
-            return View(await _context.MaterialCategories.ToListAsync());
+            var categories = await _context.MaterialCategories.ToListAsync();
+            
+            // Load the first media file for each category
+            foreach (var category in categories)
+            {
+                var media = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", category.Id);
+                if (media != null)
+                {
+                    category.Media.Add(media);
+                }
+            }
+            
+            return View(categories);
         }
 
         // GET: MaterialCategories/Details/5
@@ -41,29 +58,50 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // Load media for this category
+            var media = await _mediaService.GetMediaForModelAsync("MaterialCategory", materialCategory.Id);
+            foreach (var item in media)
+            {
+                materialCategory.Media.Add(item);
+            }
+
             return View(materialCategory);
         }
 
         // GET: MaterialCategories/Create
         public IActionResult Create()
         {
-            return View();
+            var viewModel = new MaterialCategoryViewModel
+            {
+                Category = new MaterialCategory()
+            };
+            
+            return View(viewModel);
         }
 
         // POST: MaterialCategories/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Name,Description,UnitOfMeasure")] MaterialCategory materialCategory)
+        public async Task<IActionResult> Create(MaterialCategoryViewModel viewModel)
         {
             if (ModelState.IsValid)
             {
-                _context.Add(materialCategory);
+                _context.Add(viewModel.Category);
                 await _context.SaveChangesAsync();
+                
+                // Handle image upload if provided
+                if (viewModel.ImageFile != null)
+                {
+                    await _mediaService.SaveMediaFileAsync(
+                        viewModel.ImageFile,
+                        "MaterialCategory",
+                        viewModel.Category.Id,
+                        "images");
+                }
+                
                 return RedirectToAction(nameof(Index));
             }
-            return View(materialCategory);
+            return View(viewModel);
         }
 
         // GET: MaterialCategories/Edit/5
@@ -79,17 +117,22 @@ namespace MRIV.Controllers
             {
                 return NotFound();
             }
-            return View(materialCategory);
+            
+            var viewModel = new MaterialCategoryViewModel
+            {
+                Category = materialCategory,
+                ExistingImage = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", materialCategory.Id)
+            };
+            
+            return View(viewModel);
         }
 
         // POST: MaterialCategories/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,UnitOfMeasure")] MaterialCategory materialCategory)
+        public async Task<IActionResult> Edit(int id, MaterialCategoryViewModel viewModel)
         {
-            if (id != materialCategory.Id)
+            if (id != viewModel.Category.Id)
             {
                 return NotFound();
             }
@@ -98,12 +141,30 @@ namespace MRIV.Controllers
             {
                 try
                 {
-                    _context.Update(materialCategory);
+                    _context.Update(viewModel.Category);
                     await _context.SaveChangesAsync();
+                    
+                    // Handle image upload if provided
+                    if (viewModel.ImageFile != null)
+                    {
+                        // Delete existing image first
+                        var existingMedia = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", viewModel.Category.Id);
+                        if (existingMedia != null)
+                        {
+                            await _mediaService.DeleteMediaFileAsync(existingMedia.Id);
+                        }
+                        
+                        // Save new image
+                        await _mediaService.SaveMediaFileAsync(
+                            viewModel.ImageFile,
+                            "MaterialCategory",
+                            viewModel.Category.Id,
+                            "images");
+                    }
                 }
                 catch (DbUpdateConcurrencyException)
                 {
-                    if (!MaterialCategoryExists(materialCategory.Id))
+                    if (!MaterialCategoryExists(viewModel.Category.Id))
                     {
                         return NotFound();
                     }
@@ -114,7 +175,10 @@ namespace MRIV.Controllers
                 }
                 return RedirectToAction(nameof(Index));
             }
-            return View(materialCategory);
+            
+            // If we got this far, something failed, redisplay form
+            viewModel.ExistingImage = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", viewModel.Category.Id);
+            return View(viewModel);
         }
 
         // GET: MaterialCategories/Delete/5
@@ -132,6 +196,13 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // Load media for this category
+            var media = await _mediaService.GetMediaForModelAsync("MaterialCategory", materialCategory.Id);
+            foreach (var item in media)
+            {
+                materialCategory.Media.Add(item);
+            }
+
             return View(materialCategory);
         }
 
@@ -141,11 +212,19 @@ namespace MRIV.Controllers
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
             var materialCategory = await _context.MaterialCategories.FindAsync(id);
-            if (materialCategory != null)
+            if (materialCategory == null)
             {
-                _context.MaterialCategories.Remove(materialCategory);
+                return NotFound();
             }
-
+            
+            // Delete associated media files
+            var mediaFiles = await _mediaService.GetMediaForModelAsync("MaterialCategory", id);
+            foreach (var mediaFile in mediaFiles)
+            {
+                await _mediaService.DeleteMediaFileAsync(mediaFile.Id);
+            }
+            
+            _context.MaterialCategories.Remove(materialCategory);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
