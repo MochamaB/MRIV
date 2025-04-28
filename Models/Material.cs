@@ -9,6 +9,7 @@ namespace MRIV.Models
 {
     public class Material : IHasMedia
     {
+        // MAIN/MANDATORY DATA /////////////////////
         [Key]
         public int Id { get; set; }
 
@@ -35,6 +36,8 @@ namespace MRIV.Models
         [StringLength(50)]
         [DisplayName("Vendor/Supplier")]
         public string? VendorId { get; set; }
+
+        // ADDITIONAL DATA /////////////////////
 
         // Acquisition data
         [DisplayName("Purchase Date")]

@@ -10,10 +10,9 @@ namespace MRIV.Models
         [Key]
         public int Id { get; set; }
 
-        [Required]
         public int MaterialId { get; set; }
 
-        [Required]
+      
         [StringLength(20)]
         [DisplayName("Assigned To")]
         public string PayrollNo { get; set; }

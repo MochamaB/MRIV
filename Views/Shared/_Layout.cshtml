@@ -100,8 +100,8 @@
     <script src="~/js/Customwizard.js"></script>
     <script src="~/js/Progress.js"></script>
     <script src="~/js/modal-demo.js"></script>
-    <script src="~/js/myscript_new.js"></script>
-    <script src="~/js/notification.js"></script>
+   
+    <script src="~/js/requisitionitems.js"></script>
     <script src="~/assets/js/table-search.js"></script>
     <script src="~/assets/libs/dropzone/dropzone-min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap-table@1.22.5/dist/bootstrap-table.min.js"></script>
@@ -214,9 +214,9 @@
     
     <!-- Add moment.js before the closing body tag -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
-    <!-- Add notifications.js -->
-    <script src="~/js/notifications.js"></script>
+   
     
+    <partial name="_NotificationScripts" />
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 

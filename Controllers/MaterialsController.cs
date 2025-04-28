@@ -23,19 +23,22 @@ namespace MRIV.Controllers
         private readonly VendorService _vendorService;
         private readonly IStationCategoryService _stationCategoryService;
         private readonly IEmployeeService _employeeService;
+        private readonly IMediaService _mediaService;
 
         public MaterialsController(
             RequisitionContext context, 
             VendorService vendorService,
             IStationCategoryService stationCategoryService,
             IEmployeeService employeeService,
-            KtdaleaveContext ktdacontext)
+            KtdaleaveContext ktdacontext,
+            IMediaService mediaService)
         {
             _context = context;
             _vendorService = vendorService;
             _stationCategoryService = stationCategoryService;
             _employeeService = employeeService;
             _ktdacontext = ktdacontext;
+            _mediaService = mediaService;
 
         }
 
@@ -294,6 +297,23 @@ namespace MRIV.Controllers
             return Json(result);
         }
 
+        [HttpGet]
+        public async Task<IActionResult> GetCategoryImage(int categoryId)
+        {
+            if (categoryId <= 0)
+            {
+                return Json("");
+            }
+
+            var categoryImage = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", categoryId);
+            if (categoryImage != null)
+            {
+                return Json("/" + categoryImage.FilePath);
+            }
+
+            return Json("");
+        }
+
         // POST: Materials/Create
         // To protect from overposting attacks, enable the specific properties you want to bind to.
         // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
@@ -301,73 +321,181 @@ namespace MRIV.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CreateMaterialViewModel viewModel)
         {
-            if (ModelState.IsValid)
+            bool isAjaxRequest = Request.Headers["X-Requested-With"] == "XMLHttpRequest";
+
+            try
             {
-                try
+                // Set default values for required fields before validation
+                if (string.IsNullOrEmpty(viewModel.Assignment?.PayrollNo))
                 {
-                    // Generate a unique code if not provided
-                    if (string.IsNullOrEmpty(viewModel.Material.Code))
+                    if (viewModel.Assignment == null)
                     {
-                        // Format: MC-{CategoryId}-{Timestamp}
-                        viewModel.Material.Code = $"MC-{viewModel.Material.MaterialCategoryId}-{DateTime.Now.ToString("yyyyMMddHHmmss")}";
+                        viewModel.Assignment = new MaterialAssignment();
                     }
+                    viewModel.Assignment.PayrollNo = "NotAssigned";
                     
-                    // Save the material to the database
-                    _context.Add(viewModel.Material);
-                    await _context.SaveChangesAsync();
-                    
-                    // Create a new MaterialAssignment
-                    var assignment = new MaterialAssignment
-                    {
-                        MaterialId = viewModel.Material.Id,
-                        PayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "Unknown",
-                        AssignmentDate = DateTime.UtcNow,
-                        StationCategory = viewModel.SelectedLocationCategory,
-                        Station = viewModel.CurrentLocationId,
-                        DepartmentId = viewModel.Assignment.DepartmentId,
-                        AssignmentType = AssignmentType.New,
-                        AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
-                        IsActive = true,
-                        Notes = "Initial assignment at creation"
-                    };
-                    
-                    _context.MaterialAssignments.Add(assignment);
-                    await _context.SaveChangesAsync();
-                    
-                    // Create initial condition record
-                    var condition = new MaterialCondition
-                    {
-                        MaterialId = viewModel.Material.Id,
-                        MaterialAssignmentId = assignment.Id,
-                        ConditionCheckType = ConditionCheckType.Initial,
-                        Stage = "Creation",
-                        Condition = viewModel.Material.Status,
-                        FunctionalStatus = FunctionalStatus.FullyFunctional,
-                        CosmeticStatus = CosmeticStatus.Excellent,
-                        InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
-                        InspectionDate = DateTime.UtcNow,
-                        Notes = "Initial condition at creation"
-                    };
-                    
-                    _context.MaterialConditions.Add(condition);
-                    await _context.SaveChangesAsync();
-                    
-                    // Set success message
-                    TempData["SuccessMessage"] = $"Material '{viewModel.Material.Name}' created successfully.";
-                    
-                    return RedirectToAction(nameof(Index));
+                    // Clear any validation errors for this field
+                    ModelState.Remove("Assignment.PayrollNo");
                 }
-                catch (Exception ex)
+
+                // Log the model state for debugging
+                if (!ModelState.IsValid)
                 {
-                    ModelState.AddModelError("", $"Error creating material: {ex.Message}");
+                    // Log validation errors
+                    var errors = ModelState
+                        .Where(x => x.Value.Errors.Count > 0)
+                        .Select(x => new { 
+                            Key = x.Key, 
+                            Errors = x.Value.Errors.Select(e => e.ErrorMessage).ToList() 
+                        })
+                        .ToList();
+                    
+                    Console.WriteLine($"Model validation failed with {errors.Count} error(s):");
+                    foreach (var error in errors)
+                    {
+                        Console.WriteLine($"- {error.Key}: {string.Join(", ", error.Errors)}");
+                    }
+                }
+
+                if (ModelState.IsValid)
+                {
+                    try
+                    {
+                        // Generate a unique code if not provided
+                        if (string.IsNullOrEmpty(viewModel.Material.Code))
+                        {
+                            // Format: MC-{CategoryId}-{Timestamp}
+                            viewModel.Material.Code = $"MC-{viewModel.Material.MaterialCategoryId}-{DateTime.Now:yyyyMMddHHmmss}";
+                        }
+
+                        // Set creation timestamp
+                        viewModel.Material.CreatedAt = DateTime.UtcNow;
+
+                        // Save the material to the database
+                        _context.Add(viewModel.Material);
+                        await _context.SaveChangesAsync();
+
+                        // Restore image handling
+                        // Handle main image upload if provided
+                        if (viewModel.ImageFile != null && viewModel.ImageFile.Length > 0)
+                        {
+                            await _mediaService.SaveMediaFileAsync(
+                                viewModel.ImageFile,
+                                "Material",
+                                viewModel.Material.Id,
+                                "main");
+                        }
+
+                        // Handle gallery images if provided
+                        if (viewModel.GalleryFiles != null && viewModel.GalleryFiles.Any())
+                        {
+                            foreach (var galleryFile in viewModel.GalleryFiles)
+                            {
+                                if (galleryFile != null && galleryFile.Length > 0)
+                                {
+                                    await _mediaService.SaveMediaFileAsync(
+                                        galleryFile,
+                                        "Material",
+                                        viewModel.Material.Id,
+                                        "gallery");
+                                }
+                            }
+                        }
+
+                        // Create a new MaterialAssignment
+                        var assignment = new MaterialAssignment
+                        {
+                            MaterialId = viewModel.Material.Id,
+                            PayrollNo = string.IsNullOrEmpty(viewModel.Assignment?.PayrollNo) ? "NotAssigned" : viewModel.Assignment.PayrollNo,
+                            AssignmentDate = DateTime.UtcNow,
+                            StationCategory = viewModel.SelectedLocationCategory,
+                            Station = viewModel.CurrentLocationId,
+                            DepartmentId = viewModel.Assignment?.DepartmentId ?? 0,
+                            AssignmentType = viewModel.Assignment?.AssignmentType ?? AssignmentType.New,
+                            AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System",
+                            IsActive = true,
+                            Notes = viewModel.Assignment?.Notes ?? "Initial assignment at creation"
+                        };
+
+                        _context.MaterialAssignments.Add(assignment);
+                        await _context.SaveChangesAsync(); // Save to get the new assignment ID
+                        
+                        // Create initial condition record
+                        var condition = new MaterialCondition
+                        {
+                            MaterialId = viewModel.Material.Id,
+                            MaterialAssignmentId = assignment.Id,
+                            ConditionCheckType = ConditionCheckType.Initial,
+                            Stage = "Creation",
+                            Condition = viewModel.Material.Status,
+                            FunctionalStatus = FunctionalStatus.FullyFunctional,
+                            CosmeticStatus = CosmeticStatus.Excellent,
+                            InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                            InspectionDate = DateTime.UtcNow,
+                            Notes = "Initial condition at creation"
+                        };
+
+                        _context.MaterialConditions.Add(condition);
+                        await _context.SaveChangesAsync();
+
+                        // Set success message
+                        TempData["SuccessMessage"] = $"Material '{viewModel.Material.Name}' created successfully.";
+
+                        // Return different responses based on request type
+                        if (isAjaxRequest)
+                        {
+                            return Json(new { success = true, redirectUrl = Url.Action("Index") });
+                        }
+
+                        return RedirectToAction(nameof(Index));
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error creating material: {ex.Message}");
+                        Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                        
+                        if (ex.InnerException != null)
+                        {
+                            Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                        }
+                        
+                        ModelState.AddModelError("", $"Error creating material: {ex.Message}");
+                    }
                 }
             }
-            
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Unexpected error in Create action: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                ModelState.AddModelError("", $"Unexpected error: {ex.Message}");
+            }
+
             // If we got this far, something failed, redisplay form
             // Reload dropdown lists
+            await ReloadFormData(viewModel);
+
+            // Check if AJAX request
+            if (isAjaxRequest)
+            {
+                // Return detailed validation errors for debugging
+                var errors = ModelState
+                    .Where(x => x.Value.Errors.Count > 0)
+                    .ToDictionary(
+                        x => x.Key,
+                        x => x.Value.Errors.Select(e => e.ErrorMessage).ToList()
+                    );
+                
+                return BadRequest(errors);
+            }
+
+            return View(viewModel);
+        }
+
+        // Helper method to reload form data
+        private async Task ReloadFormData(CreateMaterialViewModel viewModel)
+        {
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name", viewModel.Material.MaterialCategoryId);
-            
-            // Load material subcategories for the selected category
+
             if (viewModel.Material.MaterialCategoryId > 0)
             {
                 viewModel.MaterialSubcategories = new SelectList(
@@ -381,21 +509,18 @@ namespace MRIV.Controllers
             {
                 viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
             }
-            
+
             viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name", viewModel.Material.VendorId);
             viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
-            
-            // Reload departments
-            var departments = await _ktdacontext.Departments.ToListAsync();
-            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
-            
+
             if (!string.IsNullOrEmpty(viewModel.SelectedLocationCategory))
             {
                 viewModel.LocationOptions = await _stationCategoryService.GetLocationsForCategoryAsync(
                     viewModel.SelectedLocationCategory, viewModel.CurrentLocationId);
             }
-            
-            return View(viewModel);
+
+            var departments = await _ktdacontext.Departments.ToListAsync();
+            viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
         }
 
         // GET: Materials/Edit/5
@@ -566,7 +691,7 @@ namespace MRIV.Controllers
                             Station = viewModel.CurrentLocationId,
                             DepartmentId = viewModel.Assignment.DepartmentId,
                             AssignmentType = AssignmentType.Transfer,
-                            AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                            AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System",
                             IsActive = true,
                             Notes = "Updated location during edit"
                         };

@@ -2,6 +2,8 @@ using Microsoft.AspNetCore.Mvc.Rendering;
 using MRIV.Enums;
 using MRIV.Models;
 using System.ComponentModel.DataAnnotations;
+using Microsoft.AspNetCore.Http;
+using System.Collections.Generic;
 
 namespace MRIV.ViewModels
 {
@@ -30,6 +32,16 @@ namespace MRIV.ViewModels
         [Display(Name = "Current Location")]
         public string? CurrentLocationId { get; set; }
         
+        // For image uploads
+        public IFormFile? ImageFile { get; set; }
+        
+        // For gallery images
+        public List<IFormFile>? GalleryFiles { get; set; }
+        
+        // For displaying existing media
+        public MediaFile? ExistingImage { get; set; }
+        public List<MediaFile>? GalleryImages { get; set; }
+        
         // Constructor to initialize the status options
         public CreateMaterialViewModel()
         {
@@ -49,6 +61,10 @@ namespace MRIV.ViewModels
                 
             // Set default assignment type
             Assignment.AssignmentType = AssignmentType.New;
+            
+            // Initialize gallery images list
+            GalleryImages = new List<MediaFile>();
+            GalleryFiles = new List<IFormFile>();
         }
     }
 }
