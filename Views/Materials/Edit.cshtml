@@ -6,393 +6,468 @@
     ViewData["Title"] = "Edit Material";
 }
 
-<div class="row">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header border-bottom-dashed">
-                <div class="d-flex align-items-center">
-                    <h5 class="card-title mb-0 flex-grow-1">Edit Material</h5>
-                    <div class="flex-shrink-0">
-                        <a asp-action="Index" class="btn btn-light">
-                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
-                        </a>
+<form asp-action="Edit" asp-controller="Materials" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input type="hidden" asp-for="Material.Id" />
+    <input type="hidden" asp-for="Condition.ConditionCheckType" value="Periodic" />
+    <input type="hidden" asp-for="Condition.Stage" value="Update" />
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success">
+            @TempData["SuccessMessage"]
+        </div>
+    }
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="Material_Name">Material Name</label><span class="requiredlabel">*</span>
+                        <input asp-for="Material.Name" type="text" class="form-control" id="Material_Name" placeholder="Enter material name">
+                        <span asp-validation-for="Material.Name" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="Material_Description">Description</label><span class="requiredlabel">*</span>
+                        <textarea asp-for="Material.Description" class="form-control" id="Material_Description" rows="3" placeholder="Enter material description"></textarea>
+                        <span asp-validation-for="Material.Description" class="text-danger"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-lg-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="Material_MaterialCategoryId">Category</label><span class="requiredlabel">*</span>
+                                <select asp-for="Material.MaterialCategoryId" class="form-select" id="Material_MaterialCategoryId" asp-items="Model.MaterialCategories">
+                                    <option value="">Select Material Category</option>
+                                </select>
+                                <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-lg-6">
+                            <div class="mb-3">
+                                <label class="form-label" for="Material_MaterialSubcategoryId">Subcategory</label><span class="requiredlabel">*</span>
+                                <select asp-for="Material.MaterialSubcategoryId" class="form-select" id="Material_MaterialSubcategoryId" asp-items="Model.MaterialSubcategories">
+                                    <option value="">Select Material Subcategory</option>
+                                </select>
+                                <span asp-validation-for="Material.MaterialSubcategoryId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Material Code / Serial Number</label><span class="requiredlabel">*</span>
+                        <div class="input-group">
+                            <input type="text" asp-for="Material.Code" name="Material.Code" class="form-control materialCode" data-index="" placeholder="Enter code or click generate">
+                            <button type="button" class="btn btn-primary generateCodeBtn" data-index="">
+                                <i class="ri-refresh-line align-bottom me-1"></i> Generate Code
+                            </button>
+                        </div>
+                        <span asp-validation-for="Material.Code" class="text-danger"></span>
                     </div>
                 </div>
             </div>
-            <div class="card-body">
-                <form asp-action="Edit" method="post">
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
-                    <input type="hidden" asp-for="Material.Id" />
-                    
-                    @if (TempData["SuccessMessage"] != null)
-                    {
-                        <div class="alert alert-success">
-                            @TempData["SuccessMessage"]
-                        </div>
-                    }
-                    
+            <!-- end card -->
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Location & Assignment</h5>
+                </div>
+                <div class="card-body">
                     <div class="row">
-                        <!-- Basic Material Information -->
                         <div class="col-md-6">
-                            <div class="card border">
-                                <div class="card-header bg-soft-light">
-                                    <h5 class="card-title mb-0">Basic Information</h5>
+                            <div class="mb-3">
+                                <label class="form-label">Location Category</label><span class="requiredlabel">*</span>
+                                <select asp-for="SelectedLocationCategory" class="form-select" asp-items="Model.StationCategories">
+                                    <option value="">Select Location Category</option>
+                                </select>
+                                <span class="text-danger location-category-error"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Current Location</label><span class="requiredlabel">*</span>
+                                <select asp-for="CurrentLocationId" class="form-select" asp-items="Model.LocationOptions">
+                                    <option value="">Select Location</option>
+                                </select>
+                                <span asp-validation-for="CurrentLocationId" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Assignment.DepartmentId" class="form-label">Department</label><span class="requiredlabel">*</span>
+                                <select asp-for="Assignment.DepartmentId" class="form-select" asp-items="Model.Departments">
+                                    <option value="">Select Department</option>
+                                </select>
+                                <span asp-validation-for="Assignment.DepartmentId" class="text-danger"></span>
+                                <small class="form-text text-muted">For head office materials, this will be synchronized with the current location.</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="Assignment.AssignmentType" class="form-label">Assignment Type</label>
+                                <select asp-for="Assignment.AssignmentType" class="form-select" asp-items="Html.GetEnumSelectList<MRIV.Models.AssignmentType>()">
+                                    <option value="">Select Assignment Type</option>
+                                </select>
+                                <span asp-validation-for="Assignment.AssignmentType" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Assignment.Notes" class="form-label">Assignment Notes</label>
+                        <textarea asp-for="Assignment.Notes" class="form-control" rows="2" placeholder="Enter any notes about this assignment..."></textarea>
+                        <span asp-validation-for="Assignment.Notes" class="text-danger"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Assignment.PayrollNo" class="form-label">Assigned To</label>
+                        <input asp-for="Assignment.PayrollNo" class="form-control" placeholder="Enter payroll number of assignee" />
+                        <span asp-validation-for="Assignment.PayrollNo" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            <!-- end card -->
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Material Image</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <h5 class="fs-14 mb-1">Material Image</h5>
+                        <p class="text-muted">Add material image. If none is provided, the category image will be used.</p>
+                        <div class="text-center">
+                            <div class="position-relative d-inline-block">
+                                <div class="position-absolute top-100 start-100 translate-middle">
+                                    <label for="material-image-input" class="mb-0" data-bs-toggle="tooltip" data-bs-placement="right" title="Select Image">
+                                        <div class="avatar-xs">
+                                            <div class="avatar-title bg-light border rounded-circle text-muted cursor-pointer">
+                                                <i class="ri-image-fill"></i>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <input class="form-control d-none" id="material-image-input" type="file" name="ImageFile" accept="image/png, image/gif, image/jpeg">
                                 </div>
-                                <div class="card-body">
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.MaterialCategoryId" class="control-label">Material Category</label><span class="requiredlabel">*</span>
-                                        <select asp-for="Material.MaterialCategoryId" class="form-select" asp-items="Model.MaterialCategories">
-                                            <option value="">Select Material Category</option>
-                                        </select>
-                                        <span asp-validation-for="Material.MaterialCategoryId" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.MaterialSubcategoryId" class="control-label">Material Subcategory</label>
-                                        <select asp-for="Material.MaterialSubcategoryId" class="form-select" asp-items="Model.MaterialSubcategories">
-                                            <option value="">Select Material Subcategory</option>
-                                        </select>
-                                        <span asp-validation-for="Material.MaterialSubcategoryId" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.Code" class="control-label">Code / SNo</label><span class="requiredlabel">*</span>
-                                        <input asp-for="Material.Code" class="form-control" readonly />
-                                        <span asp-validation-for="Material.Code" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.Name" class="control-label">Material Name</label><span class="requiredlabel">*</span>
-                                        <input asp-for="Material.Name" class="form-control" />
-                                        <span asp-validation-for="Material.Name" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.Description" class="control-label"></label><span class="requiredlabel">*</span>
-                                        <textarea asp-for="Material.Description" class="auto-resize-textarea form-control" rows="2" placeholder="Enter Description..."></textarea>
-                                        <span asp-validation-for="Material.Description" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Material.Status" class="control-label"></label>
-                                        <select asp-for="Material.Status" class="form-select" asp-items="Model.StatusOptions"></select>
-                                        <span asp-validation-for="Material.Status" class="text-danger"></span>
+                                <div class="avatar-lg">
+                                    <div class="avatar-title bg-light rounded">
+                                        @if (Model.ExistingMainImage != null)
+                                        {
+                                            <img src="/@Model.ExistingMainImage.FilePath" id="material-img" class="avatar-md h-auto" />
+                                        }
+                                        else
+                                        {
+                                            <img src="" id="material-img" class="avatar-md h-auto" />
+                                        }
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h5 class="fs-14 mb-1">Material Gallery</h5>
+                        <p class="text-muted">Add material gallery images.</p>
+
+                        <div class="dropzone" id="galleryDropzone">
+                            <div class="fallback">
+                                <input name="GalleryFiles" type="file" multiple="multiple">
+                            </div>
+                            <div class="dz-message needsclick">
+                                <div class="mb-3">
+                                    <i class="display-4 text-muted ri-upload-cloud-2-fill"></i>
+                                </div>
+                                <h5>Drop files here or click to upload.</h5>
                             </div>
                         </div>
                         
-                        <!-- Location & Assignment Information -->
-                        <div class="col-md-6">
-                            <div class="card border">
-                                <div class="card-header bg-soft-light">
-                                    <h5 class="card-title mb-0">Location & Assignment</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="form-group mb-3">
-                                        <label class="control-label">Location Category</label><span class="requiredlabel">*</span>
-                                        <select asp-for="SelectedLocationCategory" class="form-select" asp-items="Model.StationCategories">
-                                            <option value="">Select Location Category</option>
-                                        </select>
-                                        <span class="text-danger location-category-error"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label class="control-label">Current Location</label><span class="requiredlabel">*</span>
-                                        <select asp-for="CurrentLocationId" class="form-select" asp-items="Model.LocationOptions">
-                                            <option value="">Select Location</option>
-                                        </select>
-                                        <span asp-validation-for="CurrentLocationId" class="text-danger"></span>
-                                    </div>
-                                    
-                                    <div class="form-group mb-3">
-                                        <label asp-for="Assignment.DepartmentId" class="control-label">Department</label><span class="requiredlabel">*</span>
-                                        <select asp-for="Assignment.DepartmentId" class="form-select" asp-items="Model.Departments">
-                                            <option value="">Select Department</option>
-                                        </select>
-                                        <span asp-validation-for="Assignment.DepartmentId" class="text-danger"></span>
-                                        <small class="form-text text-muted">For head office materials, this will be synchronized with the current location.</small>
-                                    </div>
-                                    
-                                    @if (Model.AssignmentHistory != null && Model.AssignmentHistory.Any())
+                        @if (Model.ExistingGalleryImages != null && Model.ExistingGalleryImages.Any())
+                        {
+                            <div class="mt-3">
+                                <h6 class="fs-14 mb-2">Existing Gallery Images</h6>
+                                <div class="row g-3">
+                                    @foreach (var image in Model.ExistingGalleryImages)
                                     {
-                                        <div class="form-group mb-3">
-                                            <label class="control-label">Assignment History</label>
-                                            <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Date</th>
-                                                            <th>Location</th>
-                                                            <th>Type</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var assignment in Model.AssignmentHistory.Take(3))
-                                                        {
-                                                            <tr>
-                                                                <td>@assignment.AssignmentDate.ToString("yyyy-MM-dd")</td>
-                                                                <td>@assignment.Station</td>
-                                                                <td>@EnumHelper.GetEnumDescription(assignment.AssignmentType)</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
+                                        <div class="col-md-4 col-sm-6">
+                                            <div class="card mb-2">
+                                                <img src="/@image.FilePath" class="card-img-top img-fluid" alt="@image.FileName">
+                                                <div class="card-body p-2">
+                                                    <p class="card-text small text-muted">@image.FileName (@(image.FileSize / 1024) KB)</p>
+                                                </div>
                                             </div>
                                         </div>
                                     }
                                 </div>
                             </div>
+                        }
+                        
+                        <small class="text-muted mt-2 d-block">Upload images for this material. Maximum 5 images, 2MB each.</small>
+                    </div>
+                </div>
+            </div>
+            <!-- end card -->
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Purchase Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Material.VendorId" class="form-label">Vendor/Supplier</label>
+                        <select asp-for="Material.VendorId" class="form-select" asp-items="Model.Vendors">
+                            <option value="">Select Vendor/Supplier</option>
+                        </select>
+                        <span asp-validation-for="Material.VendorId" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.PurchaseDate" class="form-label">Purchase Date</label>
+                        <input asp-for="Material.PurchaseDate" class="form-control" type="date" />
+                        <span asp-validation-for="Material.PurchaseDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.PurchasePrice" class="form-label">Purchase Price</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="Material.PurchasePrice" type="number" class="form-control" placeholder="0.00" />
+                        </div>
+                        <span asp-validation-for="Material.PurchasePrice" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Product Details</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Material.Manufacturer" class="form-label">Manufacturer</label>
+                        <input asp-for="Material.Manufacturer" class="form-control" placeholder="Enter manufacturer name" />
+                        <span asp-validation-for="Material.Manufacturer" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.ModelNumber" class="form-label">Model Number</label>
+                        <input asp-for="Material.ModelNumber" class="form-control" placeholder="Enter model number" />
+                        <span asp-validation-for="Material.ModelNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.SerialNumber" class="form-label">Serial Number</label>
+                        <input asp-for="Material.SerialNumber" class="form-control" placeholder="Enter serial number" />
+                        <span asp-validation-for="Material.SerialNumber" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.AssetTag" class="form-label">Asset Tag</label>
+                        <input asp-for="Material.AssetTag" class="form-control" placeholder="Enter asset tag" />
+                        <span asp-validation-for="Material.AssetTag" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.Status" class="form-label">Status</label>
+                        <select asp-for="Material.Status" class="form-select" asp-items="Model.StatusOptions"></select>
+                        <span asp-validation-for="Material.Status" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.Specifications" class="form-label">Specifications</label>
+                        <textarea asp-for="Material.Specifications" class="form-control" rows="3" placeholder="Enter material specifications..."></textarea>
+                        <span asp-validation-for="Material.Specifications" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Warranty Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Material.WarrantyStartDate" class="form-label">Warranty Start Date</label>
+                        <input asp-for="Material.WarrantyStartDate" class="form-control" type="date" />
+                        <span asp-validation-for="Material.WarrantyStartDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.WarrantyEndDate" class="form-label">Warranty End Date</label>
+                        <input asp-for="Material.WarrantyEndDate" class="form-control" type="date" />
+                        <span asp-validation-for="Material.WarrantyEndDate" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.WarrantyTerms" class="form-label">Warranty Terms</label>
+                        <textarea asp-for="Material.WarrantyTerms" class="form-control" rows="2" placeholder="Enter warranty terms..."></textarea>
+                        <span asp-validation-for="Material.WarrantyTerms" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Maintenance Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="Material.ExpectedLifespanMonths" class="form-label">Expected Lifespan (months)</label>
+                        <input asp-for="Material.ExpectedLifespanMonths" type="number" class="form-control" placeholder="Enter expected lifespan in months" />
+                        <span asp-validation-for="Material.ExpectedLifespanMonths" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.MaintenanceIntervalMonths" class="form-label">Maintenance Interval (months)</label>
+                        <input asp-for="Material.MaintenanceIntervalMonths" type="number" class="form-control" placeholder="Enter maintenance interval in months" />
+                        <span asp-validation-for="Material.MaintenanceIntervalMonths" class="text-danger"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Material.LastMaintenanceDate" class="form-label">Last Maintenance Date</label>
+                        <input asp-for="Material.LastMaintenanceDate" class="form-control" type="date" />
+                        <span asp-validation-for="Material.LastMaintenanceDate" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+        <!-- end col -->
+    </div>
+    <!-- end row -->
+
+    <div class="row mt-2">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <button type="submit" class="btn btn-primary">Edit Material</button>
+                            <a asp-action="Index" class="btn btn-secondary">Cancel</a>
                         </div>
                     </div>
-                    
-                    <!-- Condition Information -->
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <div class="card border">
-                                <div class="card-header bg-soft-light">
-                                    <h5 class="card-title mb-0">Condition Assessment</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Condition.FunctionalStatus" class="control-label">Functional Status</label>
-                                                <select asp-for="Condition.FunctionalStatus" class="form-select" asp-items="Html.GetEnumSelectList<MRIV.Models.FunctionalStatus>()">
-                                                    <option value="">Select Functional Status</option>
-                                                </select>
-                                                <span asp-validation-for="Condition.FunctionalStatus" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Condition.CosmeticStatus" class="control-label">Cosmetic Status</label>
-                                                <select asp-for="Condition.CosmeticStatus" class="form-select" asp-items="Html.GetEnumSelectList<MRIV.Models.CosmeticStatus>()">
-                                                    <option value="">Select Cosmetic Status</option>
-                                                </select>
-                                                <span asp-validation-for="Condition.CosmeticStatus" class="text-danger"></span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Condition.Notes" class="control-label">Condition Notes</label>
-                                                <textarea asp-for="Condition.Notes" class="form-control" rows="4" placeholder="Enter any notes about the current condition..."></textarea>
-                                                <span asp-validation-for="Condition.Notes" class="text-danger"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    
-                                    @if (Model.ConditionHistory != null && Model.ConditionHistory.Any())
-                                    {
-                                        <div class="form-group mt-3">
-                                            <label class="control-label">Condition History</label>
-                                            <div class="table-responsive">
-                                                <table class="table table-sm table-bordered">
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Date</th>
-                                                            <th>Check Type</th>
-                                                            <th>Condition</th>
-                                                            <th>Notes</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        @foreach (var condition in Model.ConditionHistory.Take(3))
-                                                        {
-                                                            <tr>
-                                                                <td> @(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not inspected")</td>
-                                                                <td>@EnumHelper.GetEnumDescription(condition.ConditionCheckType)</td>
-                                                                <td>
-                                                                    <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(condition.Condition)">
-                                                                        @EnumHelper.GetEnumDescription(condition.Condition)
-                                                                    </span>
-                                                                </td>
-                                                                <td>@(condition.Notes?.Length > 30 ? condition.Notes.Substring(0, 30) + "..." : condition.Notes)</td>
-                                                            </tr>
-                                                        }
-                                                    </tbody>
-                                                </table>
-                                            </div>
-                                        </div>
-                                    }
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Additional Information -->
-                    <div class="row mt-4">
-                        <div class="col-md-12">
-                            <div class="card border">
-                                <div class="card-header bg-soft-light">
-                                    <h5 class="card-title mb-0">Additional Information</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.VendorId" class="control-label">Vendor/Supplier</label>
-                                                <select asp-for="Material.VendorId" class="form-select" asp-items="Model.Vendors">
-                                                    <option value="">Select Vendor/Supplier</option>
-                                                </select>
-                                                <span asp-validation-for="Material.VendorId" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.Manufacturer" class="control-label">Manufacturer</label>
-                                                <input asp-for="Material.Manufacturer" class="form-control" />
-                                                <span asp-validation-for="Material.Manufacturer" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.ModelNumber" class="control-label">Model Number</label>
-                                                <input asp-for="Material.ModelNumber" class="form-control" />
-                                                <span asp-validation-for="Material.ModelNumber" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.SerialNumber" class="control-label">Serial Number</label>
-                                                <input asp-for="Material.SerialNumber" class="form-control" />
-                                                <span asp-validation-for="Material.SerialNumber" class="text-danger"></span>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-6">
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.AssetTag" class="control-label">Asset Tag</label>
-                                                <input asp-for="Material.AssetTag" class="form-control" />
-                                                <span asp-validation-for="Material.AssetTag" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.PurchaseDate" class="control-label">Purchase Date</label>
-                                                <input asp-for="Material.PurchaseDate" class="form-control" type="date" />
-                                                <span asp-validation-for="Material.PurchaseDate" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.PurchasePrice" class="control-label">Purchase Price</label>
-                                                <input asp-for="Material.PurchasePrice" class="form-control" type="number" step="0.01" />
-                                                <span asp-validation-for="Material.PurchasePrice" class="text-danger"></span>
-                                            </div>
-                                            
-                                            <div class="form-group mb-3">
-                                                <label asp-for="Material.ExpectedLifespanMonths" class="control-label">Expected Lifespan (months)</label>
-                                                <input asp-for="Material.ExpectedLifespanMonths" class="form-control" type="number" />
-                                                <span asp-validation-for="Material.ExpectedLifespanMonths" class="text-danger"></span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="form-group mt-4">
-                        <button type="submit" class="btn btn-primary">
-                            <i class="ri-save-line align-bottom me-1"></i> Save Changes
-                        </button>
-                        <a asp-action="Index" class="btn btn-light">Cancel</a>
-                    </div>
-                </form>
+
+                </div>
             </div>
         </div>
     </div>
-</div>
+</form>
+
 
 @section Scripts {
-    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
-    
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <!-- Dropzone js -->
+    <script src="~/assets/libs/dropzone/dropzone-min.js"></script>
+
     <script>
         $(document).ready(function() {
             // Handle material category change
             $('#Material_MaterialCategoryId').change(function() {
                 var categoryId = $(this).val();
-                var subcategoriesDropdown = $('#Material_MaterialSubcategoryId');
-                
-                // Clear the subcategories dropdown
-                subcategoriesDropdown.empty();
-                subcategoriesDropdown.append($('<option></option>').val('').text('Select Material Subcategory'));
-                
+                var subcategoryDropdown = $('#Material_MaterialSubcategoryId');
+
+                // Clear subcategory dropdown
+                subcategoryDropdown.empty();
+                subcategoryDropdown.append($('<option></option>').val('').text('Select Material Subcategory'));
+
                 if (categoryId) {
-                    // Get subcategories for the selected category
+                    // Load subcategories for the selected category
                     $.ajax({
                         url: '/Materials/GetSubcategoriesForCategory',
                         type: 'GET',
                         data: { categoryId: categoryId },
                         success: function(data) {
-                            // Add options from the server
-                            $.each(data, function(i, item) {
-                                subcategoriesDropdown.append($('<option></option>').val(item.value).text(item.text));
+                            // Populate subcategory dropdown
+                            $.each(data, function(index, item) {
+                                subcategoryDropdown.append($('<option></option>').val(item.value).text(item.text));
                             });
-                        },
-                        error: function() {
-                            console.error('Error loading subcategories');
+                        }
+                    });
+
+                    // Load category image if available
+                    $.ajax({
+                        url: '/Materials/GetCategoryImage',
+                        type: 'GET',
+                        data: { categoryId: categoryId },
+                        success: function(data) {
+                            if (data && data.length > 0) {
+                                // Set the category image as the default material image
+                                $('#material-img').attr('src', data);
+                                $('#material-img').data('category-image', data);
+                            } else {
+                                // Clear the image if no category image is available
+                                $('#material-img').attr('src', '');
+                                $('#material-img').data('category-image', '');
+                            }
                         }
                     });
                 }
             });
-            
-            // Function to handle department synchronization based on location category
-            function handleLocationCategoryChange() {
-                var categoryCode = $('#SelectedLocationCategory').val();
-                var isHeadOffice = categoryCode && categoryCode.toLowerCase() === 'headoffice';
+
+            // Handle station category change
+            $('#SelectedLocationCategory').change(function() {
+                var categoryCode = $(this).val();
+                var locationsDropdown = $('#CurrentLocationId');
                 
-                // If headoffice is selected, we'll sync department with location later
-                // Otherwise, enable the department dropdown for manual selection
-                $('#Assignment_DepartmentId').prop('disabled', isHeadOffice);
+                // Clear locations dropdown
+                locationsDropdown.empty();
+                locationsDropdown.append($('<option></option>').val('').text('Select Location'));
                 
                 if (categoryCode) {
-                    // Clear any previous errors
-                    $('.location-category-error').text('');
-                    
-                    // Get locations for the selected category
-                    $.ajax({
-                        url: '/Materials/GetLocationsForCategory',
-                        type: 'GET',
-                        data: { category: categoryCode },
-                        success: function(data) {
-                            // Clear and populate the locations dropdown
-                            var locationsDropdown = $('#CurrentLocationId');
-                            locationsDropdown.empty();
-                            
-                            // Add default option
-                            locationsDropdown.append($('<option></option>').val('').text('-- Select Location --'));
-                            
-                            // Add options from the server
-                            $.each(data, function(i, item) {
-                                locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
-                            });
-                            
-                            // If this is a headoffice category, trigger the location change handler
-                            // to sync the department dropdown
-                            if (isHeadOffice) {
-                                $('#CurrentLocationId').trigger('change');
+                    // If HeadOffice is selected, set Current Location to HQ and disable the dropdown
+                    if (categoryCode === 'HO' || categoryCode.toLowerCase() === 'headoffice') {
+                        // Add HQ option and select it
+                        locationsDropdown.empty();
+                        locationsDropdown.append($('<option></option>').val('HQ').text('Head Quarters (HQ)'));
+                        locationsDropdown.val('HQ');
+                        
+                        // Trigger change event to update dependent fields
+                        locationsDropdown.trigger('change');
+                        
+                        // Apply grey background to indicate it has a value
+                        locationsDropdown.css('backgroundColor', '#f8f9fa');
+                        
+                        // Optionally disable the dropdown to prevent changes
+                        locationsDropdown.prop('disabled', true);
+                    } else {
+                        // For other categories, enable the dropdown and fetch locations
+                        locationsDropdown.prop('disabled', false);
+                        
+                        // Fetch locations for the selected category
+                        $.ajax({
+                            url: '/Materials/GetLocationsForCategory',
+                            type: 'GET',
+                            data: { category: categoryCode },
+                            success: function(data) {
+                                // Populate locations dropdown
+                                $.each(data, function(index, item) {
+                                    locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
+                                });
                             }
-                        },
-                        error: function() {
-                            $('.location-category-error').text('Error loading locations. Please try again.');
-                        }
-                    });
-                } else {
-                    // Clear the locations dropdown if no category is selected
-                    $('#CurrentLocationId').empty().append($('<option></option>').val('').text('-- Select Location --'));
+                        });
+                    }
                 }
-            }
-            
-            // Handle location category change
-            $('#SelectedLocationCategory').change(handleLocationCategoryChange);
-            
+            });
+
             // Handle current location change
             $('#CurrentLocationId').change(function() {
                 var locationValue = $(this).val();
                 var categoryCode = $('#SelectedLocationCategory').val();
-                
+
                 // If headoffice is selected and a location is chosen, sync the department
-                if (categoryCode && categoryCode.toLowerCase() === 'headoffice' && locationValue) {
-                    // Find the department option that matches the location text
+                if (categoryCode === 'HO' || categoryCode.toLowerCase() === 'headoffice') {
+                    // For head office locations, try to find a matching department
                     var locationText = $(this).find('option:selected').text();
                     var departmentDropdown = $('#Assignment_DepartmentId');
-                    
+
                     // Look for a matching department by name
                     var matchFound = false;
                     departmentDropdown.find('option').each(function() {
@@ -402,7 +477,7 @@
                             return false; // Break the loop
                         }
                     });
-                    
+
                     // If no exact match, try to find a partial match
                     if (!matchFound) {
                         departmentDropdown.find('option').each(function() {
@@ -415,17 +490,220 @@
                     }
                 }
             });
-            
-            // Auto-resize textareas as you type
-            $('.auto-resize-textarea').on('input', function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
+
+            // Initialize Dropzone
+            Dropzone.autoDiscover = false;
+
+            // Main image dropzone for single image
+            var materialImageInput = document.getElementById('material-image-input');
+            materialImageInput.addEventListener('change', function(e) {
+                var file = e.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        document.getElementById('material-img').src = e.target.result;
+                    }
+                    reader.readAsDataURL(file);
+                } else {
+                    // If no file is selected, revert to category image if available
+                    var categoryImage = $('#material-img').data('category-image');
+                    if (categoryImage) {
+                        $('#material-img').attr('src', categoryImage);
+                    } else {
+                        $('#material-img').attr('src', '');
+                    }
+                }
             });
+
+            // Gallery dropzone for multiple images
+            var galleryDropzone = new Dropzone("#galleryDropzone", {
+                url: "/Materials/Edit", // Setting actual URL but we'll handle submission manually
+                autoProcessQueue: false,
+                uploadMultiple: true,
+                parallelUploads: 5,
+                maxFiles: 5,
+                acceptedFiles: "image/*",
+                addRemoveLinks: true,
+                maxFilesize: 2, // MB
+                dictRemoveFile: "Remove",
+                previewTemplate: '<div class="dz-preview dz-file-preview"><div class="dz-image"><img data-dz-thumbnail /></div><div class="dz-details"><div class="dz-size"><span data-dz-size></span></div><div class="dz-filename"><span data-dz-name></span></div></div><div class="dz-progress"><span class="dz-upload" data-dz-uploadprogress></span></div><div class="dz-error-message"><span data-dz-errormessage></span></div><div class="dz-success-mark"><svg width="54px" height="54px" viewBox="0 0 54 54" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Check</title><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><path d="M23.5,31.8431458 L17.5852419,25.9283877 C16.0248253,24.3679711 13.4910294,24.366835 11.9289322,25.9289322 C10.3700136,27.4878508 10.3665912,30.0234455 11.9283877,31.5852419 L20.4147581,40.0716123 C20.5133999,40.1702541 20.6159315,40.2626649 20.7218615,40.3488435 C22.2835669,41.8725651 24.794234,41.8626202 26.3461564,40.3106978 L43.3106978,23.3461564 C44.8771021,21.7797521 44.8758057,19.2483887 43.3137085,17.6862915 C41.7547899,16.1273729 39.2176035,16.1255422 37.6538436,17.6893022 L23.5,31.8431458 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z"></path></g></svg></div><div class="dz-error-mark"><svg width="54px" height="54px" viewBox="0 0 54 54" version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><title>Error</title><g stroke="none" stroke-width="1" fill="none" fill-rule="evenodd"><g stroke="#747474" stroke-opacity="0.198794158" fill="#FFFFFF" fill-opacity="0.816519475"><path d="M32.6568542,29 L38.3106978,23.3461564 C39.8771021,21.7797521 39.8758057,19.2483887 38.3137085,17.6862915 C36.7547899,16.1273729 34.2176035,16.1255422 32.6538436,17.6893022 L27,23.3431458 L21.3461564,17.6893022 C19.7823965,16.1255422 17.2452101,16.1273729 15.6862915,17.6862915 C14.1241943,19.2483887 14.1228979,21.7797521 15.6893022,23.3461564 L21.3431458,29 L15.6893022,34.6538436 C14.1228979,36.2202479 14.1241943,38.7516113 15.6862915,40.3137085 C17.2452101,41.8726271 19.7823965,41.8744578 21.3461564,40.3106978 L27,34.6568542 L32.6538436,40.3106978 C34.2176035,41.8744578 36.7547899,41.8726271 38.3137085,40.3137085 C39.8758057,38.7516113 39.8771021,36.2202479 38.3106978,34.6538436 L32.6568542,29 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z M27,53 C41.3594035,53 53,41.3594035 53,27 C53,12.6405965 41.3594035,1 27,1 C12.6405965,1 1,12.6405965 1,27 C1,41.3594035 12.6405965,53 27,53 Z"></path></g></g></svg></div><a class="dz-remove" href="javascript:undefined;" data-dz-remove>Remove</a></div>',
+                init: function() {
+                    this.on("addedfile", function(file) {
+                        // Preview template customization
+                        if (this.files.length > 5) {
+                            this.removeFile(file);
+                            alert("You can only upload a maximum of 5 images.");
+                        }
+                    });
+
+                    this.on("maxfilesexceeded", function(file) {
+                        this.removeFile(file);
+                        alert("You can only upload a maximum of 5 images.");
+                    });
+
+                    this.on("error", function(file, message) {
+                        if (file.size > 2 * 1024 * 1024) {
+                            alert("File is too large. Maximum size is 2MB.");
+                        }
+                        this.removeFile(file);
+                    });
+                }
+            });
+
+            // Add existing gallery images to Dropzone
+            @if (Model.ExistingGalleryImages != null && Model.ExistingGalleryImages.Any())
+            {
+                <text>
+                // Add existing gallery images to Dropzone
+                @foreach (var image in Model.ExistingGalleryImages)
+                {
+                    <text>
+                    // Create a mock file object
+                    var mockFile = { 
+                        name: "@image.FileName", 
+                        size: @image.FileSize, 
+                        accepted: true 
+                    };
+                    
+                    // Add the file to Dropzone
+                    galleryDropzone.emit("addedfile", mockFile);
+                    galleryDropzone.emit("thumbnail", mockFile, "/@image.FilePath");
+                    galleryDropzone.emit("complete", mockFile);
+                    galleryDropzone.files.push(mockFile);
+                    </text>
+                }
+                </text>
+            }
+
+            // Apply background color to input fields with values
+            function updateBackgroundColors() {
+                $('input, select, textarea').each(function() {
+                    updateBackground(this);
+                });
+                
+                // Add event listeners to update background on change
+                $('input, select, textarea').on('change input', function() {
+                    updateBackground(this);
+                });
+            }
             
-            // Initialize textareas
-            $('.auto-resize-textarea').each(function() {
-                this.style.height = 'auto';
-                this.style.height = (this.scrollHeight) + 'px';
+            // Function to update background color based on value
+            function updateBackground(element) {
+                if (element.tagName === 'SELECT') {
+                    element.style.backgroundColor = element.value ? '#f8f9fa' : '#fff'; // Light grey if value exists, white if empty
+                } else if (element.type === 'text' || element.tagName === 'TEXTAREA') {
+                    element.style.backgroundColor = element.value.trim() ? '#f8f9fa' : '#fff'; // Light grey if text is entered
+                } else if (element.type === 'number') {
+                    element.style.backgroundColor = (element.value && parseInt(element.value) > 0) ? '#f8f9fa' : '#fff';
+                }
+            }
+            
+            // Initialize background colors
+            updateBackgroundColors();
+
+            // Handle form submission
+            $("form").submit(function(e) {
+               e.preventDefault(); // Prevent the default form submission
+
+               // Check if any required validation fails
+               if (!$(this)[0].checkValidity()) {
+                   // Trigger browser validation
+                   $(this)[0].reportValidity();
+                   return false;
+               }
+
+               // Check if location category is selected
+               if (!$('#SelectedLocationCategory').val()) {
+                   $('.location-category-error').text('Location Category is required.');
+                   return false;
+               }
+
+               // Create a FormData object for the form data
+               var formData = new FormData(this);
+
+               // For debugging - log the form data
+               console.log("Form submission started");
+               for (var pair of formData.entries()) {
+                   console.log(pair[0] + ': ' + pair[1]);
+               }
+
+               // Add Dropzone files to FormData
+               if (galleryDropzone.files.length > 0) {
+                   // Remove any existing gallery files first to avoid duplicates
+                   for (var pair of formData.entries()) {
+                       if (pair[0].startsWith('GalleryFiles')) {
+                           formData.delete(pair[0]);
+                       }
+                   }
+
+                   // Append each Dropzone file individually
+                   galleryDropzone.files.forEach(function(file, index) {
+                       formData.append('GalleryFiles', file);
+                   });
+               }
+
+               // Submit the form via AJAX
+               $.ajax({
+                   url: $(this).attr('action'),
+                   type: 'POST',
+                   data: formData,
+                   processData: false,
+                   contentType: false,
+                   success: function(response) {
+                       console.log("Success response:", response);
+                       // If response is HTML (validation errors), update the page
+                       if (typeof response === 'string' && response.indexOf('<!DOCTYPE html>') !== -1) {
+                           document.open();
+                           document.write(response);
+                           document.close();
+                       } else if (response.redirectUrl) {
+                           // If JSON response with redirect URL
+                           window.location.href = response.redirectUrl;
+                       } else {
+                           // Default redirect to Index
+                           window.location.href = '/Materials/Index';
+                       }
+                   },
+                   error: function(xhr, status, error) {
+                       console.error("Error status:", status);
+                       console.error("Error message:", error);
+                       console.error("Response text:", xhr.responseText);
+
+                       // Handle validation errors if returned as JSON
+                       if (xhr.responseJSON) {
+                           // Process validation errors
+                           var errors = xhr.responseJSON;
+                           for (var key in errors) {
+                               var errorMsg = errors[key].join(', ');
+                               $('[data-valmsg-for="' + key + '"]').text(errorMsg);
+                           }
+                       } else {
+                           // General error
+                           alert("An error occurred while saving the material. Please check the form and try again.");
+                           console.error("Error submitting form:", xhr.responseText);
+                       }
+                   }
+               });
+          });
+
+            // Generate code button click handler
+            $('.generateCodeBtn').click(function() {
+                var categoryId = $('#Material_MaterialCategoryId').val();
+                var rowIndex = $(this).data('index');
+
+                if (!categoryId) {
+                    alert('Please select a material category first.');
+                    return;
+                }
+
+                $.ajax({
+                    url: '/Materials/GetNextCode',
+                    type: 'GET',
+                    data: { categoryId: categoryId, rowIndex: rowIndex },
+                    success: function(data) {
+                        $('.materialCode').val(data);
+                    }
+                });
             });
         });
     </script>

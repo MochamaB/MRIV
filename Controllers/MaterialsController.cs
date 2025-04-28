@@ -531,11 +531,10 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // First, get the material with basic information
             var material = await _context.Materials
                 .Include(m => m.MaterialCategory)
-                .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))
-                .Include(m => m.MaterialAssignments.OrderByDescending(ma => ma.AssignmentDate).Take(5))
-                .Include(m => m.MaterialConditions.OrderByDescending(mc => mc.InspectionDate).Take(5))
+                .Include(m => m.MaterialSubcategory)
                 .FirstOrDefaultAsync(m => m.Id == id);
                 
             if (material == null)
@@ -543,11 +542,41 @@ namespace MRIV.Controllers
                 return NotFound();
             }
             
+            // Then, load active assignments separately
+            var activeAssignments = await _context.MaterialAssignments
+                .Where(ma => ma.MaterialId == id && ma.IsActive)
+                .ToListAsync();
+                
+            // Load recent assignments separately
+            var recentAssignments = await _context.MaterialAssignments
+                .Where(ma => ma.MaterialId == id)
+                .OrderByDescending(ma => ma.AssignmentDate)
+                .Take(5)
+                .ToListAsync();
+                
+            // Load recent conditions separately
+            var recentConditions = await _context.MaterialConditions
+                .Where(mc => mc.MaterialId == id)
+                .OrderByDescending(mc => mc.InspectionDate)
+                .Take(5)
+                .ToListAsync();
+                
+            // Manually set the navigation properties
+            material.MaterialAssignments = new List<MaterialAssignment>();
+            material.MaterialAssignments = material.MaterialAssignments.Concat(activeAssignments).Concat(recentAssignments).Distinct().ToList();
+            material.MaterialConditions = recentConditions;
+            
+            // Load media files for the material
+            var mainImage = await _mediaService.GetFirstMediaForModelAsync("Material", material.Id);
+            var galleryImages = await _mediaService.GetMediaForModelAsync("Material", material.Id, "gallery");
+            
             var viewModel = new EditMaterialViewModel
             {
                 Material = material,
-                AssignmentHistory = material.MaterialAssignments?.OrderByDescending(ma => ma.AssignmentDate),
-                ConditionHistory = material.MaterialConditions?.OrderByDescending(mc => mc.InspectionDate)
+                AssignmentHistory = recentAssignments.OrderByDescending(ma => ma.AssignmentDate),
+                ConditionHistory = recentConditions.OrderByDescending(mc => mc.InspectionDate),
+                ExistingMainImage = mainImage,
+                ExistingGalleryImages = galleryImages.ToList()
             };
             
             // Get the active assignment
@@ -557,6 +586,7 @@ namespace MRIV.Controllers
                 viewModel.Assignment = activeAssignment;
                 viewModel.SelectedLocationCategory = activeAssignment.StationCategory;
                 viewModel.CurrentLocationId = activeAssignment.Station;
+
             }
             
             // Initialize a new condition record
@@ -618,6 +648,30 @@ namespace MRIV.Controllers
             if (id != viewModel.Material.Id)
             {
                 return NotFound();
+            }
+
+            // Ensure required fields are set for MaterialCondition
+            if (viewModel.Condition != null)
+            {
+                // Set required fields for MaterialCondition
+                if (viewModel.Condition.ConditionCheckType == 0) // Default enum value
+                {
+                    viewModel.Condition.ConditionCheckType = ConditionCheckType.Periodic;
+                    ModelState.Remove("Condition.ConditionCheckType");
+                }
+                
+                if (string.IsNullOrEmpty(viewModel.Condition.Stage))
+                {
+                    viewModel.Condition.Stage = "Update";
+                    ModelState.Remove("Condition.Stage");
+                }
+            }
+
+            // Ensure AssignedByPayrollNo is set
+            if (viewModel.Assignment != null && string.IsNullOrEmpty(viewModel.Assignment.AssignedByPayrollNo))
+            {
+                viewModel.Assignment.AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System";
+                ModelState.Remove("Assignment.AssignedByPayrollNo");
             }
 
             if (ModelState.IsValid)

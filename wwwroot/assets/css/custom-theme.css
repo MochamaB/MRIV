@@ -135,7 +135,7 @@
     padding:  1rem;
 }
 .card-body {
-    padding: 0rem;
+    padding: 1rem 0rem 0rem 0rem;
 }
 /* Modify vertical overlay behavior */
 /* .vertical-overlay {

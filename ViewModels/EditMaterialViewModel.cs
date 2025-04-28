@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using MRIV.Enums;
 using MRIV.Models;
@@ -15,6 +16,12 @@ namespace MRIV.ViewModels
         
         // Material Condition for recording changes
         public MaterialCondition Condition { get; set; } = new MaterialCondition();
+
+        // Image handling properties
+        public IFormFile? ImageFile { get; set; }
+        public List<IFormFile>? GalleryFiles { get; set; }
+        public MediaFile? ExistingMainImage { get; set; }
+        public List<MediaFile>? ExistingGalleryImages { get; set; } = new List<MediaFile>();
 
         // Dropdown lists for the form
         public SelectList? MaterialCategories { get; set; }
