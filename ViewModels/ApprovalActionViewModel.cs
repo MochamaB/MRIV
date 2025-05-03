@@ -12,6 +12,8 @@ namespace MRIV.ViewModels
         public int RequisitionId { get; set; }
         
         public string ApprovalStep { get; set; }
+
+        public string? ApprovalAction { get; set; }
         
         public string? EmployeeName { get; set; }
         

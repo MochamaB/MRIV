@@ -130,6 +130,27 @@ namespace MRIV.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
+            // Load media for each material and category
+            foreach (var material in materials)
+            {
+                // Load main image for the material
+                var materialMedia = await _mediaService.GetFirstMediaForModelAsync("Material", material.Id);
+                if (materialMedia != null)
+                {
+                    material.Media.Add(materialMedia);
+                }
+
+                // Load category image regardless if material has image or not
+                if (material.MaterialCategory != null)
+                {
+                    var categoryMedia = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", material.MaterialCategoryId);
+                    if (categoryMedia != null)
+                    {
+                        // Add category image to category's media collection
+                        material.MaterialCategory.Media.Add(categoryMedia);
+                    }
+                }
+            }
            
             // Get all vendors in one batch
             var allVendors = await _vendorService.GetVendorsAsync();
@@ -239,7 +260,7 @@ namespace MRIV.Controllers
             viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
             
             // Set default status
-            viewModel.Material.Status = MaterialStatus.GoodCondition;
+            viewModel.Material.Status = MaterialStatus.Available;
             
             return View(viewModel);
         }
@@ -411,7 +432,7 @@ namespace MRIV.Controllers
                             StationCategory = viewModel.SelectedLocationCategory,
                             Station = viewModel.CurrentLocationId,
                             DepartmentId = viewModel.Assignment?.DepartmentId ?? 0,
-                            AssignmentType = viewModel.Assignment?.AssignmentType ?? AssignmentType.New,
+                            AssignmentType = viewModel.Assignment?.AssignmentType ?? RequisitionType.NewPurchase,
                             AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System",
                             IsActive = true,
                             Notes = viewModel.Assignment?.Notes ?? "Initial assignment at creation"
@@ -744,7 +765,7 @@ namespace MRIV.Controllers
                             StationCategory = viewModel.SelectedLocationCategory,
                             Station = viewModel.CurrentLocationId,
                             DepartmentId = viewModel.Assignment.DepartmentId,
-                            AssignmentType = AssignmentType.Transfer,
+                            AssignmentType = viewModel.Assignment?.AssignmentType ?? RequisitionType.NewPurchase,
                             AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System",
                             IsActive = true,
                             Notes = "Updated location during edit"

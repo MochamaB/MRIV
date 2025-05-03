@@ -28,6 +28,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -44,6 +45,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "user",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -65,6 +67,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -81,6 +84,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
+                            StepAction = "Dispatch",
                             ApproverRole = "dispatchAdmin",
                              RoleParameters = new Dictionary<string, string>
                             {
@@ -96,6 +100,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
+                            StepAction = "Dispatch",
                             ApproverRole = "vendor",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -111,6 +116,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 3,
                             StepName = "Factory Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldUser",
                             RoleParameters = new Dictionary<string, string>
                             { 
@@ -131,6 +137,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } },
@@ -144,6 +151,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
+                            StepAction = "Approve",
                             ApproverRole = "dispatchAdmin",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -159,6 +167,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
+                            StepAction = "Dispatch",
                             ApproverRole = "vendor",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -174,6 +183,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 3,
                             StepName = "Region Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldSupervisor",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -194,6 +204,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor,HR" }, { "station", "HQ" } }
@@ -202,6 +213,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Admin Dispatch Approval",
+                            StepAction = "Approve",
                             ApproverRole = "dispatchAdmin",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -217,6 +229,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Vendor Dispatch",
+                            StepAction = "Dispatch",
                             ApproverRole = "vendor",
                             RoleParameters = new Dictionary<string, string>
                              {
@@ -242,6 +255,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -250,6 +264,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "user",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -271,6 +286,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -282,6 +298,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Factory Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldUser",
                             RoleParameters = new Dictionary<string, string>
                             {
@@ -303,6 +320,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -311,6 +329,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Region Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldSupervisor",
                             RoleParameters = new Dictionary<string, string>
                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
@@ -329,6 +348,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
@@ -347,6 +367,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -355,6 +376,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "HO Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "user",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -373,6 +395,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -381,6 +404,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Factory Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldUser",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
@@ -399,6 +423,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }
@@ -407,6 +432,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 2,
                             StepName = "Region Employee Receipt",
+                            StepAction = "Receive",
                             ApproverRole = "FieldSupervisor",
                             RoleParameters = new Dictionary<string, string>
                              { { "roles", "Hod,supervisor,Admin,FieldSupervisor,FieldUser" } }
@@ -425,6 +451,7 @@ namespace MRIV.Data
                         {
                             StepOrder = 1,
                             StepName = "Supervisor Approval",
+                            StepAction = "Approve",
                             ApproverRole = "supervisor",
                             RoleParameters = new Dictionary<string, string>
                             { { "roles", "Hod,supervisor,Admin,FieldSupervisor" } }

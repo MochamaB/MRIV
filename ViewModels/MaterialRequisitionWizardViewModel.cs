@@ -76,6 +76,8 @@ namespace MRIV.ViewModels
 
         public int? StepNumber { get; set; }
         public string ApprovalStep { get; set; }
+
+        public string? ApprovalAction { get; set; }
         public string PayrollNo { get; set; }
         public string EmployeeName { get; set; }
         public int DepartmentId { get; set; }

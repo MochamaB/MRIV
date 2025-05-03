@@ -47,6 +47,9 @@
                             <th>
                                 Id
                             </th>
+                            <th style="width: 80px;">
+                                Icon
+                            </th>
                             <th>
                                 Material Category
                             </th>
@@ -80,6 +83,31 @@
                             <tr>
                                 <td>
                                     @Html.DisplayFor(modelItem => item.Id)
+                                </td>
+                                <td class="text-center">
+                                    @{
+                                        string imageUrl = "/uploads/defaultmaterialimage.svg";
+                                        string imageAlt = "Default";
+                                        string imageSource = "Default";
+                                        
+                                        if (item.Media.Any())
+                                        {
+                                            // Use material's own image if available
+                                            imageUrl = $"/{item.Media.First().FilePath}";
+                                            imageAlt = item.Name;
+                                            imageSource = "Material";
+                                        }
+                                        else if (item.MaterialCategory?.Media != null && item.MaterialCategory.Media.Any())
+                                        {
+                                            // Use category image if material has no image
+                                            imageUrl = $"/{item.MaterialCategory.Media.First().FilePath}";
+                                            imageAlt = $"{item.MaterialCategory.Name} (Category)";
+                                            imageSource = "Category";
+                                        }
+                                    }
+                                    <img src="@imageUrl" alt="@imageAlt" class="rounded" 
+                                         style="height: 50px; width: 50px; object-fit: contain;" 
+                                         data-bs-toggle="tooltip" title="Image Source: @imageSource" />
                                 </td>
                                 <td>
                                     @Html.DisplayFor(modelItem => item.MaterialCategory.Name)

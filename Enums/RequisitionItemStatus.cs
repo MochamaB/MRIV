@@ -3,7 +3,7 @@ namespace MRIV.Enums
 {
     public enum RequisitionItemStatus
     {
-        //Pending Approval,Dispatched, Received, Returned
+        //Transfer,Dispatched, Received, Returned
         [Description("Pending Approval")]
         PendingApproval = 1,
 

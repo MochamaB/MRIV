@@ -33,6 +33,9 @@ namespace MRIV.Helpers
                 MaterialStatus.UnderMaintenance => "badge-information",
                 MaterialStatus.LostOrStolen => "badge-dark",
                 MaterialStatus.Disposed => "badge-secondary",
+                MaterialStatus.Available => "badge-active",
+                MaterialStatus.Assigned => "badge-warning",
+                MaterialStatus.InProcess => "badge-danger",
                 null => "badge-light", // Handle null case (optional)
                 _ => "bg-primary" // Default class
             };

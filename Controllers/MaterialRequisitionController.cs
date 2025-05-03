@@ -376,6 +376,7 @@ namespace MRIV.Controllers
                 // Map properties
                 requisition.DepartmentId = model.Requisition.DepartmentId;
                 requisition.PayrollNo = model.Requisition.PayrollNo;
+                requisition.RequisitionType = model.Requisition.RequisitionType;
                 requisition.IssueStationCategory = model.Requisition.IssueStationCategory;
                 requisition.IssueStation = model.Requisition.IssueStation;
                 requisition.DeliveryStationCategory = model.Requisition.DeliveryStationCategory;
@@ -690,7 +691,7 @@ namespace MRIV.Controllers
                     item.Material.Name = item.Name;
                     item.Material.Description = item.Description;
                     // Set the material status based on the condition
-                    item.Material.Status = (MaterialStatus)(int)item.Condition;
+                    item.Material.Status = MaterialStatus.InProcess;
                     
                     // We'll create MaterialAssignment in CompleteWizard when we have the Material ID
                     // Just store the category information for now
@@ -988,7 +989,7 @@ namespace MRIV.Controllers
                                     StationCategory = requisition.IssueStationCategory,
                                     Station = requisition.IssueStation,
                                     DepartmentId = requisition.DepartmentId,
-                                    AssignmentType = AssignmentType.New,
+                                    AssignmentType = requisition.RequisitionType,
                                     RequisitionId = requisition.Id,
                                     AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
                                     IsActive = true

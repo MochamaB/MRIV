@@ -13,6 +13,8 @@ namespace MRIV.ViewModels
         public int ApprovalId { get; set; }
         public int RequisitionId { get; set; }
         public string? ApprovalStep { get; set; } // Make nullable to avoid null ref exceptions
+
+        public string? ApprovalAction { get; set; }
         public int StepNumber { get; set; }
 
         // Requisition details

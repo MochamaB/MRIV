@@ -1,4 +1,4 @@
-﻿using MRIV.Attributes;
+using MRIV.Attributes;
 using MRIV.Enums;
 using System;
 using System.Collections.Generic;
@@ -21,6 +21,10 @@ namespace MRIV.Models
         [Required]
         [StringLength(20)]
         public string PayrollNo { get; set; }
+
+        [Required]
+        [Display(Name = "Requisition Type")]
+        public RequisitionType RequisitionType { get; set; }
 
         [Required]
         [StringLength(50)]

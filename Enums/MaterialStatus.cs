@@ -23,5 +23,15 @@ namespace MRIV.Enums
 
         [Description("Disposed")]
         Disposed = 7,
+
+        [Description("Available")]
+        Available = 8,
+
+        [Description("Assigned")]
+        Assigned = 9,
+
+        [Description("In Process")]
+        InProcess = 10,
+
     }
 }

@@ -15,7 +15,7 @@ namespace MRIV.Models
       
         [StringLength(20)]
         [DisplayName("Assigned To")]
-        public string PayrollNo { get; set; }
+        public string? PayrollNo { get; set; }
 
         [DisplayName("Assignment Date")]
         public DateTime AssignmentDate { get; set; } = DateTime.UtcNow;
@@ -42,7 +42,7 @@ namespace MRIV.Models
         // Assignment context
         [Required]
         [DisplayName("Assignment Type")]
-        public AssignmentType AssignmentType { get; set; } // New, Transfer, Maintenance, Return
+        public RequisitionType AssignmentType { get; set; } // New, Transfer, Maintenance, Return
 
         [DisplayName("Requisition")]
         public int? RequisitionId { get; set; }
@@ -68,10 +68,14 @@ namespace MRIV.Models
 
     public enum AssignmentType
     {
-        New,
+        NewPurchase,
         Transfer,
+        InterFactory,
         Maintenance,
         Return,
-        Disposal
+        Disposal,
+        Loan,
+        TemporaryAllocation,
+        Other
     }
 }

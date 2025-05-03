@@ -21,13 +21,11 @@ namespace MRIV.Models
 
         public int? ApprovalId { get; set; }
 
-        [Required]
         [DisplayName("Condition Check Type")]
-        public ConditionCheckType ConditionCheckType { get; set; }
+        public ConditionCheckType? ConditionCheckType { get; set; }
 
-        [Required]
         [DisplayName("Stage")]
-        public string Stage { get; set; } // "Pre-Dispatch", "Post-Receive", etc.
+        public string? Stage { get; set; } // "Pre-Dispatch", "Post-Receive", etc.
 
         [DisplayName("Condition")]
         public MaterialStatus? Condition { get; set; }

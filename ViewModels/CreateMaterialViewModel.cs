@@ -60,7 +60,7 @@ namespace MRIV.ViewModels
                 "Value", "Text");
                 
             // Set default assignment type
-            Assignment.AssignmentType = AssignmentType.New;
+            Assignment.AssignmentType = RequisitionType.NewPurchase;
             
             // Initialize gallery images list
             GalleryImages = new List<MediaFile>();

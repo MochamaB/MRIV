@@ -115,6 +115,7 @@ namespace MRIV.Services
                         var approval = new Approval
                         {
                             ApprovalStep = stepConfig.StepName,
+                            ApprovalAction = stepConfig.StepAction,
                             PayrollNo = approver is EmployeeBkp employee ? employee.PayrollNo : approver.ToString(),
                             // Set the department to default ICT which has department id = 114 if approver is not found especially in vendor dispatch
                             DepartmentId = approver is EmployeeBkp employee2 ?
@@ -234,6 +235,7 @@ namespace MRIV.Services
             {
                 StepNumber = step.StepNumber,
                 ApprovalStep = step.ApprovalStep,
+                ApprovalAction = step.ApprovalAction,
                 PayrollNo = step.PayrollNo,
                 EmployeeName = employeeName,
                 DepartmentId = step.DepartmentId,

@@ -25,6 +25,10 @@ namespace MRIV.Models
         public string ApprovalStep { get; set; }
 
         [Required]
+        [StringLength(50)]
+        public string? ApprovalAction{ get; set; }
+
+        [Required]
         public string PayrollNo { get; set; }
 
         [Required]

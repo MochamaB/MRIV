@@ -16,6 +16,9 @@ namespace MRIV.Models
         [Required, StringLength(100)]
         public string StepName { get; set; }
 
+        [Required, StringLength(100)]
+        public string StepAction { get; set; }
+
         [Required, StringLength(50)]
         public string ApproverRole { get; set; }
 

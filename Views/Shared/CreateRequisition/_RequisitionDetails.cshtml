@@ -7,10 +7,10 @@
 
 <style>
     .auto-resize-textarea {
-        resize: none;9
-        overflow-y: hidden;
-        min-height: 40px;
-        white-space: pre-wrap;
+    resize: none;9
+    overflow-y: hidden;
+    min-height: 40px;
+    white-space: pre-wrap;
     }
 </style>
 <div class="row">
@@ -33,7 +33,7 @@
 
 <form id="wizardForm" asp-controller="MaterialRequisition" asp-action="CreateRequisition">
     <div class="row">
-   
+
         <div class="col-md-6">
             <div asp-validation-summary="ModelOnly" class="text-danger d-none"></div>
 
@@ -45,7 +45,7 @@
                         @(Model.Requisition.TicketId == 0 ? "Inter Factory Borrowing" : Model.Requisition.TicketId.ToString())
                     </option>
                 </select>
-                
+
                 <span asp-validation-for="Requisition.TicketId" class="text-danger"></span>
             </div>
             <div class="form-group">
@@ -64,6 +64,27 @@
             </div>
             <div class="form-group">
                 <input asp-for="Requisition.PayrollNo" type="text" class="form-control form-control-sm " placeholder="" value="@Model.LoggedInUserEmployee.PayrollNo" hidden  />
+            </div>
+            <div class="form-group">
+                <label class="control-label">Requisition Type</label><span class="requiredlabel">*</span>
+                <select asp-for="Requisition.RequisitionType" class="formcontrol2">
+                    @if (Model.Requisition.TicketId == 0)
+                    {
+                        <option value="@MRIV.Enums.RequisitionType.InterFactory">Inter Factory</option>
+                    }
+                    else
+                    {
+                      <option value="@MRIV.Enums.RequisitionType.Transfer">Transfer</option>
+                        <option value="@MRIV.Enums.RequisitionType.NewPurchase">New Purchase</option>
+                        <option value="@MRIV.Enums.RequisitionType.Maintenance">Maintenance/Repair</option>
+                        <option value="@MRIV.Enums.RequisitionType.Return">Return</option>
+                        <option value="@MRIV.Enums.RequisitionType.Disposal">Disposal</option>
+                        <option value="@MRIV.Enums.RequisitionType.Loan">Loan/Borrow</option>
+                        <option value="@MRIV.Enums.RequisitionType.TemporaryAllocation"> Temporary Allocation</option>
+                        <option value="@MRIV.Enums.RequisitionType.Other">Other</option>
+                    }
+                </select>
+                <span asp-validation-for="Requisition.RequisitionType" class="text-danger"></span>
             </div>
      
         </div>
