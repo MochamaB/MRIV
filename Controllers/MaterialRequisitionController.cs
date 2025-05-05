@@ -972,6 +972,10 @@ namespace MRIV.Controllers
                                 // Use existing material
                                 item.MaterialId = existingMaterial.Id;
                                 item.Material = null; // Prevent duplicate creation
+
+                                // Update existing material status to InProcess to lock it
+                                existingMaterial.Status = MaterialStatus.InProcess;
+                                _context.Materials.Update(existingMaterial);
                             }
                             else
                             {

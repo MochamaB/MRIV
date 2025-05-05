@@ -41,5 +41,36 @@
         .hidden {
             display: none;
         }
-    </style>
+
+        @@media print {
+            .col-md-6
+
+        {
+            width: 50% !important;
+            float: left !important;
+            display: block !important;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+        }
+
+        .no-print {
+            display: none !important;
+        }
+
+            .printbutton {
+                display: none !important;
+            }
+
+        /* Optional: Remove padding/margin if needed */
+        .card, .card-body {
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+        }
+
+        </style>
 </head>

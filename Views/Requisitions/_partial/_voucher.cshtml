@@ -1,0 +1,249 @@
+@using MRIV.Enums
+@using MRIV.Helpers
+@model MRIV.ViewModels.RequisitionDetailsViewModel
+
+<!-- ---------------------------------------- Materials Voucher Tab content ------------------------------------------------>
+<div class="voucher-container printableArea" id="voucherPrint">
+    <div class="d-flex align-items-center justify-content-center mb-2">
+        <img src="~/images/Login.gif" alt="KTDA Logo" height="100" class="me-5"> <!-- Increased height and margin -->
+
+        <div class="ms-5">
+            <!-- Increased left margin -->
+            <h3 class="mb-2"><strong>KENYA TEA DEVELOPMENT AGENCY LTD</strong></h3>
+            <h5 class="mb-2"><strong>MATERIAL REQUISITION AND ISSUE VOUCHER</strong></h5>
+            <p class="text-muted mb-0">@DateTime.Now.ToString("dddd, dd/MM/yyyy")</p>
+        </div>
+
+        <button class="btn btn-outline-primary printbutton ms-auto px-4 py-2">
+            <!-- ms-auto pushes it to the right -->
+            <i class="ri-printer-line align-middle me-2"></i> Print Voucher
+        </button>
+    </div>
+   <hr />
+    <!-- Requisition Details -->
+
+    <div class="row mb-0">
+        <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td style="width: 35%;"><strong>Requisition ID:</strong></td>
+                                    <td>@Model.Requisition?.Id</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Ticket Number:</strong></td>
+                                    <td>
+                                        @if (Model.Requisition?.TicketId == 0)
+                                        {
+                                            <span>Inter Factory Borrowing</span>
+                                        }
+                                        else
+                                        {
+                                            <span>@Model.Requisition?.TicketId</span>
+                                        }
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Requisition Type:</strong></td>
+                                    <td>@EnumHelper.GetEnumDescription(Model.Requisition?.RequisitionType)</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Issue Point:</strong></td>
+                                    <td><span style="text-transform:capitalize">@Model.Requisition?.IssueStationCategory</span> - @Model.Requisition?.IssueStation</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Point of Use:</strong></td>
+                                    <td><span style="text-transform:capitalize">@Model.Requisition?.DeliveryStationCategory</span> - @Model.Requisition?.DeliveryStation</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="col-md-6">
+                            <table class="table table-sm table-borderless">
+                                <tr>
+                                    <td style="width: 35%;"><strong>Department:</strong></td>
+                                    <td>@Model.DepartmentDetail?.DepartmentName</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Requisition By:</strong></td>
+                                    <td>@Model.EmployeeDetail?.Fullname</td>
+                                </tr>
+                               
+                                <tr>
+                                    <td><strong>Remarks:</strong></td>
+                                    <td>@Model.Requisition?.Remarks</td>
+                                </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>
+                                @if (Model.Requisition?.Status != null)
+                                {
+                                    <span class="badge @BadgeHelper.GetRequisitionStatusBadgeClass(Model.Requisition.Status.Value)">
+                                        @Model.Requisition.Status.ToString()
+                                    </span>
+                                }
+                            </td>
+                        </tr>
+                            </table>
+                        </div>
+                    </div>
+        </div>
+    </div>
+
+    <!-- Requisition Items -->
+    <div class="row mb-1">
+        <div class="col-md-12">
+                    <h6 class="pt-2">
+                        <b>Requisition Items</b>
+                    </h6>
+                    <hr>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-hover">
+                            <thead class="table-light" style="text-align:left">
+                                <tr>
+                                    <th style="width: 5%;">#</th>
+                                    <th style="width: 30%;">Item Description</th>
+                                    <th style="width: 10%;">Quantity</th>
+                                    <th style="width: 15%;">Material Code</th>
+                                    <th style="width: 20%;">Material Condition</th>
+                                    <th style="width: 20%;">Category</th>
+                                    <th style="width: 20%;">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.RequisitionItems != null && Model.RequisitionItems.Any())
+                                {
+                                    @foreach (var item in Model.RequisitionItems)
+                                    {
+                                        <tr>
+                                            <td>@item.Id</td>
+                                            <td>
+                                                <strong>@item.Name</strong>
+                                                @if (!string.IsNullOrEmpty(item.Description))
+                                                {
+                                                    <br /><small>@item.Description</small>
+                                                }
+                                            </td>
+                                            <td class="text-center">@item.Quantity</td>
+                                            <td>
+                                                @if (item.Material != null)
+                                                {
+                                                    @item.Material.Code
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.Condition)">
+                                                    @EnumHelper.GetEnumDescription(item.Condition)
+                                                </span>
+                                            </td>
+                                            <td>
+                                                @if (item.Material?.MaterialCategory != null)
+                                                {
+                                                    @item.Material.MaterialCategory.Name
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                            <td>
+                                                <span class="badge @BadgeHelper.GetRequisitionItemStatusBadgeClass(item.Status)">
+                                                    @item.Status.ToString()
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center">No items found</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+              
+        </div>
+    </div>
+
+    <!-- Approvals Section -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <h6 class="pt-4">
+                <b>Approvals and Receipts</b>
+            </h6>
+            <hr />
+                    <div class="table-responsive">
+                        <table class="table table-bordered mb-0">
+                    <thead class="table-light" style="text-align:left">
+                                <tr>
+                                    <th style="width: 20%;">Approval step</th>
+                                    <th style="width: 25%;">Employee Name</th>
+                                    <th style="width: 15%;">Status</th>
+                                    <th style="width: 20%;">Comments</th>
+                                    <th style="width: 10%;">Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ApprovalSteps!= null && Model.ApprovalSteps.Any())
+                                {
+                                    @foreach (var approval in Model.ApprovalSteps)
+                                    {
+                                        <tr>
+                                            <td><strong>@approval.ApprovalStep</strong></td>
+                                    <td>@approval.EmployeeName - @approval.EmployeeDesignation</td>
+                                            <td>
+                                                <span class="badge @BadgeHelper.GetApprovalsBadgeClass(approval.ApprovalStatus)">
+                                                    @approval.ApprovalStatus.ToString()
+                                                </span>
+                                            </td>
+                                    <td>@approval.Comments</td>
+                                            <td>
+                                                @if (approval.UpdatedAt.HasValue)
+                                                {
+                                                    @approval.UpdatedAt.Value.ToString("dd/MM/yyyy HH:mm:ss")
+                                                }
+                                                else
+                                                {
+                                                    <span>-</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="5" class="text-center">No approval steps found</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+             
+        </div>
+    </div>
+
+    <!-- Collection Information -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <p><strong>Collected by:</strong> ___@Model.Requisition?.CollectorName _____</p>
+                            <p><strong>ID No:</strong> ___ @Model.Requisition?.CollectorId _____</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Signature:</strong> ________________________</p>
+                            <p><strong>Date:</strong> ________________________</p>
+                        </div>
+              
+                    </div>
+               
+        </div>
+    </div>
+</div>
