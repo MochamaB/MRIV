@@ -1,0 +1,122 @@
+@model IEnumerable<MRIV.ViewModels.RoleGroupMemberViewModel>
+
+@{
+    ViewData["Title"] = "Role Group Details";
+    var roleGroup = ViewBag.RoleGroup as MRIV.Models.RoleGroup;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Role Group: @roleGroup.Name</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+
+                  
+                            <a href="@Url.Action("AddMember", "Roles", new { id = roleGroup.Id })" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-user-add-line align-bottom me-1"></i> Add Member
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Group Details -->
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong>Description:</strong> @roleGroup.Description
+                        </div>
+                        <div class="mb-3">
+                            <strong>Full Department Access:</strong> 
+                            @if (roleGroup.HasFullDepartmentAccess)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">No</span>
+                            }
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong>Full Station Access:</strong> 
+                            @if (roleGroup.HasFullStationAccess)
+                            {
+                                <span class="badge bg-success">Yes</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">No</span>
+                            }
+                        </div>
+                        <div class="mb-3">
+                            <strong>Status:</strong> 
+                            @if (roleGroup.IsActive)
+                            {
+                                <span class="badge bg-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger">Inactive</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+
+                <h6 class="card-title mb-3">Group Members</h6>
+                
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Payroll No</th>
+                                <th>Employee Name</th>
+                                <th>Role</th>
+                                <th>Department</th>
+                                <th>Station</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                @foreach (var member in Model)
+                                {
+                                    <tr>
+                                        <td>@member.PayrollNo</td>
+                                        <td>@member.EmployeeName</td>
+                                        <td>@member.EmployeeRole</td>
+                                        <td>@member.Department</td>
+                                        <td>@member.Station</td>
+                                        <td>
+                                            <form asp-action="RemoveMember" asp-route-id="@member.Id" asp-route-roleGroupId="@roleGroup.Id" method="post" onsubmit="return confirm('Are you sure you want to remove this member?');">
+                                                <button type="submit" class="btn btn-sm btn-danger">
+                                                    <i class="ri-user-unfollow-line"></i> Remove
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center">No members found in this role group.</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

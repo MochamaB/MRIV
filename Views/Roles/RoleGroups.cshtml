@@ -1,0 +1,105 @@
+@model IEnumerable<MRIV.Models.RoleGroup>
+
+@{
+    ViewData["Title"] = "Role Groups";
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Role Groups</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+
+                            <a href="@Url.Action("Index", "Roles")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Roles
+                            </a>
+                            
+                            <a href="@Url.Action("CreateRoleGroup", "Roles")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-add-line align-bottom me-1"></i> New Role Group
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Name</th>
+                                <th>Description</th>
+                                <th>Full Dept. Access</th>
+                                <th>Full Station Access</th>
+                                <th>Members</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var group in Model)
+                            {
+                                <tr>
+                                    <td>@group.Name</td>
+                                    <td>@group.Description</td>
+                                    <td>
+                                        @if (group.HasFullDepartmentAccess)
+                                        {
+                                            <span class="badge bg-success">Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">No</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (group.HasFullStationAccess)
+                                        {
+                                            <span class="badge bg-success">Yes</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">No</span>
+                                        }
+                                    </td>
+                                    <td>@ViewBag.MemberCounts[group.Id]</td>
+                                    <td>
+                                        @if (group.IsActive)
+                                        {
+                                            <span class="badge bg-success">Active</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactive</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <div class="hstack gap-3 fs-15">
+                                            <a href="@Url.Action("RoleGroupDetails", "Roles", new { id = group.Id })" class="link-primary" title="View Details">
+                                                <i class="ri-eye-line"></i>
+                                            </a>
+                                            <a href="@Url.Action("EditRoleGroup", "Roles", new { id = group.Id })" class="link-success" title="Edit">
+                                                <i class="ri-pencil-line"></i>
+                                            </a>
+                                            <a href="@Url.Action("DeleteRoleGroup", "Roles", new { id = group.Id })" class="link-danger" title="Delete">
+                                                <i class="ri-delete-bin-line"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

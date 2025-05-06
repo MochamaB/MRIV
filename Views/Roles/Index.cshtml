@@ -1,0 +1,61 @@
+@model IEnumerable<string>
+
+@{
+    ViewData["Title"] = "Roles";
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">System Roles</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+
+                            <!-- Role Groups button -->
+                            <a href="@Url.Action("RoleGroups", "Roles")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-group-line align-bottom me-1"></i> All Role Groups
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr class="table-light">
+                                <th>Role Name</th>
+                                <th>Users Count</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var role in Model)
+                            {
+                                <tr>
+                                    <td>@role</td>
+                                    <td>@ViewBag.RoleCounts[role]</td>
+                                    <td>
+                                       
+                                            <a href="@Url.Action("Details", "Roles", new { id = role })" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                                                <i class="mdi mdi-eye mdi-24px text-warning"></i> 
+                                            </a>
+                                        
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

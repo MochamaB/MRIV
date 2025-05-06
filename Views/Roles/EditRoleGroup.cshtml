@@ -1,0 +1,81 @@
+@model MRIV.Models.RoleGroup
+
+@{
+    ViewData["Title"] = "Edit Role Group";
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Edit Role Group</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("RoleGroups", "Roles")" class="btn btn-soft-danger btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Role Groups
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="EditRoleGroup">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input type="hidden" asp-for="Id" />
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Name" class="control-label"></label>
+                                <input asp-for="Name" class="form-control" required />
+                                <span asp-validation-for="Name" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label asp-for="Description" class="control-label"></label>
+                                <input asp-for="Description" class="form-control" />
+                                <span asp-validation-for="Description" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="HasFullDepartmentAccess" class="form-check-input" />
+                                <label asp-for="HasFullDepartmentAccess" class="form-check-label">Has Full Department Access</label>
+                                <span asp-validation-for="HasFullDepartmentAccess" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="HasFullStationAccess" class="form-check-input" />
+                                <label asp-for="HasFullStationAccess" class="form-check-label">Has Full Station Access</label>
+                                <span asp-validation-for="HasFullStationAccess" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input asp-for="IsActive" class="form-check-input" />
+                                <label asp-for="IsActive" class="form-check-label">Is Active</label>
+                                <span asp-validation-for="IsActive" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+}

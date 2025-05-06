@@ -1,0 +1,230 @@
+@model IEnumerable<MRIV.Models.EmployeeBkp>
+
+@{
+    ViewData["Title"] = "Role Details";
+    var departmentNames = ViewBag.DepartmentNames as Dictionary<string, string>;
+    var stationNames = ViewBag.StationNames as Dictionary<string, string>;
+    var pagination = ViewBag.Pagination as MRIV.ViewModels.PaginationViewModel;
+    var totalCount = ViewBag.TotalCount;
+    var startNumber = ((pagination.CurrentPage - 1) * pagination.ItemsPerPage) + 1;
+    var currentSortField = ViewBag.SortField;
+    var currentSortOrder = ViewBag.SortOrder;
+    var searchTerm = ViewBag.SearchTerm as string;
+    
+    // Helper function to generate sort URL
+    Func<string, string> GetSortUrl = (string field) => {
+        var newSortOrder = field.Equals(currentSortField, StringComparison.OrdinalIgnoreCase) && currentSortOrder == "asc" ? "desc" : "asc";
+        return Url.Action("Details", "Roles", new { id = ViewBag.RoleName, page = pagination.CurrentPage, sortField = field, sortOrder = newSortOrder, searchTerm = searchTerm });
+    };
+    
+    // Helper function to get sort icon
+    Func<string, string> GetSortIcon = (string field) => {
+        if (!field.Equals(currentSortField, StringComparison.OrdinalIgnoreCase))
+            return "mdi mdi-sort text-muted";
+            
+        return currentSortOrder == "asc" ? "mdi mdi-sort-ascending text-success" : "mdi mdi-sort-descending text-danger";
+    };
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Employees with Role: @ViewBag.RoleName (@totalCount total)</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <form method="get" action="@Url.Action("Details", "Roles")" class="d-flex gap-2">
+                                <input type="hidden" name="id" value="@ViewBag.RoleName" />
+                                <input type="hidden" name="sortField" value="@currentSortField" />
+                                <input type="hidden" name="sortOrder" value="@currentSortOrder" />
+                                <div class="search-box">
+                                    <input type="text" name="searchTerm" class="form-control" placeholder="Search..." value="@searchTerm">
+                                    <i class="ri-search-line search-icon"></i>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Search</button>
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <a href="@Url.Action("Details", "Roles", new { id = ViewBag.RoleName, sortField = currentSortField, sortOrder = currentSortOrder })" class="btn btn-outline-secondary">
+                                        <i class="ri-close-line align-bottom"></i> Clear
+                                    </a>
+                                }
+                            </form>
+
+                            <a href="@Url.Action("Index", "Roles")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Roles
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0 table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>#</th>
+                                <th>
+                                    <a href="@GetSortUrl("PayrollNo")" class="text-primary">
+                                        Payroll No
+                                        <i class="@GetSortIcon("PayrollNo") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Fullname")" class="d-flex align-items-center text-primary">
+                                        Full Name
+                                        <i class="@GetSortIcon("Fullname") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Department")" class="d-flex align-items-center text-primary">
+                                        Department
+                                        <i class="@GetSortIcon("Department") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Station")" class="d-flex align-items-center text-primary">
+                                        Station
+                                        <i class="@GetSortIcon("Station") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Designation")" class="d-flex align-items-center text-primary">
+                                        Designation
+                                        <i class="@GetSortIcon("Designation") ms-1"></i>
+                                    </a>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                int rowNumber = startNumber;
+                                foreach (var employee in Model)
+                                {
+                                    <tr>
+                                        <td>@(rowNumber++)</td>
+                                        <td>@employee.PayrollNo</td>
+                                        <td>@employee.Fullname</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(employee.Department) && departmentNames.ContainsKey(employee.Department))
+                                            {
+                                                @departmentNames[employee.Department]
+                                            }
+                                            else
+                                            {
+                                                <span>@employee.Department</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(employee.Station) && stationNames.ContainsKey(employee.Station))
+                                            {
+                                                @stationNames[employee.Station]
+                                            }
+                                            else
+                                            {
+                                                <span>@employee.Station</span>
+                                            }
+                                        </td>
+                                        <td>@employee.Designation</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="6" class="text-center">
+                                        @if (!string.IsNullOrEmpty(searchTerm))
+                                        {
+                                            <div class="p-3">
+                                                <div class="text-center">
+                                                    <i class="ri-search-line display-5 text-muted"></i>
+                                                    <h5 class="mt-2">No results found for "@searchTerm"</h5>
+                                                    <p class="text-muted">Try adjusting your search criteria</p>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="p-3">No employees found with this role.</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                @if (pagination.TotalItems > pagination.ItemsPerPage)
+                {
+                    <div class="d-flex justify-content-end mt-3">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                @if (pagination.CurrentPage > 1)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { id = ViewBag.RoleName, page = 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="First">
+                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { id = ViewBag.RoleName, page = pagination.CurrentPage - 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @{
+                                    int totalPages = (int)Math.Ceiling((double)pagination.TotalItems / pagination.ItemsPerPage);
+                                    int startPage = Math.Max(1, pagination.CurrentPage - 2);
+                                    int endPage = Math.Min(totalPages, startPage + 4);
+                                    startPage = Math.Max(1, endPage - 4);
+                                }
+
+                                @for (int i = startPage; i <= endPage; i++)
+                                {
+                                    <li class="page-item @(i == pagination.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { id = ViewBag.RoleName, page = i, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })">@i</a>
+                                    </li>
+                                }
+
+                                @if (pagination.CurrentPage < totalPages)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { id = ViewBag.RoleName, page = pagination.CurrentPage + 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { id = ViewBag.RoleName, page = totalPages, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Last">
+                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Add table hover effect
+            $(".table-hover tbody tr").hover(
+                function() {
+                    $(this).addClass("table-active");
+                },
+                function() {
+                    $(this).removeClass("table-active");
+                }
+            );
+        });
+    </script>
+}
