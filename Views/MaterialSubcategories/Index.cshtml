@@ -21,7 +21,7 @@
                         
 
                             <!-- Add other action buttons here -->
-                            <a href="@Url.Action("Create", "MaterialSubCategories")" class="btn btn-primary">
+                            <a href="@Url.Action("Create", "MaterialSubCategories")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
                                 <i class="ri-add-line align-bottom me-1"></i> New Sub Category
                             </a>
                         </div>
@@ -55,7 +55,7 @@
                         <tbody>
                             @foreach (var item in Model)
                             {
-                                <tr>
+                                <tr class="clickable-row" data-href="@Url.Action("Details", "MaterialSubcategories", new { id = item.Id })">
                                     <td>
                                         @Html.DisplayFor(modelItem => item.Name)
                                     </td>

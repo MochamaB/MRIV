@@ -181,6 +181,16 @@
                             console.error('Element with class "' + divClass + '" not found.');
                         }
                     }
+
+
+                    /// SCRIPT FOR CLICKABLE ROW IN INDEX PAGES///
+                    document.querySelectorAll('.clickable-row').forEach(row => {
+                        row.addEventListener('click', function(e) {
+                            if (e.target.closest('a')) return; // Skip if clicking a link
+                            window.location.href = this.dataset.href;
+                        });
+                    });
+   
                     
                     // Fix for the notification URL error
                     // Override the default notification URL with the correct one

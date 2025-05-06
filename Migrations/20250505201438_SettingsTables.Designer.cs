@@ -4,6 +4,7 @@ using MRIV.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    partial class RequisitionContextModelSnapshot : ModelSnapshot
+    [Migration("20250505201438_SettingsTables")]
+    partial class SettingsTables
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -733,6 +736,7 @@ namespace MRIV.Migrations
                         .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("ModuleName")
+                        .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -745,6 +749,7 @@ namespace MRIV.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("ValidationRules")
+                        .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");

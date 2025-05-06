@@ -1,0 +1,92 @@
+@using MRIV.Enums
+@using MRIV.ViewModels
+@model dynamic
+
+@{
+    var setting = (SettingItemViewModel)Model.Setting;
+    var scope = (SettingScope)Model.Scope;
+    var scopeId = (string)Model.ScopeId;
+}
+
+<div class="setting-editor">
+    @switch (setting.DataType)
+    {
+        case SettingDataType.String:
+            <input type="text" 
+                   class="form-control" 
+                   value="@setting.Value" 
+                   data-key="@setting.Key"
+                   placeholder="@setting.DefaultValue" />
+            break;
+            
+        case SettingDataType.Int:
+            <input type="number" 
+                   class="form-control" 
+                   value="@setting.Value" 
+                   data-key="@setting.Key"
+                   placeholder="@setting.DefaultValue" />
+            break;
+            
+        case SettingDataType.Decimal:
+            <input type="number" 
+                   class="form-control" 
+                   value="@setting.Value" 
+                   data-key="@setting.Key"
+                   placeholder="@setting.DefaultValue"
+                   step="0.01" />
+            break;
+            
+        case SettingDataType.Boolean:
+            <select class="form-select" data-key="@setting.Key">
+                <option value="true" selected="@(setting.Value == "True")">True</option>
+                <option value="false" selected="@(setting.Value == "False")">False</option>
+            </select>
+            break;
+            
+        case SettingDataType.DateTime:
+            <input type="datetime-local" 
+                   class="form-control" 
+                   value="@(DateTime.TryParse(setting.Value, out var dt) ? dt.ToString("yyyy-MM-ddTHH:mm") : "")" 
+                   data-key="@setting.Key"
+                   placeholder="@setting.DefaultValue" />
+            break;
+            
+        case SettingDataType.StringArray:
+            <textarea class="form-control" 
+                      data-key="@setting.Key" 
+                      rows="3" 
+                      placeholder="@setting.DefaultValue">@setting.Value</textarea>
+            <small class="text-muted">Enter comma-separated values</small>
+            break;
+            
+        case SettingDataType.Json:
+            <textarea class="form-control" 
+                      data-key="@setting.Key" 
+                      rows="5" 
+                      placeholder="@setting.DefaultValue">@setting.Value</textarea>
+            <small class="text-muted">Enter valid JSON</small>
+            break;
+            
+        default:
+            <input type="text" 
+                   class="form-control" 
+                   value="@setting.Value" 
+                   data-key="@setting.Key"
+                   placeholder="@setting.DefaultValue" />
+            break;
+    }
+    
+    @if (setting.HasCustomValue)
+    {
+        <div class="mt-1">
+            <span class="badge bg-success">Custom value</span>
+        </div>
+    }
+    else
+    {
+        <div class="mt-1">
+            <span class="badge bg-secondary">Default value</span>
+            <small class="text-muted">(@setting.DefaultValue)</small>
+        </div>
+    }
+</div>

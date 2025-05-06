@@ -27,7 +27,7 @@
                         @await Html.PartialAsync("_FilterToggleButton")
 
                         <!-- Add other action buttons here -->
-                        <a href="@Url.Action("Create", "Materials")" class="btn btn-primary">
+                            <a href="@Url.Action("Create", "Materials")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
                             <i class="ri-add-line align-bottom me-1"></i> New Material
                         </a>
                     </div>
@@ -80,7 +80,7 @@
                         {
                             var activeAssignment = item.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
                             
-                            <tr>
+                                <tr class="clickable-row" data-href="@Url.Action("Details", "Materials", new { id = item.Id })">
                                 <td>
                                     @Html.DisplayFor(modelItem => item.Id)
                                 </td>
@@ -149,10 +149,10 @@
                                 </td>
 
                                 <td>
-                                    <a asp-action="Details" asp-route-id="@item.Id"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                                    <a asp-action="Edit" asp-route-id="@item.Id"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                                    <a asp-action="Delete" asp-route-id="@item.Id"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
-                                </td>
+                                        <partial name="_ActionButtons" model="(item.Id, ActionButtonStyle.Dropdown)" />
+                               </td>
+
+
                             </tr>
                         }
                     </tbody>

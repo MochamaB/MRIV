@@ -983,46 +983,6 @@ namespace MRIV.Controllers
                                 _context.Materials.Add(item.Material);
                                 await _context.SaveChangesAsync(); // Generate MaterialId
                                 item.MaterialId = item.Material.Id;
-                                
-                                // Create initial MaterialAssignment for new material
-                                var materialAssignment = new MaterialAssignment
-                                {
-                                    MaterialId = item.Material.Id,
-                                    PayrollNo = requisition.PayrollNo,
-                                    AssignmentDate = DateTime.UtcNow,
-                                    StationCategory = requisition.IssueStationCategory,
-                                    Station = requisition.IssueStation,
-                                    DepartmentId = requisition.DepartmentId,
-                                    AssignmentType = requisition.RequisitionType,
-                                    RequisitionId = requisition.Id,
-                                    AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                    IsActive = true
-                                };
-                                _context.MaterialAssignments.Add(materialAssignment);
-                                
-                                // Create initial condition record
-                                var materialCondition = new MaterialCondition
-                                {
-                                    MaterialId = item.Material.Id,
-                                    RequisitionId = requisition.Id,
-                                    RequisitionItemId = item.Id,
-                                    ConditionCheckType = ConditionCheckType.Initial,
-                                    Stage = "Creation",
-                                    Condition = item.Material.Status,
-                                    FunctionalStatus = FunctionalStatus.FullyFunctional,
-                                    CosmeticStatus = CosmeticStatus.Excellent,
-                                    InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                    InspectionDate = DateTime.UtcNow,
-                                    Notes = "Initial condition at creation"
-                                };
-                                _context.MaterialConditions.Add(materialCondition);
-                                
-                                // Save to get IDs for the assignment and condition
-                                await _context.SaveChangesAsync();
-                                
-                                // Link the condition to the assignment
-                                materialCondition.MaterialAssignmentId = materialAssignment.Id;
-                                _context.MaterialConditions.Update(materialCondition);
                             }
                         }
                         else
@@ -1035,9 +995,56 @@ namespace MRIV.Controllers
                         // Add requisition item
                         _context.RequisitionItems.Add(item);
                     }
+
+                    // Save all requisition items to get their IDs
                     await _context.SaveChangesAsync();
 
-                    // 3. Save approval steps
+                    // 3. Now that we have requisition items with IDs, create material assignments and conditions
+                    foreach (var item in requisitionItems)
+                    {
+                        if (item.MaterialId.HasValue)
+                        {
+                            // Create initial MaterialAssignment for the material
+                            var materialAssignment = new MaterialAssignment
+                            {
+                                MaterialId = item.MaterialId.Value,
+                                PayrollNo = requisition.PayrollNo,
+                                AssignmentDate = DateTime.UtcNow,
+                                StationCategory = requisition.IssueStationCategory,
+                                Station = requisition.IssueStation,
+                                DepartmentId = requisition.DepartmentId,
+                                AssignmentType = requisition.RequisitionType,
+                                RequisitionId = requisition.Id,
+                                AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                IsActive = true
+                            };
+                            _context.MaterialAssignments.Add(materialAssignment);
+
+                            // Save to get the assignment ID
+                            await _context.SaveChangesAsync();
+
+                            // Now create the condition record with valid IDs
+                            var materialCondition = new MaterialCondition
+                            {
+                                MaterialId = item.MaterialId.Value,
+                                RequisitionId = requisition.Id,
+                                RequisitionItemId = item.Id, // Now this ID exists in the database
+                                MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
+                                ConditionCheckType = ConditionCheckType.Initial,
+                                Stage = "Creation",
+                                Condition = MaterialStatus.InProcess,
+                                FunctionalStatus = FunctionalStatus.FullyFunctional,
+                                CosmeticStatus = CosmeticStatus.Excellent,
+                                InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                InspectionDate = DateTime.UtcNow,
+                                Notes = "Initial condition at creation"
+                            };
+                            _context.MaterialConditions.Add(materialCondition);
+                            await _context.SaveChangesAsync();
+                        }
+                    }
+
+                    // 4. Save approval steps
                     foreach (var step in approvalSteps)
                     {
                         step.RequisitionId = requisition.Id; // Link to parent
@@ -1047,7 +1054,7 @@ namespace MRIV.Controllers
                     _context.Approvals.AddRange(approvalSteps); // Add all steps at once
                     await _context.SaveChangesAsync();
 
-                    // 4. Send notifications to requisition creator and first approver
+                    // 5. Send notifications to requisition creator and first approver
                     await SendRequisitionNotifications(requisition, requisitionItems, approvalSteps);
 
                     // Commit the transaction

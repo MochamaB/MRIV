@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.Data;
+using MRIV.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,8 +28,10 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 
-builder.Services.AddHttpContextAccessor();
+// Add settings service
+builder.Services.AddSettingsService();
 
+builder.Services.AddHttpContextAccessor();
 
 // Add session services
 builder.Services.AddDistributedMemoryCache();
@@ -54,6 +57,9 @@ using (var scope = app.Services.CreateScope())
 
         // Seed notification templates (new seeder)
         NotificationTemplateSeeder.SeedNotificationTemplates(context);
+        
+        // Seed settings
+        SettingsSeeder.SeedSettings(context);
     }
     catch (Exception ex)
     {

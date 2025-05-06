@@ -1,0 +1,304 @@
+@model MRIV.ViewModels.SettingsViewModel
+@using MRIV.Enums
+@{
+    ViewData["Title"] = Model.ScopeDisplayName;
+}
+
+<div class="row">
+    <div class="col-12">
+        <div class="page-title-box d-sm-flex align-items-center justify-content-between">
+            <h4 class="mb-sm-0">@Model.ScopeDisplayName</h4>
+
+            <div class="page-title-right">
+                <ol class="breadcrumb m-0">
+                    <li class="breadcrumb-item"><a href="javascript: void(0);">Admin</a></li>
+                    <li class="breadcrumb-item active">Settings</li>
+                </ol>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Settings Navigation</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid">
+                    <a href="@Url.Action("Global")" class="btn @(Model.Scope == SettingScope.Global ? "btn-primary" : "btn-light")">
+                        <i class="ri-settings-3-line align-middle me-1"></i> Global Settings
+                    </a>
+                </div>
+                
+                @if (Model.AvailableModules.Any())
+                {
+                    <h6 class="mt-4 mb-2">Module Settings</h6>
+                    <div class="list-group">
+                        @foreach (var module in Model.AvailableModules)
+                        {
+                            <a href="@Url.Action("Module", new { id = module })" 
+                               class="list-group-item list-group-item-action @(Model.Scope == SettingScope.Module && Model.ScopeId == module ? "active" : "")">
+                                <i class="ri-apps-2-line align-middle me-1"></i> @module
+                            </a>
+                        }
+                    </div>
+                }
+                
+                @if (Model.AvailableUsers.Any())
+                {
+                    <h6 class="mt-4 mb-2">User Settings</h6>
+                    <div class="list-group">
+                        @foreach (var user in Model.AvailableUsers)
+                        {
+                            <a href="@Url.Action("UserSettings", new { id = user.Id })" 
+                               class="list-group-item list-group-item-action @(Model.Scope == SettingScope.User && Model.ScopeId == user.Id ? "active" : "")">
+                                <i class="ri-user-settings-line align-middle me-1"></i> @user.Name
+                            </a>
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-9">
+        @if (!Model.Groups.Any())
+        {
+            <div class="card">
+                <div class="card-body">
+                    <div class="alert alert-info mb-0">
+                        No settings found for this scope. Please select a different scope from the navigation.
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="settings-accordion" id="settingsAccordion">
+                @foreach (var group in Model.Groups)
+                {
+                    <div class="card mb-3">
+                        <div class="card-header" id="heading@(group.Id)">
+                            <h5 class="mb-0">
+                                <button class="btn btn-link w-100 text-start d-flex justify-content-between" 
+                                        type="button" 
+                                        data-bs-toggle="collapse" 
+                                        data-bs-target="#collapse@(group.Id)" 
+                                        aria-expanded="true" 
+                                        aria-controls="collapse@(group.Id)">
+                                    @group.Name
+                                    <i class="ri-arrow-down-s-line"></i>
+                                </button>
+                            </h5>
+                        </div>
+
+                        <div id="collapse@(group.Id)" 
+                             class="collapse show" 
+                             aria-labelledby="heading@(group.Id)" 
+                             data-bs-parent="#settingsAccordion">
+                            <div class="card-body">
+                                @if (!string.IsNullOrEmpty(group.Description))
+                                {
+                                    <p class="text-muted">@group.Description</p>
+                                }
+                                
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Setting</th>
+                                                <th>Value</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var setting in group.Settings)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <strong>@setting.Name</strong>
+                                                        @if (!string.IsNullOrEmpty(setting.Description))
+                                                        {
+                                                            <p class="text-muted mb-0 small">@setting.Description</p>
+                                                        }
+                                                    </td>
+                                                    <td>
+                                                        @await Html.PartialAsync("_SettingValueEditor", new { 
+                                                            Setting = setting, 
+                                                            Scope = Model.Scope, 
+                                                            ScopeId = Model.ScopeId 
+                                                        })
+                                                    </td>
+                                                    <td>
+                                                        <div class="btn-group">
+                                                            <button type="button" 
+                                                                    class="btn btn-sm btn-primary save-setting" 
+                                                                    data-key="@setting.Key" 
+                                                                    data-scope="@((int)Model.Scope)" 
+                                                                    data-scope-id="@Model.ScopeId">
+                                                                <i class="ri-save-line"></i> Save
+                                                            </button>
+                                                            @if (setting.HasCustomValue)
+                                                            {
+                                                                <button type="button" 
+                                                                        class="btn btn-sm btn-outline-danger reset-setting" 
+                                                                        data-key="@setting.Key" 
+                                                                        data-scope="@((int)Model.Scope)" 
+                                                                        data-scope-id="@Model.ScopeId"
+                                                                        data-default-value="@setting.DefaultValue">
+                                                                    <i class="ri-refresh-line"></i> Reset
+                                                                </button>
+                                                            }
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Save setting
+            $('.save-setting').on('click', function() {
+                var btn = $(this);
+                var key = btn.data('key');
+                var scope = btn.data('scope');
+                var scopeId = btn.data('scope-id');
+                var valueInput = $(`input[data-key="${key}"], select[data-key="${key}"], textarea[data-key="${key}"]`);
+                var value = valueInput.val();
+                
+                // Show loading state
+                btn.html('<i class="ri-loader-4-line"></i> Saving...');
+                btn.prop('disabled', true);
+                
+                // Send AJAX request
+                $.ajax({
+                    url: '@Url.Action("UpdateSetting")',
+                    type: 'POST',
+                    data: {
+                        Key: key,
+                        Value: value,
+                        Scope: scope,
+                        ScopeId: scopeId,
+                        ResetToDefault: false
+                    },
+                    success: function(response) {
+                        // Show success message
+                        Toastify({
+                            text: "Setting saved successfully!",
+                            duration: 3000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#0ab39c",
+                        }).showToast();
+                        
+                        // Reload the page to show updated values
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    },
+                    error: function(xhr) {
+                        // Show error message
+                        var errorMessage = "Failed to save setting.";
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join("<br>");
+                        }
+                        
+                        Toastify({
+                            text: errorMessage,
+                            duration: 5000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#f06548",
+                        }).showToast();
+                        
+                        // Reset button state
+                        btn.html('<i class="ri-save-line"></i> Save');
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+            
+            // Reset setting
+            $('.reset-setting').on('click', function() {
+                var btn = $(this);
+                var key = btn.data('key');
+                var scope = btn.data('scope');
+                var scopeId = btn.data('scope-id');
+                var defaultValue = btn.data('default-value');
+                
+                // Confirm reset
+                if (!confirm(`Are you sure you want to reset this setting to its default value (${defaultValue})?`)) {
+                    return;
+                }
+                
+                // Show loading state
+                btn.html('<i class="ri-loader-4-line"></i> Resetting...');
+                btn.prop('disabled', true);
+                
+                // Send AJAX request
+                $.ajax({
+                    url: '@Url.Action("UpdateSetting")',
+                    type: 'POST',
+                    data: {
+                        Key: key,
+                        Value: '',
+                        Scope: scope,
+                        ScopeId: scopeId,
+                        ResetToDefault: true
+                    },
+                    success: function(response) {
+                        // Show success message
+                        Toastify({
+                            text: "Setting reset to default value!",
+                            duration: 3000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#0ab39c",
+                        }).showToast();
+                        
+                        // Reload the page to show updated values
+                        setTimeout(function() {
+                            location.reload();
+                        }, 1000);
+                    },
+                    error: function(xhr) {
+                        // Show error message
+                        var errorMessage = "Failed to reset setting.";
+                        if (xhr.responseJSON && xhr.responseJSON.errors) {
+                            errorMessage = Object.values(xhr.responseJSON.errors).flat().join("<br>");
+                        }
+                        
+                        Toastify({
+                            text: errorMessage,
+                            duration: 5000,
+                            close: true,
+                            gravity: "top",
+                            position: "right",
+                            backgroundColor: "#f06548",
+                        }).showToast();
+                        
+                        // Reset button state
+                        btn.html('<i class="ri-refresh-line"></i> Reset');
+                        btn.prop('disabled', false);
+                    }
+                });
+            });
+        });
+    </script>
+}

@@ -40,6 +40,11 @@ public partial class RequisitionContext : DbContext
 
     public DbSet<MediaFile> MediaFiles { get; set; }
 
+    // Settings entities
+    public DbSet<SettingGroup> SettingGroups { get; set; }
+    public DbSet<SettingDefinition> SettingDefinitions { get; set; }
+    public DbSet<SettingValue> SettingValues { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -133,6 +138,39 @@ public partial class RequisitionContext : DbContext
         });
         modelBuilder.Entity<MediaFile>()
     .HasIndex(m => new { m.ModelType, m.ModelId });
+
+        // Settings configuration
+        modelBuilder.Entity<SettingDefinition>(entity =>
+        {
+            entity.HasIndex(e => e.Key).IsUnique();
+            
+            entity.Property(e => e.DataType)
+                  .HasConversion<int>();
+                  
+            entity.HasOne(e => e.Group)
+                  .WithMany(g => g.SettingDefinitions)
+                  .HasForeignKey(e => e.GroupId);
+        });
+        
+        modelBuilder.Entity<SettingValue>(entity =>
+        {
+            entity.HasIndex(e => new { e.SettingDefinitionId, e.Scope, e.ScopeId }).IsUnique();
+            
+            entity.Property(e => e.Scope)
+                  .HasConversion<int>();
+                  
+            entity.HasOne(e => e.SettingDefinition)
+                  .WithMany(sd => sd.SettingValues)
+                  .HasForeignKey(e => e.SettingDefinitionId);
+        });
+        
+        modelBuilder.Entity<SettingGroup>(entity =>
+        {
+            entity.HasOne(e => e.ParentGroup)
+                  .WithMany(g => g.ChildGroups)
+                  .HasForeignKey(e => e.ParentGroupId)
+                  .OnDelete(DeleteBehavior.Restrict);
+        });
 
         OnModelCreatingPartial(modelBuilder);
 

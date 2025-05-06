@@ -1,0 +1,49 @@
+﻿@using MRIV.Enums
+@model (int Id, ActionButtonStyle Style)
+
+@switch (Model.Style)
+{
+    case ActionButtonStyle.Inline:
+        <!-- Inline buttons code -->
+        <a asp-action="Details" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+        <a asp-action="Edit" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+        <a asp-action="Delete" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+        break;
+    case ActionButtonStyle.Dropdown:
+        <!-- Dropdown buttons code -->
+        <span>
+            <div class="dropdown">
+                <button class="btn btn-light dropdown"
+                        type="button"
+                        data-bs-toggle="dropdown"
+                        aria-expanded="false"
+                        onclick="event.stopPropagation()">
+                    <i class="ri-more-fill"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" style="margin-top: 5px;">
+                    <li>
+                        <a class="dropdown-item" asp-action="Details" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details" onclick="event.stopPropagation()">
+                            <i class="mdi mdi-eye mdi-24px text-warning"></i> View
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item" asp-action="Edit" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit" onclick="event.stopPropagation()">
+                            <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit
+                        </a>
+                    </li>
+                    <li class="dropdown-divider"></li>
+                    <li>
+                        <a class="dropdown-item" asp-action="Delete" asp-route-id="@Model.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete" onclick="event.stopPropagation()">
+                            <i class="mdi mdi-delete mdi-24px text-danger"></i> Delete
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </span>
+
+        break;
+    default:
+        <!-- Default to inline -->
+        break;
+}
+
