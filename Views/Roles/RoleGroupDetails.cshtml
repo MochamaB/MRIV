@@ -18,8 +18,11 @@
                                 <i class="ri-search-line search-icon"></i>
                             </div>
 
+                            <a href="@Url.Action("Index", "RoleGroups")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Role Groups
+                            </a>
                   
-                            <a href="@Url.Action("AddMember", "Roles", new { id = roleGroup.Id })" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                            <a href="@Url.Action("AddMember", "RoleGroups", new { id = roleGroup.Id })" class="btn btn-primary btn-sm d-flex align-items-center py-2">
                                 <i class="ri-user-add-line align-bottom me-1"></i> Add Member
                             </a>
                         </div>

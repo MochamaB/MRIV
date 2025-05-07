@@ -5,6 +5,8 @@ using MRIV.Attributes;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,20 +16,17 @@ namespace MRIV.Controllers
     public class RolesController : Controller
     {
         private readonly KtdaleaveContext _ktdaContext;
-        private readonly RequisitionContext _requisitionContext;
         private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly ILogger<RolesController> _logger;
 
         public RolesController(
             KtdaleaveContext ktdaContext,
-            RequisitionContext requisitionContext,
             IEmployeeService employeeService,
             IDepartmentService departmentService,
             ILogger<RolesController> logger)
         {
             _ktdaContext = ktdaContext;
-            _requisitionContext = requisitionContext;
             _employeeService = employeeService;
             _departmentService = departmentService;
             _logger = logger;
@@ -239,295 +238,6 @@ namespace MRIV.Controllers
             }
             
             return query;
-        }
-
-        // GET: Roles/RoleGroups
-        public async Task<IActionResult> RoleGroups()
-        {
-            var roleGroups = await _requisitionContext.RoleGroups
-                .OrderBy(rg => rg.Name)
-                .ToListAsync();
-
-            // Count members per role group
-            var memberCounts = new Dictionary<int, int>();
-            foreach (var group in roleGroups)
-            {
-                var count = await _requisitionContext.RoleGroupMembers
-                    .CountAsync(m => m.RoleGroupId == group.Id && m.IsActive);
-                memberCounts[group.Id] = count;
-            }
-
-            ViewBag.MemberCounts = memberCounts;
-            return View(roleGroups);
-        }
-
-        // GET: Roles/RoleGroupDetails/{id}
-        public async Task<IActionResult> RoleGroupDetails(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var roleGroup = await _requisitionContext.RoleGroups
-                .FirstOrDefaultAsync(rg => rg.Id == id);
-
-            if (roleGroup == null)
-            {
-                return NotFound();
-            }
-
-            // Get members of this role group
-            var members = await _requisitionContext.RoleGroupMembers
-                .Where(m => m.RoleGroupId == id && m.IsActive)
-                .ToListAsync();
-
-            // Get employee details for each member
-            var viewModels = new List<RoleGroupMemberViewModel>();
-            foreach (var member in members)
-            {
-                var employee = await _employeeService.GetEmployeeByPayrollAsync(member.PayrollNo);
-                if (employee != null)
-                {
-                    viewModels.Add(new RoleGroupMemberViewModel
-                    {
-                        Id = member.Id,
-                        RoleGroupId = member.RoleGroupId,
-                        PayrollNo = member.PayrollNo,
-                        EmployeeName = employee.Fullname,
-                        EmployeeRole = employee.Role,
-                        Department = employee.Department,
-                        Station = employee.Station,
-                        IsActive = member.IsActive
-                    });
-                }
-            }
-
-            ViewBag.RoleGroup = roleGroup;
-            return View(viewModels);
-        }
-
-        // GET: Roles/CreateRoleGroup
-        public IActionResult CreateRoleGroup()
-        {
-            return View();
-        }
-
-        // POST: Roles/CreateRoleGroup
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> CreateRoleGroup([Bind("Name,Description,HasFullDepartmentAccess,HasFullStationAccess,IsActive")] RoleGroup roleGroup)
-        {
-            if (ModelState.IsValid)
-            {
-                roleGroup.CreatedAt = DateTime.Now;
-                _requisitionContext.Add(roleGroup);
-                await _requisitionContext.SaveChangesAsync();
-                return RedirectToAction(nameof(RoleGroups));
-            }
-            return View(roleGroup);
-        }
-
-        // GET: Roles/EditRoleGroup/{id}
-        public async Task<IActionResult> EditRoleGroup(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var roleGroup = await _requisitionContext.RoleGroups.FindAsync(id);
-            if (roleGroup == null)
-            {
-                return NotFound();
-            }
-            return View(roleGroup);
-        }
-
-        // POST: Roles/EditRoleGroup/{id}
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> EditRoleGroup(int id, [Bind("Id,Name,Description,HasFullDepartmentAccess,HasFullStationAccess,IsActive")] RoleGroup roleGroup)
-        {
-            if (id != roleGroup.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    roleGroup.UpdatedAt = DateTime.Now;
-                    _requisitionContext.Update(roleGroup);
-                    await _requisitionContext.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!RoleGroupExists(roleGroup.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(RoleGroups));
-            }
-            return View(roleGroup);
-        }
-
-        // GET: Roles/DeleteRoleGroup/{id}
-        public async Task<IActionResult> DeleteRoleGroup(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var roleGroup = await _requisitionContext.RoleGroups
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (roleGroup == null)
-            {
-                return NotFound();
-            }
-
-            return View(roleGroup);
-        }
-
-        // POST: Roles/DeleteRoleGroup/{id}
-        [HttpPost, ActionName("DeleteRoleGroup")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteRoleGroupConfirmed(int id)
-        {
-            var roleGroup = await _requisitionContext.RoleGroups.FindAsync(id);
-            if (roleGroup != null)
-            {
-                _requisitionContext.RoleGroups.Remove(roleGroup);
-                await _requisitionContext.SaveChangesAsync();
-            }
-            
-            return RedirectToAction(nameof(RoleGroups));
-        }
-
-        #region Role Group Members
-
-        // GET: Roles/AddMember/{roleGroupId}
-        public async Task<IActionResult> AddMember(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var roleGroup = await _requisitionContext.RoleGroups.FindAsync(id);
-            if (roleGroup == null)
-            {
-                return NotFound();
-            }
-
-            // Get existing members to exclude them
-            var existingMembers = await _requisitionContext.RoleGroupMembers
-                .Where(m => m.RoleGroupId == id && m.IsActive)
-                .Select(m => m.PayrollNo)
-                .ToListAsync();
-
-            // Create view model
-            var viewModel = new AddRoleGroupMemberViewModel
-            {
-                RoleGroupId = roleGroup.Id,
-                RoleGroupName = roleGroup.Name
-            };
-
-            ViewBag.RoleGroup = roleGroup;
-            return View(viewModel);
-        }
-
-        // POST: Roles/AddMember
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> AddMember(AddRoleGroupMemberViewModel viewModel)
-        {
-            if (ModelState.IsValid)
-            {
-                // Check if employee exists
-                var employee = await _employeeService.GetEmployeeByPayrollAsync(viewModel.PayrollNo);
-                if (employee == null)
-                {
-                    ModelState.AddModelError("PayrollNo", "Employee not found with this payroll number.");
-                    var roleGroup = await _requisitionContext.RoleGroups.FindAsync(viewModel.RoleGroupId);
-                    ViewBag.RoleGroup = roleGroup;
-                    return View(viewModel);
-                }
-
-                // Check if already a member
-                var existingMember = await _requisitionContext.RoleGroupMembers
-                    .FirstOrDefaultAsync(m => m.RoleGroupId == viewModel.RoleGroupId && 
-                                             m.PayrollNo == viewModel.PayrollNo);
-
-                if (existingMember != null)
-                {
-                    if (existingMember.IsActive)
-                    {
-                        ModelState.AddModelError("PayrollNo", "Employee is already a member of this role group.");
-                        var roleGroup = await _requisitionContext.RoleGroups.FindAsync(viewModel.RoleGroupId);
-                        ViewBag.RoleGroup = roleGroup;
-                        return View(viewModel);
-                    }
-                    else
-                    {
-                        // Reactivate the member
-                        existingMember.IsActive = true;
-                        existingMember.UpdatedAt = DateTime.Now;
-                        _requisitionContext.Update(existingMember);
-                    }
-                }
-                else
-                {
-                    // Create new member
-                    var member = new RoleGroupMember
-                    {
-                        RoleGroupId = viewModel.RoleGroupId,
-                        PayrollNo = viewModel.PayrollNo,
-                        IsActive = true,
-                        CreatedAt = DateTime.Now
-                    };
-                    _requisitionContext.Add(member);
-                }
-
-                await _requisitionContext.SaveChangesAsync();
-                return RedirectToAction(nameof(RoleGroupDetails), new { id = viewModel.RoleGroupId });
-            }
-
-            var roleGroupForError = await _requisitionContext.RoleGroups.FindAsync(viewModel.RoleGroupId);
-            ViewBag.RoleGroup = roleGroupForError;
-            return View(viewModel);
-        }
-
-        // POST: Roles/RemoveMember/{id}
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RemoveMember(int id, int roleGroupId)
-        {
-            var member = await _requisitionContext.RoleGroupMembers.FindAsync(id);
-            if (member != null)
-            {
-                // Soft delete - just mark as inactive
-                member.IsActive = false;
-                member.UpdatedAt = DateTime.Now;
-                _requisitionContext.Update(member);
-                await _requisitionContext.SaveChangesAsync();
-            }
-            
-            return RedirectToAction(nameof(RoleGroupDetails), new { id = roleGroupId });
-        }
-
-        #endregion
-
-        private bool RoleGroupExists(int id)
-        {
-            return _requisitionContext.RoleGroups.Any(e => e.Id == id);
         }
     }
 }

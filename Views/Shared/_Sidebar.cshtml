@@ -93,6 +93,8 @@
                 </a>
             </li>
 
+           
+
             <li class="nav-item">
                 <a class="nav-link menu-link @(currentController == "Notifications" || currentController == "NotificationTemplates" ? "active" : "")"
                                href="#sidebarNotifications"
@@ -136,9 +138,34 @@
                 </a>
             </li>
 
+            <li class="nav-item">
+                <a class="nav-link menu-link @(currentController == "Roles" || currentController == "RoleGroups" ? "active" : "")"
+                   href="#sidebarRoles"
+                   data-bs-toggle="collapse"
+                   role="button"
+                   aria-expanded="@(currentController == "Roles" || currentController == "RoleGroups" ? "true" : "false")"
+                   aria-controls="sidebarRoles">
+                    <i class="ri-shield-user-line"></i> <span data-key="t-roles">Roles & Access</span>
+                </a>
+                <div class="menu-dropdown collapse @(currentController == "Roles" || currentController == "RoleGroups" ? "show" : "")" id="sidebarRoles">
+                    <ul class="nav nav-sm flex-column">
+                        <li class="nav-item">
+                            <a href="/Roles/" class="nav-link @(currentController == "Roles" ? "active" : "")" data-key="t-roles-list">System Roles</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="/RoleGroups/" class="nav-link @(currentController == "RoleGroups" ? "active" : "")" data-key="t-role-groups">Role Groups</a>
+                        </li>
+                    </ul>
+                </div>
+            </li>
             <li class="nav-item" asp-authorize-role="Admin">
-                <a class="nav-link menu-link @(currentController == "Roles" ? "active" : "")" href="/Roles/">
-                    <i class="ri-shield-user-line"></i> <span data-key="t-roles">Roles</span>
+                <a class="nav-link menu-link">
+                    <i class="ri-user"></i> <span data-key="t-employees"></span>
+                </a>
+            </li>
+            <li class="nav-item" asp-authorize-role="Admin">
+                <a class="nav-link menu-link">
+                    <i class="ri-user"></i> <span data-key="t-employees"></span>
                 </a>
             </li>
         </ul>

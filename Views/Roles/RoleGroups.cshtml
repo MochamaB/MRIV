@@ -2,6 +2,7 @@
 
 @{
     ViewData["Title"] = "Role Groups";
+    var memberCounts = ViewBag.MemberCounts as Dictionary<int, int>;
 }
 
 <div class="row">
@@ -21,23 +22,23 @@
                                 <i class="ri-arrow-left-line align-bottom me-1"></i> Back to Roles
                             </a>
                             
-                            <a href="@Url.Action("CreateRoleGroup", "Roles")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
-                                <i class="ri-add-line align-bottom me-1"></i> New Role Group
+                            <a href="@Url.Action("Create", "RoleGroups")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-add-line align-bottom me-1"></i> Create New
                             </a>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Table Content -->
             <div class="card-body">
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle mb-0">
                         <thead>
                             <tr class="table-light">
+                                <th>#</th>
                                 <th>Name</th>
                                 <th>Description</th>
-                                <th>Full Dept. Access</th>
+                                <th>Full Dept Access</th>
                                 <th>Full Station Access</th>
                                 <th>Members</th>
                                 <th>Status</th>
@@ -45,55 +46,86 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var group in Model)
+                            @if (Model != null && Model.Any())
+                            {
+                                int rowNumber = 1;
+                                foreach (var roleGroup in Model)
+                                {
+                                    <tr>
+                                        <td>@(rowNumber++)</td>
+                                        <td>@roleGroup.Name</td>
+                                        <td>@(string.IsNullOrEmpty(roleGroup.Description) ? "N/A" : roleGroup.Description)</td>
+                                        <td>
+                                            @if (roleGroup.HasFullDepartmentAccess)
+                                            {
+                                                <span class="badge badge-soft-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-soft-danger">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (roleGroup.HasFullStationAccess)
+                                            {
+                                                <span class="badge badge-soft-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-soft-danger">No</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (memberCounts.ContainsKey(roleGroup.Id))
+                                            {
+                                                <span class="badge badge-soft-primary">@memberCounts[roleGroup.Id]</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-soft-secondary">0</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (roleGroup.IsActive)
+                                            {
+                                                <span class="badge badge-soft-success">Active</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-soft-danger">Inactive</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-soft-secondary btn-sm dropdown" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="ri-more-fill align-middle"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <a class="dropdown-item" href="@Url.Action("Details", "RoleGroups", new { id = roleGroup.Id })">
+                                                            <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="@Url.Action("Edit", "RoleGroups", new { id = roleGroup.Id })">
+                                                            <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="@Url.Action("Delete", "RoleGroups", new { id = roleGroup.Id })">
+                                                            <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Delete
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
                             {
                                 <tr>
-                                    <td>@group.Name</td>
-                                    <td>@group.Description</td>
-                                    <td>
-                                        @if (group.HasFullDepartmentAccess)
-                                        {
-                                            <span class="badge bg-success">Yes</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">No</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        @if (group.HasFullStationAccess)
-                                        {
-                                            <span class="badge bg-success">Yes</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">No</span>
-                                        }
-                                    </td>
-                                    <td>@ViewBag.MemberCounts[group.Id]</td>
-                                    <td>
-                                        @if (group.IsActive)
-                                        {
-                                            <span class="badge bg-success">Active</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Inactive</span>
-                                        }
-                                    </td>
-                                    <td>
-                                        <div class="hstack gap-3 fs-15">
-                                            <a href="@Url.Action("RoleGroupDetails", "Roles", new { id = group.Id })" class="link-primary" title="View Details">
-                                                <i class="ri-eye-line"></i>
-                                            </a>
-                                            <a href="@Url.Action("EditRoleGroup", "Roles", new { id = group.Id })" class="link-success" title="Edit">
-                                                <i class="ri-pencil-line"></i>
-                                            </a>
-                                            <a href="@Url.Action("DeleteRoleGroup", "Roles", new { id = group.Id })" class="link-danger" title="Delete">
-                                                <i class="ri-delete-bin-line"></i>
-                                            </a>
-                                        </div>
-                                    </td>
+                                    <td colspan="8" class="text-center">No role groups found.</td>
                                 </tr>
                             }
                         </tbody>
@@ -103,3 +135,17 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Search functionality
+            $(".search").on("keyup", function() {
+                var value = $(this).val().toLowerCase();
+                $("table tbody tr").filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1)
+                });
+            });
+        });
+    </script>
+}

@@ -25,5 +25,7 @@ namespace MRIV.ViewModels
         
         [Display(Name = "Active")]
         public bool IsActive { get; set; }
+        [Display(Name = "Designation")]
+        public string? Designation { get; set; }
     }
 }
