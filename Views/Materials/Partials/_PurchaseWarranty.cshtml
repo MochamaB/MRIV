@@ -1,0 +1,172 @@
+@model MRIV.ViewModels.MaterialDisplayViewModel
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light">
+                <h5 class="card-title mb-0">Purchase Information</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Vendor/Supplier</dt>
+                    <dd class="col-sm-8">@Model.VendorName</dd>
+                    
+                    <dt class="col-sm-4">Purchase Date</dt>
+                    <dd class="col-sm-8">
+                        @(Model.PurchaseDate.HasValue ? Model.PurchaseDate.Value.ToString("yyyy-MM-dd") : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-4">Purchase Price</dt>
+                    <dd class="col-sm-8">
+                        @(Model.PurchasePrice.HasValue ? $"{Model.PurchasePrice.Value:C2}" : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-4">Asset Tag</dt>
+                    <dd class="col-sm-8">@(Model.AssetTag ?? "N/A")</dd>
+                    
+                    <dt class="col-sm-4">Serial Number</dt>
+                    <dd class="col-sm-8">@(Model.QRCode ?? "N/A")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light">
+                <h5 class="card-title mb-0">Warranty & Lifecycle</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Warranty Start</dt>
+                    <dd class="col-sm-8">
+                        @(Model.WarrantyStartDate.HasValue ? Model.WarrantyStartDate.Value.ToString("yyyy-MM-dd") : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-4">Warranty End</dt>
+                    <dd class="col-sm-8">
+                        @(Model.WarrantyEndDate.HasValue ? Model.WarrantyEndDate.Value.ToString("yyyy-MM-dd") : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-4">Warranty Status</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.WarrantyEndDate.HasValue && Model.WarrantyEndDate.Value > DateTime.Now)
+                        {
+                            var daysLeft = (Model.WarrantyEndDate.Value - DateTime.Now).TotalDays;
+                            <span class="badge bg-success">Active</span>
+                            <small class="text-muted ms-2">@Math.Round(daysLeft) days remaining</small>
+                        }
+                        else if (Model.WarrantyEndDate.HasValue)
+                        {
+                            <span class="badge bg-danger">Expired</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Unknown</span>
+                        }
+                    </dd>
+                    
+                    <dt class="col-sm-4">Warranty Terms</dt>
+                    <dd class="col-sm-8">@(Model.WarrantyTerms ?? "N/A")</dd>
+                    
+                    <dt class="col-sm-4">Expected Lifespan</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.ExpectedLifespanMonths.HasValue)
+                        {
+                            <span>@Model.ExpectedLifespanMonths months</span>
+                            
+                            @if (Model.PurchaseDate.HasValue)
+                            {
+                                var endOfLife = Model.PurchaseDate.Value.AddMonths(Model.ExpectedLifespanMonths.Value);
+                                var progress = Math.Min(100, Math.Max(0, (DateTime.Now - Model.PurchaseDate.Value).TotalDays / 
+                                                    (endOfLife - Model.PurchaseDate.Value).TotalDays * 100));
+                                
+                                <div class="progress animated-progress custom-progress mt-2">
+                                    <div class="progress-bar @(progress > 75 ? "bg-danger" : progress > 50 ? "bg-warning" : "bg-success")" 
+                                         role="progressbar" style="width: @progress%" aria-valuenow="@progress" aria-valuemin="0" aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">
+                                    @if (DateTime.Now > endOfLife)
+                                    {
+                                        <span>End of life reached on @endOfLife.ToString("yyyy-MM-dd")</span>
+                                    }
+                                    else
+                                    {
+                                        <span>End of life expected on @endOfLife.ToString("yyyy-MM-dd")</span>
+                                    }
+                                </small>
+                            }
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light">
+                <h5 class="card-title mb-0">Maintenance Schedule</h5>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Maintenance Interval</dt>
+                    <dd class="col-sm-9">
+                        @(Model.MaintenanceIntervalMonths.HasValue ? $"{Model.MaintenanceIntervalMonths.Value} months" : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-3">Last Maintenance</dt>
+                    <dd class="col-sm-9">
+                        @(Model.LastMaintenanceDate.HasValue ? Model.LastMaintenanceDate.Value.ToString("yyyy-MM-dd") : "N/A")
+                    </dd>
+                    
+                    <dt class="col-sm-3">Next Maintenance</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.NextMaintenanceDate.HasValue)
+                        {
+                            var daysUntil = (Model.NextMaintenanceDate.Value - DateTime.Now).TotalDays;
+                            
+                            @Model.NextMaintenanceDate.Value.ToString("yyyy-MM-dd")
+                            
+                            if (daysUntil < 0)
+                            {
+                                <span class="badge bg-danger ms-2">Overdue by @Math.Abs((int)daysUntil) days</span>
+                            }
+                            else if (daysUntil < 30)
+                            {
+                                <span class="badge bg-warning ms-2">Due in @((int)daysUntil) days</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-info ms-2">Due in @((int)daysUntil) days</span>
+                            }
+                            
+                            <div class="progress animated-progress custom-progress mt-2" style="height: 6px;">
+                                @{
+                                    var lastDate = Model.LastMaintenanceDate ?? Model.PurchaseDate ?? DateTime.Now.AddMonths(-Model.MaintenanceIntervalMonths ?? 6);
+                                    var nextDate = Model.NextMaintenanceDate ?? lastDate.AddMonths(Model.MaintenanceIntervalMonths ?? 6);
+                                    var totalDays = (nextDate - lastDate).TotalDays;
+                                    var elapsedDays = (DateTime.Now - lastDate).TotalDays;
+                                    var maintenanceProgress = Math.Min(100, Math.Max(0, elapsedDays / totalDays * 100));
+                                }
+                                <div class="progress-bar @(maintenanceProgress > 90 ? "bg-danger" : maintenanceProgress > 75 ? "bg-warning" : "bg-success")" 
+                                     role="progressbar" style="width: @maintenanceProgress%" aria-valuenow="@maintenanceProgress" aria-valuemin="0" aria-valuemax="100">
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <span>N/A</span>
+                        }
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>

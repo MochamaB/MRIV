@@ -30,7 +30,7 @@ namespace MRIV.Models
 
         [StringLength(100)]
         [DisplayName("Station")]
-        public string? Station { get; set; }
+        public int? StationId { get; set; }
 
         [DisplayName("Department")]
         public int? DepartmentId { get; set; }

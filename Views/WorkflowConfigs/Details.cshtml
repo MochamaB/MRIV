@@ -7,23 +7,28 @@
 
 <div class=" contwrapper">
 <div>
-        <h4 style="text-transform:capitalize"><strong>Station Categories:</strong> @Model.IssueStationCategory → @Model.DeliveryStationCategory</h4>
+        <div class="d-flex align-items-center">
+            <h5 class="me-3 mb-0" style="color:#324721;text-transform:capitalize">FROM: @Model.IssueStationCategory </h5>
+            <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary  me-3" style="vertical-align: middle;"></i>
+            <h5 class="mb-0" style="color:#fcb900;text-transform:capitalize"> TO: @Model.DeliveryStationCategory</h5>
+        </div>
+       
     <hr />
         <dl class="row">
             <dt class="col-sm-3">ID</dt>
             <dd class="col-sm-9">@Model.Id</dd>
 
             <dt class="col-sm-3">Issue Station Category</dt>
-            <dd class="col-sm-9">@Model.IssueStationCategory</dd>
+            <dd class="col-sm-9" style="text-transform: capitalize;">@Model.IssueStationCategory</dd>
 
             <dt class="col-sm-3">Delivery Station Category</dt>
-            <dd class="col-sm-9">@Model.DeliveryStationCategory</dd>
+            <dd class="col-sm-9" style="text-transform: capitalize;">@Model.DeliveryStationCategory</dd>
         </dl>
 </div>
     <h5 class="mt-2 pt-4">Workflow Steps</h5>
     <div class="table-responsive">
-    <table class="table select-table">
-        <thead>
+        <table class="table table-hover">
+            <thead class="table-light">
             <tr>
                 <th>Order</th>
                 <th>Step Name</th>

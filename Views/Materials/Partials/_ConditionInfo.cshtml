@@ -1,0 +1,257 @@
+@using MRIV.Enums
+@using MRIV.Helpers
+@model MRIV.ViewModels.MaterialDisplayViewModel
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light">
+                <h5 class="card-title mb-0">Current Condition</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.CurrentConditionId.HasValue)
+                {
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Overall Condition</dt>
+                        <dd class="col-sm-8">
+                            <span class="ms-2 badge @BadgeHelper.GetMaterialConditionBadgeClass(Model.CurrentCondition)">
+                                @EnumHelper.GetEnumDescription(Model.CurrentCondition)
+                            </span>
+                          
+                        </dd>
+                        
+                        <dt class="col-sm-4">Functional Status</dt>
+                        <dd class="col-sm-8">
+                            <div class="progress animated-progress custom-progress">
+                                @{
+                                    // Map enum values to percentages (0=0%, 1=50%, 2=100%)
+                                    var functionalPercentage = (int)Model.FunctionalStatus * 50;
+
+                                    // Color mapping based on your enum values
+                                    var functionalColor = Model.FunctionalStatus switch
+                                    {
+                                        FunctionalStatus.FullyFunctional => "bg-success",
+                                        FunctionalStatus.PartiallyFunctional => "bg-warning",
+                                        FunctionalStatus.NonFunctional => "bg-danger",
+                                        _ => "bg-secondary" // default case
+                                    };
+                                }
+                                <div class="progress-bar @functionalColor" role="progressbar"
+                                     style="width: @functionalPercentage%" aria-valuenow="@functionalPercentage"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    @EnumHelper.GetEnumDescription(Model.FunctionalStatus) <!-- Shows the description text -->
+                                </div>
+                            </div>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Cosmetic Status</dt>
+                        <dd class="col-sm-8">
+                            <div class="progress animated-progress custom-progress">
+                                @{
+                                    var cosmeticValue = (int)Model.CosmeticStatus;
+                                    var cosmeticPercentage = (cosmeticValue + 1) * 20; // Adjust if enum starts at 0
+
+                                    var cosmeticColor = Model.CosmeticStatus switch
+                                    {
+                                        CosmeticStatus.Excellent => "bg-success",
+                                        CosmeticStatus.Good => "bg-success",
+                                        CosmeticStatus.Fair => "bg-warning",
+                                        CosmeticStatus.Poor => "bg-danger",
+                                        _ => "bg-secondary"
+                                    };
+                                }
+                                <div class="progress-bar @cosmeticColor" role="progressbar"
+                                     style="width: @cosmeticPercentage%" aria-valuenow="@cosmeticPercentage"
+                                     aria-valuemin="0" aria-valuemax="100">
+                                    @EnumHelper.GetEnumDescription(Model.CosmeticStatus)
+                                </div>
+                            </div>
+                        </dd>
+                        
+                        <dt class="col-sm-4">Inspection Date</dt>
+                        <dd class="col-sm-8">@(Model.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not Inspected")</dd>
+                       
+                        
+                        <dt class="col-sm-4">Inspected By</dt>
+                        <dd class="col-sm-8">@Model.InspectedBy</dd>
+                        
+                        @if (!string.IsNullOrEmpty(Model.ConditionNotes))
+                        {
+                            <dt class="col-sm-4">Notes</dt>
+                            <dd class="col-sm-8">@Model.ConditionNotes</dd>
+                        }
+                    </dl>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="ri-information-line me-2 align-middle"></i> No condition information available.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light d-flex align-items-center">
+                <h5 class="card-title mb-0 flex-grow-1">Condition History</h5>
+                <div class="flex-shrink-0">
+                    <button type="button" class="btn btn-sm btn-soft-primary" data-bs-toggle="modal" data-bs-target="#conditionHistoryModal">
+                        <i class="ri-eye-line align-bottom"></i> View All
+                    </button>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (Model.ConditionHistory != null && Model.ConditionHistory.Any())
+                {
+                    <div class="vertical-timeline">
+                        @foreach (var condition in Model.ConditionHistory.Take(3))
+                        {
+                            <div class="timeline-item">
+
+                                <div class="timeline-status @(condition.Condition == Condition.GoodCondition? "bg-success" : 
+                                                            condition.Condition == Condition.MinorDamage ? "bg-warning" : 
+                                                            condition.Condition == Condition.MajorDamage? "bg-danger" : "bg-secondary")"></div>
+                                <div class="timeline-content">
+                                    <h5 class="fs-14 mb-1">
+                                        @(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not Inspected")
+                                   
+                                        @if (condition.Id == Model.CurrentConditionId)
+                                        {
+                                            <span class="badge bg-info ms-1">Latest</span>
+                                        }
+                                    </h5>
+                                    <p class="text-muted mb-0">
+                                        Condition: <span class="fw-medium">@condition.Condition</span>
+                                    </p>
+                                    <p class="text-muted mb-0">
+                                        Functional: @condition.FunctionalStatus/5, 
+                                        Cosmetic: @condition.CosmeticStatus/5
+                                    </p>
+                                    <p class="text-muted mb-0">Inspected by: @condition.InspectedBy</p>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    
+                    @if (Model.ConditionHistory.Count() > 3)
+                    {
+                        <div class="text-center mt-3">
+                            <button type="button" class="btn btn-sm btn-soft-primary" data-bs-toggle="modal" data-bs-target="#conditionHistoryModal">
+                                View All @Model.ConditionHistory.Count() Condition Records
+                            </button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="ri-information-line me-2 align-middle"></i> No condition history available.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Condition History Modal -->
+<div class="modal fade" id="conditionHistoryModal" tabindex="-1" aria-labelledby="conditionHistoryModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="conditionHistoryModalLabel">Condition History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                @if (Model.ConditionHistory != null && Model.ConditionHistory.Any())
+                {
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Condition</th>
+                                    <th>Functional</th>
+                                    <th>Cosmetic</th>
+                                    <th>Check Type</th>
+                                    <th>Inspected By</th>
+                                    <th>Notes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var condition in Model.ConditionHistory)
+                                {
+                                    <tr>
+                                        <td>@(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not Inspected")</td>
+                                        <td>
+                                            <span class="badge @(condition.Condition == Condition.GoodCondition ? "bg-success" : 
+                                                               condition.Condition == Condition.MinorDamage? "bg-warning" : 
+                                                               condition.Condition == Condition.MajorDamage ? "bg-danger" : "bg-secondary")">
+                                                @condition.Condition
+                                            </span>
+                                        </td>
+                                        <td>@condition.FunctionalStatus/5</td>
+                                        <td>@condition.CosmeticStatus/5</td>
+                                        <td>@condition.ConditionCheckType</td>
+                                        <td>@condition.InspectedBy</td>
+                                        <td>@(condition.Notes ?? "N/A")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info mb-0">
+                        <i class="ri-information-line me-2 align-middle"></i> No condition history available.
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .vertical-timeline {
+        position: relative;
+        padding-left: 45px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-bottom: 25px;
+    }
+    
+    .timeline-status {
+        position: absolute;
+        left: -30px;
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        z-index: 1;
+    }
+    
+    .timeline-item:before {
+        content: '';
+        position: absolute;
+        left: -24px;
+        top: 0;
+        bottom: 0;
+        width: 1px;
+        background-color: #e9e9ef;
+        z-index: 0;
+    }
+    
+    .timeline-item:last-child {
+        padding-bottom: 0;
+    }
+    
+    .timeline-item:last-child:before {
+        display: none;
+    }
+</style>

@@ -124,8 +124,31 @@
                                 <td>
                                     @if (activeAssignment != null)
                                     {
-                                        <span>@activeAssignment.Station</span>
-                                        <small class="d-block text-muted">@activeAssignment.StationCategory</small>
+                                            <div class="font-weight-bold pb-1" style="text-transform:capitalize">
+                                           @activeAssignment.StationCategory
+                                             </div>
+                                        <div>
+                                            @{
+                                                string stationName = "Unknown";
+                                                string departmentName = "Unknown";
+                                                
+                                                // Get station name from the dictionary
+                                                if (activeAssignment.StationId.HasValue && ViewBag.StationNames != null && 
+                                                    ViewBag.StationNames.ContainsKey(activeAssignment.StationId.Value))
+                                                {
+                                                    stationName = ViewBag.StationNames[activeAssignment.StationId.Value];
+                                                }
+                                                
+                                                // Get department name from the dictionary
+                                                if (activeAssignment.DepartmentId.HasValue && ViewBag.DepartmentNames != null && 
+                                                    ViewBag.DepartmentNames.ContainsKey(activeAssignment.DepartmentId.Value))
+                                                {
+                                                    departmentName = ViewBag.DepartmentNames[activeAssignment.DepartmentId.Value];
+                                                }
+                                            }
+                                            <span class="text-muted"><i class="mdi mdi-office-building-outline"></i> @stationName</span>
+                                            <small class="d-block text-muted" title="Department"><i class="mdi mdi-domain"></i> @departmentName</small>
+                                        </div>
                                     }
                                     else
                                     {

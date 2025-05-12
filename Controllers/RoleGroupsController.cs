@@ -159,8 +159,8 @@ namespace MRIV.Controllers
 
                     existingRoleGroup.Name = roleGroup.Name;
                     existingRoleGroup.Description = roleGroup.Description;
-                    existingRoleGroup.HasFullDepartmentAccess = roleGroup.HasFullDepartmentAccess;
-                    existingRoleGroup.HasFullStationAccess = roleGroup.HasFullStationAccess;
+                    existingRoleGroup.CanAccessAcrossDepartments = roleGroup.CanAccessAcrossDepartments;
+                    existingRoleGroup.CanAccessAcrossStations = roleGroup.CanAccessAcrossStations;
                     existingRoleGroup.IsActive = roleGroup.IsActive;
                     existingRoleGroup.UpdatedAt = DateTime.Now;
 

@@ -81,7 +81,7 @@ namespace MRIV.Services
                 {
                     // For the first step (usually supervisor), use the issue context
                     bool isFirstStep = stepConfig.StepOrder == 1;
-                    string locationContext = isFirstStep ? requisition.IssueStation : requisition.DeliveryStation;
+                    string locationContext = await GetLocationContextAsync(requisition, isFirstStep);
 
                     // Get the appropriate approver
                     object approver;
@@ -143,50 +143,107 @@ namespace MRIV.Services
             return approvalSteps;
         }
 
-       private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)
-{
-    _logger.LogInformation($"Checking conditions for step: {stepConfig.StepName}");
-    
-    // If no conditions are present, always include the step
-    if (stepConfig.Conditions == null || !stepConfig.Conditions.Any())
-    {
-        _logger.LogInformation($"Step {stepConfig.StepName} has no conditions, including it");
-        return true;
-    }
-
-    // Check each condition
-    foreach (var condition in stepConfig.Conditions)
-    {
-        var propertyName = condition.Key;
-        var expectedValue = condition.Value;
-
-        _logger.LogInformation($"Checking condition: {propertyName} = {expectedValue}");
-        
-        // Use reflection to get the property value - CASE INSENSITIVE
-        var propertyInfo = requisition.GetType().GetProperties()
-            .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
-            
-        if (propertyInfo == null)
+        // Helper Method to get the station and department
+        private async Task<string> GetLocationContextAsync(Requisition requisition, bool isIssueContext)
         {
-            _logger.LogWarning($"Property {propertyName} not found on requisition");
-            continue;
+            if (isIssueContext)
+            {
+                return await _departmentService.GetLocationNameFromIdsAsync(
+                    requisition.IssueStationId,
+                    requisition.IssueDepartmentId);
+            }
+            else
+            {
+                return await _departmentService.GetLocationNameFromIdsAsync(
+                    requisition.DeliveryStationId,
+                    requisition.DeliveryDepartmentId);
+            }
         }
 
-        var actualValue = propertyInfo.GetValue(requisition)?.ToString();
-        _logger.LogInformation($"Actual value: {actualValue}");
-
-        // If the condition doesn't match, skip this step
-        if (actualValue != expectedValue)
+        private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)
         {
-            _logger.LogInformation($"Condition not matched, excluding step {stepConfig.StepName}");
-            return false;
-        }
-    }
+            _logger.LogInformation($"Checking conditions for step: {stepConfig.StepName}");
 
-    // All conditions match
-    _logger.LogInformation($"All conditions matched, including step {stepConfig.StepName}");
-    return true;
-}
+            // If no conditions are present, always include the step
+            if (stepConfig.Conditions == null || !stepConfig.Conditions.Any())
+            {
+                _logger.LogInformation($"Step {stepConfig.StepName} has no conditions, including it");
+                return true;
+            }
+
+            // Check each condition
+            foreach (var condition in stepConfig.Conditions)
+            {
+                var propertyName = condition.Key;
+                var expectedValue = condition.Value;
+
+                _logger.LogInformation($"Checking condition: {propertyName} = {expectedValue}");
+
+                // Handle special cases for the new properties
+                if (propertyName.Equals("IssueStation", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Use the station ID or department ID as appropriate
+                    var stationName = _departmentService.GetLocationNameFromIdsAsync(
+                        requisition.IssueStationId, requisition.IssueDepartmentId).Result;
+
+                    if (stationName != expectedValue)
+                    {
+                        _logger.LogInformation($"Condition not matched, excluding step {stepConfig.StepName}");
+                        return false;
+                    }
+                    continue;
+                }
+                else if (propertyName.Equals("DeliveryStation", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Use the station ID or department ID as appropriate
+                    var stationName = _departmentService.GetLocationNameFromIdsAsync(
+                        requisition.DeliveryStationId, requisition.DeliveryDepartmentId).Result;
+
+                    if (stationName != expectedValue)
+                    {
+                        _logger.LogInformation($"Condition not matched, excluding step {stepConfig.StepName}");
+                        return false;
+                    }
+                    continue;
+                }
+
+                // Use reflection for other properties
+                var propertyInfo = requisition.GetType().GetProperties()
+                    .FirstOrDefault(p => string.Equals(p.Name, propertyName, StringComparison.OrdinalIgnoreCase));
+
+                if (propertyInfo == null)
+                {
+                    _logger.LogWarning($"Property {propertyName} not found on requisition");
+                    continue;
+                }
+
+                var actualValue = propertyInfo.GetValue(requisition)?.ToString();
+                _logger.LogInformation($"Actual value: {actualValue}");
+
+                // If the condition doesn't match, skip this step
+                if (actualValue != expectedValue)
+                {
+                    _logger.LogInformation($"Condition not matched, excluding step {stepConfig.StepName}");
+                    return false;
+                }
+            }
+
+            // All conditions match
+            _logger.LogInformation($"All conditions matched, including step {stepConfig.StepName}");
+            return true;
+        }
+
+        #region Phase 2: Display Approvals in the view
+
+
+        /// <summary>
+        /// Approves an approval step and activates the next step if available
+        /// </summary>
+        /// <param name="approvalId">The ID of the approval to approve</param>
+        /// <param name="comments">Optional comments for the approval</param>
+        /// <returns>True if successful, false otherwise</returns>
+
+
         // GET APPROVAl STEPS IN VIEW
         public async Task<List<ApprovalStepViewModel>> ConvertToViewModelsAsync(List<Approval> approvalSteps,Requisition requisition,List<Vendor> vendors)
         {
@@ -201,11 +258,19 @@ namespace MRIV.Services
             return viewModels;
         }
 
-        private async Task<ApprovalStepViewModel> ProcessStep(Approval step,Requisition requisition,List<Vendor> vendors)
+        private async Task<ApprovalStepViewModel> ProcessStep(Approval step, Requisition requisition, List<Vendor> vendors)
         {
             // Get department and employee information
             var department = await _departmentService.GetDepartmentByIdAsync(step.DepartmentId);
             var employee = await _employeeService.GetEmployeeByPayrollAsync(step.PayrollNo);
+
+            // Get station information if available
+            string stationName = "Unknown";
+            if (step.StationId > 0)
+            {
+                var station = await _departmentService.GetStationByIdAsync(step.StationId);
+                stationName = station?.StationName ?? "Unknown";
+            }
 
             string departmentName = department?.DepartmentName ?? "Unknown";
             string employeeName = employee?.Fullname ?? "Unknown";
@@ -217,19 +282,21 @@ namespace MRIV.Services
                 departmentName = "N/A";
             }
 
+            // Resolve delivery location name from IDs
+            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                requisition.DeliveryStationId, 
+                requisition.DeliveryDepartmentId);
+
             // Factory Employee Receipt handling
-            if (step.ApprovalStep == "Factory Employee Receipt" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+            if (step.ApprovalStep == "Factory Employee Receipt" && !string.IsNullOrEmpty(deliveryLocationName))
             {
-                var station = await _departmentService.GetStationByStationNameAsync(requisition.DeliveryStation);
-                departmentName = $"{departmentName} ({station?.StationName ?? "Unknown Station"})";
+                departmentName = $"{departmentName} ({deliveryLocationName})";
             }
-            // Factory Employee Receipt handling
-            if (step.ApprovalStep == "HO Employee Receipt" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+            // HO Employee Receipt handling
+            if (step.ApprovalStep == "HO Employee Receipt" && !string.IsNullOrEmpty(deliveryLocationName))
             {
-                var station = await _departmentService.GetDepartmentByNameAsync(requisition.DeliveryStation);
                 departmentName = $"{departmentName}";
             }
-
 
             return new ApprovalStepViewModel
             {
@@ -240,6 +307,8 @@ namespace MRIV.Services
                 EmployeeName = employeeName,
                 DepartmentId = step.DepartmentId,
                 DepartmentName = departmentName,
+                StationId = step.StationId,
+                StationName = stationName,
                 ApprovalStatus = step.ApprovalStatus,
                 CreatedAt = step.CreatedAt
             };
@@ -263,6 +332,15 @@ namespace MRIV.Services
             var departmentEmployees = new Dictionary<string, SelectList>();
 
             if (approvalSteps == null) return departmentEmployees;
+
+            // Pre-resolve location names to avoid multiple calls
+            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                requisition.DeliveryStationId, 
+                requisition.DeliveryDepartmentId);
+                
+            string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                requisition.IssueStationId, 
+                requisition.IssueDepartmentId);
 
             foreach (var step in approvalSteps)
             {
@@ -315,6 +393,11 @@ namespace MRIV.Services
             if (string.IsNullOrEmpty(step.ApprovalStep))
                 return new List<EmployeeBkp>();
 
+            // Resolve delivery location name from IDs
+            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                requisition.DeliveryStationId, 
+                requisition.DeliveryDepartmentId);
+
             // Handle office employee scenarios
             if (step.ApprovalStep == "Supervisor Approval" ||
                 step.ApprovalStep == "Admin Dispatch Approval" ||
@@ -323,20 +406,20 @@ namespace MRIV.Services
                 // Try to get from department ID first
                 var departmentEmployees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
 
-                // If we have a delivery station and no department employees, try by department name
+                // If we have a delivery location and no department employees, try by department name
                 if ((departmentEmployees == null || !departmentEmployees.Any()) &&
-                    !string.IsNullOrEmpty(requisition.DeliveryStation))
+                    !string.IsNullOrEmpty(deliveryLocationName))
                 {
-                    return await _employeeService.GetEmployeesByDepartmentNameAsync(requisition.DeliveryStation);
+                    return await _employeeService.GetEmployeesByDepartmentNameAsync(deliveryLocationName);
                 }
 
                 return departmentEmployees ?? new List<EmployeeBkp>();
             }
             // Handle factory employee receipt
             else if (step.ApprovalStep == "Factory Employee Receipt" &&
-                     !string.IsNullOrEmpty(requisition.DeliveryStation))
+                     !string.IsNullOrEmpty(deliveryLocationName))
             {
-                return await _employeeService.GetFactoryEmployeesByStationAsync(requisition.DeliveryStation);
+                return await _employeeService.GetFactoryEmployeesByStationAsync(deliveryLocationName);
             }
 
             // Return empty list for other cases
@@ -371,7 +454,7 @@ namespace MRIV.Services
             return approvals.OrderByDescending(a => a.StepNumber).FirstOrDefault();
         }
 
-        #region Phase 2: Core Approval Functions
+        #region Phase 3: Core Approval Functions
 
 
         /// <summary>
@@ -845,7 +928,7 @@ namespace MRIV.Services
                 if (requisitionItems.Any())
                 {
                     // Get the delivery station's location ID
-                    var deliveryStationLocation = requisition.DeliveryStation;
+                    var deliveryStationLocation = requisition.DeliveryStationId;
                     
                     if (deliveryStationLocation != null)
                     {
@@ -862,7 +945,7 @@ namespace MRIV.Services
                     }
                     else
                     {
-                        _logger.LogWarning($"Could not find location ID for delivery station {requisition.DeliveryStation}");
+                        _logger.LogWarning($"Could not find location ID for delivery station {requisition.DeliveryStationId}");
                     }
                 }
             }
@@ -1075,3 +1158,4 @@ namespace MRIV.Services
         #endregion
     }
 }
+#endregion

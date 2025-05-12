@@ -80,8 +80,8 @@ namespace MRIV.Models
         public string? ModelNumber { get; set; }
 
         [StringLength(100)]
-        [DisplayName("Serial Number")]
-        public string? SerialNumber { get; set; }
+        [DisplayName("QR Code")]
+        public string? QRCODE{ get; set; }
 
         [StringLength(100)]
         [DisplayName("Asset Tag")]

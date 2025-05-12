@@ -89,10 +89,10 @@
                         <div class="col-md-6">
                             <div class="mb-3">
                                 <label class="form-label">Current Location</label><span class="requiredlabel">*</span>
-                                <select asp-for="CurrentLocationId" class="form-select" asp-items="Model.LocationOptions">
+                                <select asp-for="StationId" class="form-select" asp-items="Model.Stations">
                                     <option value="">Select Location</option>
                                 </select>
-                                <span asp-validation-for="CurrentLocationId" class="text-danger"></span>
+                                <span asp-validation-for="StationId" class="text-danger"></span>
                             </div>
                         </div>
                     </div>
@@ -261,9 +261,9 @@
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Material.SerialNumber" class="form-label">Serial Number</label>
-                        <input asp-for="Material.SerialNumber" class="form-control" placeholder="Enter serial number" />
-                        <span asp-validation-for="Material.SerialNumber" class="text-danger"></span>
+                        <label asp-for="Material.QRCODE" class="form-label">Serial Number</label>
+                        <input asp-for="Material.QRCODE" class="form-control" placeholder="Enter serial number" />
+                        <span asp-validation-for="Material.QRCODE" class="text-danger"></span>
                     </div>
 
                     <div class="mb-3">
@@ -415,19 +415,19 @@
             // Handle station category change
             $('#SelectedLocationCategory').change(function() {
                 var categoryCode = $(this).val();
-                var locationsDropdown = $('#CurrentLocationId');
+                var locationsDropdown = $('#StationId');
                 
                 // Clear locations dropdown
                 locationsDropdown.empty();
                 locationsDropdown.append($('<option></option>').val('').text('Select Location'));
                 
                 if (categoryCode) {
-                    // If HeadOffice is selected, set Current Location to HQ and disable the dropdown
-                    if (categoryCode === 'HO' || categoryCode.toLowerCase() === 'headoffice') {
+                    // If HeadOffice is selected, set Station to HQ with ID 0 and disable the dropdown
+                    if (categoryCode.toLowerCase() === 'headoffice') {
                         // Add HQ option and select it
                         locationsDropdown.empty();
-                        locationsDropdown.append($('<option></option>').val('HQ').text('Head Quarters (HQ)'));
-                        locationsDropdown.val('HQ');
+                        locationsDropdown.append($('<option></option>').val('0').text('Head Quarters (HQ)'));
+                        locationsDropdown.val('0');
                         
                         // Trigger change event to update dependent fields
                         locationsDropdown.trigger('change');
@@ -451,21 +451,26 @@
                                 $.each(data, function(index, item) {
                                     locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
                                 });
+                            },
+                            error: function(xhr, status, error) {
+                                console.error("Error loading locations:", error);
+                                // Show error message
+                                $('.location-category-error').text('Failed to load locations. Please try again.');
                             }
                         });
                     }
                 }
             });
-
-            // Handle current location change
-            $('#CurrentLocationId').change(function() {
-                var locationValue = $(this).val();
+            
+            // Handle station location change
+            $('#StationId').change(function() {
+                var locationId = $(this).val();
+                var locationText = $(this).find('option:selected').text();
                 var categoryCode = $('#SelectedLocationCategory').val();
 
                 // If headoffice is selected and a location is chosen, sync the department
-                if (categoryCode === 'HO' || categoryCode.toLowerCase() === 'headoffice') {
+                if (categoryCode && categoryCode.toLowerCase() === 'headoffice' && locationId) {
                     // For head office locations, try to find a matching department
-                    var locationText = $(this).find('option:selected').text();
                     var departmentDropdown = $('#Assignment_DepartmentId');
 
                     // Look for a matching department by name

@@ -17,11 +17,13 @@ namespace MRIV.Services
     {
         private readonly RequisitionContext _context;
         private readonly IEmployeeService _employeeService;
+        private readonly IDepartmentService _departmentService;
 
-        public DashboardService(RequisitionContext context, IEmployeeService employeeService)
+        public DashboardService(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService)
         {
             _context = context;
             _employeeService = employeeService;
+            _departmentService = departmentService;
         }
 
         public async Task<MyRequisitionsDashboardViewModel> GetMyRequisitionsDashboardAsync(HttpContext httpContext)
@@ -68,19 +70,33 @@ namespace MRIV.Services
             }
 
             // Get recent requisitions
-            viewModel.RecentRequisitions = userRequisitions
-                .Take(5)
-                .Select(r => new RequisitionSummary
+            var recentRequisitions = userRequisitions.Take(5).ToList();
+            viewModel.RecentRequisitions = new List<RequisitionSummary>();
+            
+            foreach (var r in recentRequisitions)
+            {
+                // Resolve location names
+                string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                    r.IssueStationId, r.IssueDepartmentId);
+                
+                string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                    r.DeliveryStationId, r.DeliveryDepartmentId);
+                
+                viewModel.RecentRequisitions.Add(new RequisitionSummary
                 {
                     Id = r.Id,
-                    IssueStation = r.IssueStation,
-                    DeliveryStation = r.DeliveryStation,
+                    IssueStation = issueLocationName,
+                    DeliveryStation = deliveryLocationName,
+                    IssueStationId = r.IssueStationId,
+                    IssueDepartmentId = r.IssueDepartmentId,
+                    DeliveryStationId = r.DeliveryStationId,
+                    DeliveryDepartmentId = r.DeliveryDepartmentId,
                     Status = r.Status ?? RequisitionStatus.NotStarted,
                     StatusDescription = r.Status?.GetDescription() ?? "Not Started",
                     CreatedAt = r.CreatedAt,
                     ItemCount = r.RequisitionItems?.Count() ?? 0
-                })
-                .ToList();
+                });
+            }
 
             return viewModel;
         }
@@ -137,20 +153,34 @@ namespace MRIV.Services
             }
 
             // Get recent department requisitions
-            viewModel.RecentDepartmentRequisitions = departmentRequisitions
-                .Take(5)
-                .Select(r => new RequisitionSummary
+            var recentDepartmentRequisitions = departmentRequisitions.Take(5).ToList();
+            viewModel.RecentDepartmentRequisitions = new List<RequisitionSummary>();
+            
+            foreach (var r in recentDepartmentRequisitions)
+            {
+                // Resolve location names
+                string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                    r.IssueStationId, r.IssueDepartmentId);
+                
+                string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                    r.DeliveryStationId, r.DeliveryDepartmentId);
+                
+                viewModel.RecentDepartmentRequisitions.Add(new RequisitionSummary
                 {
                     Id = r.Id,
-                    IssueStation = r.IssueStation,
-                    DeliveryStation = r.DeliveryStation,
+                    IssueStation = issueLocationName,
+                    DeliveryStation = deliveryLocationName,
+                    IssueStationId = r.IssueStationId,
+                    IssueDepartmentId = r.IssueDepartmentId,
+                    DeliveryStationId = r.DeliveryStationId,
+                    DeliveryDepartmentId = r.DeliveryDepartmentId,
                     Status = r.Status ?? RequisitionStatus.NotStarted,
                     StatusDescription = r.Status?.GetDescription() ?? "Not Started",
                     CreatedAt = r.CreatedAt,
                     ItemCount = r.RequisitionItems?.Count() ?? 0,
                     PayrollNo = r.PayrollNo
-                })
-                .ToList();
+                });
+            }
 
             // Get employee names for the requisitions
             var payrollNumbers = viewModel.RecentDepartmentRequisitions.Select(r => r.PayrollNo).Distinct().ToList();

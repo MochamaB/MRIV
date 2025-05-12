@@ -28,7 +28,7 @@ namespace MRIV.Models
         public string? Stage { get; set; } // "Pre-Dispatch", "Post-Receive", etc.
 
         [DisplayName("Condition")]
-        public MaterialStatus? Condition { get; set; }
+        public Condition? Condition { get; set; }
 
         [DisplayName("Functional Status")]
         public FunctionalStatus? FunctionalStatus { get; set; }
@@ -77,28 +77,75 @@ namespace MRIV.Models
         public virtual ICollection<MediaFile> Media { get; set; } = new List<MediaFile>();
     }
 
+    public enum Condition
+    {
+        [Description("Good Condition")]
+        GoodCondition = 1,
+
+        [Description("Minor Damage")]
+        MinorDamage = 2,
+
+        [Description("Major Damage")]
+        MajorDamage = 3,
+
+        [Description("Faulty")]
+        Faulty = 4,
+
+        [Description("Broken")]
+        UnderMaintenance = 5,
+
+        [Description("Lost or Stolen")]
+        LostOrStolen = 6,
+
+        [Description("Disposed")]
+        Disposed = 7,
+    }
+
     public enum ConditionCheckType
     {
-        Initial,
-        Assignment,
-        Return,
-        Periodic,
-        Damage,
-        Disposal
+        [Description("Initial")]
+        Initial = 0,
+
+        [Description("Assignment")]
+        Assignment = 1,
+
+        [Description("Return")]
+        Return = 2,
+
+        [Description("Periodic")]
+        Periodic = 3,
+
+        [Description("Damage")]
+        Damage = 4,
+
+        [Description("Disposal")]
+        Disposal = 5
     }
 
     public enum FunctionalStatus
     {
-        FullyFunctional,
-        PartiallyFunctional,
-        NonFunctional
+        [Description("Fully Functional")]
+        FullyFunctional = 0,
+
+        [Description("Partially Functional")]
+        PartiallyFunctional = 1,
+
+        [Description("Non Functional")]
+        NonFunctional = 2
     }
 
     public enum CosmeticStatus
     {
+        [Description("Excellent")]
         Excellent,
+
+        [Description("Good")]
         Good,
+
+        [Description("Fair")]
         Fair,
+
+        [Description("Poor")]
         Poor
     }
 }

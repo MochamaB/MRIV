@@ -1,4 +1,4 @@
-﻿@using MRIV.Enums
+@using MRIV.Enums
 @using MRIV.Helpers
 @{
    
@@ -31,6 +31,12 @@
                                 <p class="text-muted">
                                     <b>DEPARTMENT:</b> @step.DepartmentName
                                 </p>
+                                @if (step.StationId > 0)
+                                {
+                                    <p class="text-muted">
+                                        <b>STATION:</b> @step.StationName
+                                    </p>
+                                }
                             }
 
 

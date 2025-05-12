@@ -41,8 +41,16 @@ namespace MRIV.ViewModels
     public class RequisitionSummary
     {
         public int Id { get; set; }
+        // Keep original string properties for backward compatibility
         public string IssueStation { get; set; }
         public string DeliveryStation { get; set; }
+        
+        // Add new ID-based properties
+        public int IssueStationId { get; set; }
+        public string IssueDepartmentId { get; set; }
+        public int DeliveryStationId { get; set; }
+        public string DeliveryDepartmentId { get; set; }
+        
         public RequisitionStatus Status { get; set; }
         public string StatusDescription { get; set; }
         public DateTime? CreatedAt { get; set; }

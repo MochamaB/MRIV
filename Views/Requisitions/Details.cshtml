@@ -87,13 +87,13 @@
                                             }
                                         </dd>
 
-                                        <dt class="col-sm-6">Department</dt>
+                                        <dt class="col-sm-6">Requisition Department</dt>
                                         <dd class="col-sm-6">@Model.DepartmentDetail?.DepartmentName</dd>
 
                                         <dt class="col-sm-6">Requisition By</dt>
                                         <dd class="col-sm-6">@Model.EmployeeDetail?.Fullname</dd>
 
-                                        <dt class="col-sm-6">Issue Station Category</dt>
+                                        <dt class="col-sm-6">Issue Point Category</dt>
                                         <dd class="col-sm-6">
                                             @if (Model.Requisition?.IssueStationCategory?.ToLower() == "headoffice")
                                             {
@@ -108,7 +108,10 @@
                                         <dt class="col-sm-6">Issue Station</dt>
                                         <dd class="col-sm-6">@Model.IssueStation</dd>
 
-                                        <dt class="col-sm-6">Delivery Station Category</dt>
+                                        <dt class="col-sm-6">Issue Department</dt>
+                                        <dd class="col-sm-6">@Model.IssueDepartment</dd>
+
+                                        <dt class="col-sm-6">Delivery Point Category</dt>
                                         <dd class="col-sm-6">
                                             @if (Model.Requisition?.DeliveryStationCategory?.ToLower() == "headoffice")
                                             {
@@ -131,6 +134,8 @@
                                                 @Model.DeliveryStation
                                             }
                                         </dd>
+                                        <dt class="col-sm-6">Delivery Department</dt>
+                                        <dd class="col-sm-6">@Model.DeliveryDepartment</dd>
 
                                         @if (!string.IsNullOrEmpty(Model.Requisition?.Remarks))
                                         {

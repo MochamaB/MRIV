@@ -36,7 +36,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <strong>Full Department Access:</strong> 
-                            @if (Model.HasFullDepartmentAccess)
+                            @if (Model.CanAccessAcrossDepartments)
                             {
                                 <span class="badge bg-success">Yes</span>
                             }
@@ -47,7 +47,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>Full Station Access:</strong> 
-                            @if (Model.HasFullStationAccess)
+                            @if (Model.CanAccessAcrossStations)
                             {
                                 <span class="badge bg-success">Yes</span>
                             }

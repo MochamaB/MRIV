@@ -3,35 +3,24 @@ namespace MRIV.Enums
 {
     public enum MaterialStatus
     {
-        [Description("Good Condition")]
-        GoodCondition = 1,
-
-        [Description("Minor Damage")]
-        MinorDamage = 2,
-
-        [Description("Major Damage")]
-        MajorDamage = 3,
-
-        [Description("Faulty")]
-        Faulty = 4,
-
+       
         [Description("Under Maintenance")]
-        UnderMaintenance = 5,
+        UnderMaintenance = 1,
 
         [Description("Lost or Stolen")]
-        LostOrStolen = 6,
+        LostOrStolen = 2,
 
         [Description("Disposed")]
-        Disposed = 7,
+        Disposed = 3,
 
         [Description("Available")]
-        Available = 8,
+        Available = 4,
 
         [Description("Assigned")]
-        Assigned = 9,
+        Assigned = 5,
 
         [Description("In Process")]
-        InProcess = 10,
+        InProcess = 6,
 
     }
 }

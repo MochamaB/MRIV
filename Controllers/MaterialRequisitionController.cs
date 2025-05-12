@@ -33,8 +33,10 @@ namespace MRIV.Controllers
         private readonly string _connectionString;
         private readonly IStationCategoryService _stationCategoryService;
         private readonly INotificationService _notificationService;
+        private readonly ILocationService _locationService;
         public MaterialRequisitionController(IEmployeeService employeeService, VendorService vendorService, RequisitionContext context, 
-            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, IStationCategoryService stationCategoryService, INotificationService notificationService)
+            IApprovalService approvalService, IConfiguration configuration, IDepartmentService departmentService, IStationCategoryService stationCategoryService, INotificationService notificationService
+            , ILocationService locationService)
         {
             _employeeService = employeeService;
             _vendorService = vendorService;
@@ -44,7 +46,7 @@ namespace MRIV.Controllers
             _departmentService = departmentService;
             _stationCategoryService = stationCategoryService;
             _notificationService = notificationService;
-
+            _locationService = locationService;
         }
 
 
@@ -304,17 +306,11 @@ namespace MRIV.Controllers
             viewModel.IssueStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("issue");
             viewModel.DeliveryStationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("delivery");
 
-            // Helper function to load locations
-            async Task<SelectList> LoadLocations(string categoryCode, string stationValue)
-            {
-                return !string.IsNullOrEmpty(categoryCode)
-                    ? await _stationCategoryService.GetLocationsForCategoryAsync(categoryCode, stationValue)
-                    : new SelectList(new List<SelectListItem>());
-            }
-
-            // Load locations for both issue and delivery
-            viewModel.IssueLocations = await LoadLocations(requisition.IssueStationCategory, requisition.IssueStation);
-            viewModel.DeliveryLocations = await LoadLocations(requisition.DeliveryStationCategory, requisition.DeliveryStation);
+            // Get all departments and stations for the dropdowns
+            viewModel.IssueDepartments = await _locationService.GetDepartmentsSelectListAsync(requisition.IssueDepartmentId);
+            viewModel.DeliveryDepartments = await _locationService.GetDepartmentsSelectListAsync(requisition.DeliveryDepartmentId);
+            viewModel.IssueStations = await _locationService.GetStationsSelectListAsync(requisition.IssueStationId);
+            viewModel.DeliveryStations = await _locationService.GetStationsSelectListAsync(requisition.DeliveryStationId);
 
             return View(WizardViewPath, viewModel);
         }
@@ -378,9 +374,11 @@ namespace MRIV.Controllers
                 requisition.PayrollNo = model.Requisition.PayrollNo;
                 requisition.RequisitionType = model.Requisition.RequisitionType;
                 requisition.IssueStationCategory = model.Requisition.IssueStationCategory;
-                requisition.IssueStation = model.Requisition.IssueStation;
+                requisition.IssueStationId = model.Requisition.IssueStationId;
+                requisition.IssueDepartmentId = model.Requisition.IssueDepartmentId;
                 requisition.DeliveryStationCategory = model.Requisition.DeliveryStationCategory;
-                requisition.DeliveryStation = model.Requisition.DeliveryStation;
+                requisition.DeliveryStationId = model.Requisition.DeliveryStationId;
+                requisition.DeliveryDepartmentId = model.Requisition.DeliveryDepartmentId;
 
                 // Conditional mapping
                 requisition.DispatchType = model.Requisition.DispatchType;
@@ -391,11 +389,7 @@ namespace MRIV.Controllers
                 requisition.DispatchVendor = model.Requisition.DispatchType == "vendor"
                     ? model.Requisition.DispatchVendor
                 : null;
-                // Set ForwardToAdmin to true if DispatchType is "admin"
-                requisition.ForwardToAdmin = model.Requisition.DispatchType == "admin";
-                // Set IsExternal to true if DispatchType is "vendor"
-                requisition.IsExternal = model.Requisition.DispatchType == "vendor";
-            
+              
                 // Set CreatedAt to the current date and time
                 requisition.CreatedAt = DateTime.Now;
             }
@@ -586,7 +580,7 @@ namespace MRIV.Controllers
                 
                 // Get requisition from session to check issue station
                 var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
-                var issueStationId = requisition?.IssueStation;
+                var issueStationId = requisition?.IssueStationId;
 
                 // Search for materials matching the search term
                 var query = _context.Materials
@@ -595,11 +589,11 @@ namespace MRIV.Controllers
                     .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));
                     
                 // Only filter by location if we have a valid issue station
-                if (!string.IsNullOrEmpty(issueStationId))
+                if (issueStationId != 0)
                 {
                     // Join with MaterialAssignments to filter by current location
                     query = query.Where(m => m.MaterialAssignments.Any(ma => 
-                        ma.Station == issueStationId && 
+                        ma.StationId == issueStationId && 
                         ma.IsActive == true));
                 }
                 
@@ -1011,7 +1005,7 @@ namespace MRIV.Controllers
                                 PayrollNo = requisition.PayrollNo,
                                 AssignmentDate = DateTime.UtcNow,
                                 StationCategory = requisition.IssueStationCategory,
-                                Station = requisition.IssueStation,
+                                StationId = requisition.IssueStationId,
                                 DepartmentId = requisition.DepartmentId,
                                 AssignmentType = requisition.RequisitionType,
                                 RequisitionId = requisition.Id,
@@ -1032,7 +1026,7 @@ namespace MRIV.Controllers
                                 MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
                                 ConditionCheckType = ConditionCheckType.Initial,
                                 Stage = "Creation",
-                                Condition = MaterialStatus.InProcess,
+                                Condition = Condition.GoodCondition,
                                 FunctionalStatus = FunctionalStatus.FullyFunctional,
                                 CosmeticStatus = CosmeticStatus.Excellent,
                                 InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
@@ -1109,8 +1103,8 @@ namespace MRIV.Controllers
                 var departmentName = department?.DepartmentName ?? "Unknown Department";
                 
                 // Get delivery station information
-                var deliveryStation = requisition.DeliveryStation;
-                var deliveryStationName = deliveryStation ?? "Unknown Location";
+                var deliveryStation = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId);
+                var deliveryStationName = deliveryStation.StationName ?? "Unknown Location";
 
                 // Create parameters for notification templates
                 // Base parameters (common to both notifications)

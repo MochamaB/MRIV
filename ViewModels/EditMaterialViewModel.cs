@@ -27,7 +27,7 @@ namespace MRIV.ViewModels
         public SelectList? MaterialCategories { get; set; }
         public SelectList? MaterialSubcategories { get; set; }
         public SelectList? StationCategories { get; set; }
-        public SelectList? LocationOptions { get; set; }
+        public SelectList? Stations { get; set; }
         public SelectList? Departments { get; set; }
         public SelectList? Vendors { get; set; }
         public SelectList? StatusOptions { get; set; }
@@ -39,8 +39,8 @@ namespace MRIV.ViewModels
         public string? SelectedLocationCategory { get; set; }
         
         // For compatibility with existing views
-        [Display(Name = "Current Location")]
-        public string? CurrentLocationId { get; set; }
+        [Display(Name = "Station")]
+        public int? StationId { get; set; }
         
         // Assignment history
         public IEnumerable<MaterialAssignment>? AssignmentHistory { get; set; }

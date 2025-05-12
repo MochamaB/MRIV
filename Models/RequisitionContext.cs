@@ -18,7 +18,7 @@ public partial class RequisitionContext : DbContext
     {
     }
 
-    public virtual DbSet<Tbrequisition> Tbrequisitions { get; set; }
+  
     public DbSet<Requisition> Requisitions { get; set; }
     public DbSet<RequisitionItem> RequisitionItems { get; set; }
     public DbSet<Material> Materials { get; set; }
@@ -57,7 +57,7 @@ public partial class RequisitionContext : DbContext
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Department>().ToTable("Department", t => t.ExcludeFromMigrations());
-        modelBuilder.Entity<Tbrequisition>().ToTable("tbrequisition", t => t.ExcludeFromMigrations());
+       
 
         // Fluent API configurations (if needed)
         modelBuilder.Entity<Requisition>(entity =>

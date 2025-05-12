@@ -1,0 +1,157 @@
+@using MRIV.Enums
+@using MRIV.Helpers
+@model MRIV.ViewModels.MaterialDisplayViewModel
+
+<div class="row">
+    <div class="col-lg-4">
+        <div class="product-img-slider sticky-side-div">
+            <div class="card border shadow-none">
+                <div class="card-body">
+                    <div class="position-relative">
+                        <div class="product-img">
+                            <img src="@(Model.MainImagePath ?? "/uploads/defaultmaterialimage.svg")" class="img-fluid rounded" alt="@Model.Name">
+                        </div>
+                        @if (Model.Status == MRIV.Enums.MaterialStatus.UnderMaintenance)
+                        {
+                            <div class="ribbon ribbon-danger ribbon-shape">Maintenance</div>
+                        }
+                        else if (Model.Status == MRIV.Enums.MaterialStatus.Disposed)
+                        {
+                            <div class="ribbon ribbon-secondary ribbon-shape">Disposed</div>
+                        }
+                    </div>
+                    
+                    @if (Model.GalleryImagePaths != null && Model.GalleryImagePaths.Any())
+                    {
+                        <div class="mt-3">
+                            <div class="row">
+                                @foreach (var imagePath in Model.GalleryImagePaths.Take(4))
+                                {
+                                    <div class="col-3">
+                                        <div class="product-img-thumb">
+                                            <img src="@imagePath" alt="Gallery Image" class="img-fluid rounded">
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+                    
+                    <div class="mt-3">
+                        <div class="d-flex gap-2">
+                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary flex-grow-1">
+                                <i class="ri-pencil-line align-bottom me-1"></i> Edit
+                            </a>
+                            <a href="#" class="btn btn-success flex-grow-1">
+                                <i class="ri-exchange-line align-bottom me-1"></i> Assign
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-8">
+        <div class="card border shadow-none">
+            <div class="card-header bg-soft-light">
+                <h5 class="card-title mb-0">Material Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="mt-4 mt-lg-0">
+                    <h4 class="mb-1">@Model.Name</h4>
+                    <div class="d-flex align-items-baseline">
+                        <h5 class="mb-3 me-2">Code: @Model.Code</h5>
+                        <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(Model.Status)">
+                            @EnumHelper.GetEnumDescription(Model.Status)
+                        </span>
+                    </div>
+                    
+                    <!-- Key information at a glance -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="text-muted mb-2">Category: <strong>@Model.MaterialCategoryName</strong></p>
+                            <p class="text-muted mb-2">Subcategory: <strong>@Model.MaterialSubcategoryName</strong></p>
+                            <p class="text-muted mb-2">Manufacturer: <strong>@(Model.Manufacturer ?? "N/A")</strong></p>
+                            <p class="text-muted mb-2">Model: <strong>@(Model.ModelNumber ?? "N/A")</strong></p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="text-muted mb-2">Location: <strong>@(Model.StationName ?? "Not Assigned")</strong></p>
+                            <p class="text-muted mb-2">Department: <strong>@(Model.DepartmentName ?? "Not Assigned")</strong></p>
+                            <p class="text-muted mb-2">Assigned To: <strong>@(Model.AssignedToPayrollNo ?? "Not Assigned")</strong></p>
+                            <p class="text-muted mb-2">Condition: <strong>@(Model.CurrentCondition?.ToString() ?? "Not Inspected")</strong></p>
+                        </div>
+                    </div>
+                    
+                    <!-- Status indicators -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            @if (Model.WarrantyEndDate.HasValue && Model.WarrantyEndDate.Value > DateTime.Now)
+                            {
+                                <div class="badge bg-success p-2 mb-2">
+                                    <i class="mdi mdi-shield-check me-1"></i> Under Warranty
+                                </div>
+                                <p class="text-muted mb-0 small">Expires: @Model.WarrantyEndDate.Value.ToString("yyyy-MM-dd")</p>
+                            }
+                            else if (Model.WarrantyEndDate.HasValue)
+                            {
+                                <div class="badge bg-danger p-2 mb-2">
+                                    <i class="mdi mdi-shield-off me-1"></i> Warranty Expired
+                                </div>
+                                <p class="text-muted mb-0 small">Expired: @Model.WarrantyEndDate.Value.ToString("yyyy-MM-dd")</p>
+                            }
+                            else
+                            {
+                                <div class="badge bg-secondary p-2 mb-2">
+                                    <i class="mdi mdi-shield-outline me-1"></i> No Warranty Info
+                                </div>
+                            }
+                        </div>
+                        <div class="col-md-6">
+                            @if (Model.NextMaintenanceDate.HasValue)
+                            {
+                                var daysUntilMaintenance = (Model.NextMaintenanceDate.Value - DateTime.Now).TotalDays;
+                                
+                                if (daysUntilMaintenance < 0)
+                                {
+                                    <div class="badge bg-danger p-2 mb-2">
+                                        <i class="mdi mdi-tools me-1"></i> Maintenance Overdue
+                                    </div>
+                                    <p class="text-muted mb-0 small">Due: @Model.NextMaintenanceDate.Value.ToString("yyyy-MM-dd")</p>
+                                }
+                                else if (daysUntilMaintenance < 30)
+                                {
+                                    <div class="badge bg-warning p-2 mb-2">
+                                        <i class="mdi mdi-tools me-1"></i> Maintenance Due Soon
+                                    </div>
+                                    <p class="text-muted mb-0 small">Due: @Model.NextMaintenanceDate.Value.ToString("yyyy-MM-dd")</p>
+                                }
+                                else
+                                {
+                                    <div class="badge bg-info p-2 mb-2">
+                                        <i class="mdi mdi-tools me-1"></i> Next Maintenance
+                                    </div>
+                                    <p class="text-muted mb-0 small">Due: @Model.NextMaintenanceDate.Value.ToString("yyyy-MM-dd")</p>
+                                }
+                            }
+                        </div>
+                    </div>
+                    
+                    <!-- Description -->
+                    <div class="mt-4">
+                        <h5 class="fs-14">Description:</h5>
+                        <p class="text-muted">@Model.Description</p>
+                    </div>
+                    
+                    <!-- Specifications -->
+                    @if (!string.IsNullOrEmpty(Model.Specifications))
+                    {
+                        <div class="mt-4">
+                            <h5 class="fs-14">Specifications:</h5>
+                            <p class="text-muted">@Model.Specifications</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

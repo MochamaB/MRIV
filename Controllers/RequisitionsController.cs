@@ -24,9 +24,10 @@ namespace MRIV.Controllers
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
         private readonly VendorService _vendorService;
+        private readonly ILocationService _locationService;
 
         public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService,
-            IApprovalService approvalService, VendorService vendorService, KtdaleaveContext ktdaleavecontext)
+            IApprovalService approvalService, VendorService vendorService, KtdaleaveContext ktdaleavecontext, ILocationService location)
         {
             _context = context;
             _employeeService = employeeService;
@@ -34,6 +35,7 @@ namespace MRIV.Controllers
             _approvalService = approvalService;
             _vendorService = vendorService;
             _ktdaleavecontext = ktdaleavecontext;
+            _locationService = location;
 
         }
 
@@ -91,21 +93,28 @@ namespace MRIV.Controllers
                 var department = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId);
                 var employee = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo);
 
-                // Get location names
-                var issueLocationName = requisition.IssueStation;
-                string deliveryLocationName;
+                // Get Issue location names
+                var issueStation = await _locationService.GetStationByIdAsync(requisition.IssueStationId);
+                var issueDepartment = await _locationService.GetDepartmentByIdAsync(requisition.IssueDepartmentId);
+                string deliveryStationName;
+
+                // Get Delivery Department Location names
+                var deliveryStation = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId);
+                var deliveryDepartment = await _locationService.GetDepartmentByIdAsync(requisition.DeliveryDepartmentId);
 
                 // Special handling for vendor delivery locations
-                if (requisition.DeliveryStationCategory?.ToLower() == "vendor" && !string.IsNullOrEmpty(requisition.DeliveryStation))
+                if (requisition.DeliveryStationCategory?.ToLower() == "vendor" && requisition.DeliveryStationId != 0)
                 {
                     // Try to get vendor by ID
-                    var vendor = await _vendorService.GetVendorByIdAsync(requisition.DeliveryStation);
-                    deliveryLocationName = vendor?.Name ?? requisition.DeliveryStation;
+                    var vendor = await _vendorService.GetVendorByIdAsync(requisition.DeliveryStationId.ToString());
+                    deliveryStationName = vendor?.Name ?? "Unknown Vendor";
                 }
                 else
                 {
                     // For non-vendor locations, use the station name directly
-                    deliveryLocationName = requisition.DeliveryStation;
+                    // For non-vendor locations, use the station name directly
+                   
+                    deliveryStationName = deliveryStation?.StationName ?? "Unknown Station";
                 }
 
                 // Calculate days pending
@@ -128,22 +137,23 @@ namespace MRIV.Controllers
                     }
                 }
 
-                // Create view model
+                // Create view model with proper null checks
                 viewModels.Add(new RequisitionViewModel
                 {
                     Id = requisition.Id,
                     TicketId = requisition.TicketId,
                     IssueStationCategory = requisition.IssueStationCategory,
-                    IssueStation = requisition.IssueStation,
-                    DeliveryStationCategory = requisition.DeliveryStationCategory,
-                    DeliveryStation = requisition.DeliveryStation,
+                    IssueStation = issueStation?.StationName ?? "Unknown Station",
+                    IssueDepartment = issueDepartment.DepartmentName ?? "Unknown Department",
+                    DeliveryStationCategory = requisition?.DeliveryStationCategory,
+                    DeliveryStation = deliveryStation?.StationName ?? "Unknown Station",
+                    DeliveryDepartment = deliveryDepartment.DepartmentName ?? "Unknown Department",
                     CreatedAt = requisition.CreatedAt,
                     CompleteDate = requisition.CompleteDate,
                     Status = requisition.Status,
                     DepartmentName = department?.DepartmentName ?? "Unknown",
                     EmployeeName = employee?.Fullname ?? "Unknown",
-                    IssueLocationName = issueLocationName,
-                    DeliveryLocationName = deliveryLocationName,
+                    DeliveryLocationName = department?.DepartmentName ?? "Unknown",
                     DaysPending = daysPending,
                     // Set approval properties
                     CurrentApprovalStepNumber = currentApproval?.StepNumber,
@@ -180,15 +190,26 @@ namespace MRIV.Controllers
             }
 
             var requisition = await _context.Requisitions
-                .Include(r => r.RequisitionItems)
-                  .ThenInclude(ri => ri.Material)
-                .Include(r => r.Approvals.OrderBy(a => a.StepNumber))
-                .FirstOrDefaultAsync(m => m.Id == id);
+             .Include(r => r.RequisitionItems)
+                 .ThenInclude(ri => ri.Material)
+                     .ThenInclude(m => m.MaterialCategory)  // Include MaterialCategory if needed
+             .Include(r => r.RequisitionItems)
+                 .ThenInclude(ri => ri.Material)
+                     .ThenInclude(m => m.MaterialSubcategory)  // Directly include MaterialSubcategory from Material
+             .Include(r => r.Approvals.OrderBy(a => a.StepNumber))
+             .FirstOrDefaultAsync(m => m.Id == id);
 
             if (requisition == null)
             {
                 return NotFound();
             }
+            // Get Issue location names
+            var issueStation = await _locationService.GetStationByIdAsync(requisition.IssueStationId);
+            var issueDepartment = await _locationService.GetDepartmentByIdAsync(requisition.IssueDepartmentId);
+
+            // Get Delivery Department Location names
+            var deliveryStation = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId);
+            var deliveryDepartment = await _locationService.GetDepartmentByIdAsync(requisition.DeliveryDepartmentId);
 
             // Create the view model
             var viewModel = new RequisitionDetailsViewModel
@@ -197,32 +218,34 @@ namespace MRIV.Controllers
                 EmployeeDetail = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo),
                 DepartmentDetail = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId),
                 RequisitionItems = requisition.RequisitionItems?.ToList(),
-              
+                IssueStation = requisition.IssueStationId == 0 ? "HQ": (await _locationService.GetStationByIdAsync(requisition.IssueStationId))?.StationName ?? "Unknown Station",
+                IssueDepartment = issueDepartment?.DepartmentName ?? "Unknown Department",
+                DeliveryStation = requisition.DeliveryStationId == 0 ? "HQ": (await _locationService.GetStationByIdAsync(requisition.DeliveryStationId))?.StationName ?? "Unknown Station",
+                DeliveryDepartment = deliveryDepartment?.DepartmentName ?? "Unknown Department",
             };
 
+
+
+            //  var Station = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId);
+            //   var Department = await _locationService.GetDepartmentByIdAsync(requisition.DeliveryDepartmentId);
             // Get issue and delivery station details
-            if (!string.IsNullOrEmpty(requisition.IssueStation))
+            if (requisition.IssueStationId != 0)
             {
-                viewModel.IssueStation = await _departmentService.GetLocationNameAsync(requisition.IssueStation);
-            }
-
-            if (!string.IsNullOrEmpty(requisition.DeliveryStation))
-            {
-                if (requisition.DispatchType?.ToLower() == "vendor")
+               
+                if (requisition.DeliveryStationId != 0)
                 {
-                    viewModel.Vendor = await _vendorService.GetVendorByIdAsync(requisition.DispatchVendor);
-                }
-                else
-                {
-                    viewModel.DispatchEmployee = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
-                   
-                }
-            }
+                    if (requisition.DispatchType?.ToLower() == "vendor")
+                    {
+                        viewModel.Vendor = await _vendorService.GetVendorByIdAsync(requisition.DispatchVendor);
+                    }
+                    else
+                    {
+                        viewModel.DispatchEmployee = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
 
-            // Get dispatch employee details if available
-            if (!string.IsNullOrEmpty(requisition.DeliveryStation))
-            {
-                viewModel.DeliveryStation = await _departmentService.GetLocationNameAsync(requisition.DeliveryStation);
+                    }
+                }
+
+              
             }
 
             // Convert approval steps to view models

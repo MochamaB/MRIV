@@ -92,7 +92,7 @@
                             <td>
                                 @if (item.Condition != null)
                                 {
-                                    <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Condition)">@EnumHelper.GetEnumDescription(item.Condition)
+                                    <span class="badge @BadgeHelper.GetMaterialConditionBadgeClass(item.Condition)">@EnumHelper.GetEnumDescription(item.Condition)
                                     @if (!string.IsNullOrEmpty(item.Notes))
                                     {
                                     <i class="mdi mdi-information mdi-12px text-info" data-bs-toggle="tooltip" title="@item.Notes"></i>
@@ -140,7 +140,7 @@
                                             <label for="condition-@i" class="form-label">Condition</label>
                                                <select id="condition-@i" class="form-select">
                                                 <option value="">-- Select Condition --</option>
-                                                @foreach (MaterialStatus status in Enum.GetValues(typeof(MaterialStatus)))
+                                                @foreach (Condition status in Enum.GetValues(typeof(Condition)))
                                                 {
                                                     bool isSelected = false;
         

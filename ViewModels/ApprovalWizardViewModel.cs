@@ -21,9 +21,9 @@ namespace MRIV.ViewModels
         public int RequisitionNumber { get; set; }
         public string? IssueStationCategory { get; set; }
         public int RequestingDepartment { get; set; }
-        public string? RequestingStation { get; set; }
+        public int? RequestingStation { get; set; }
         public string? DeliveryStationCategory { get; set; }
-        public string? DeliveryStation { get; set; }
+        public int? DeliveryStation { get; set; }
         public DateTime RequestDate { get; set; }
         public string? Status { get; set; }
 
@@ -56,7 +56,7 @@ namespace MRIV.ViewModels
         public int Quantity { get; set; }
         public string? MaterialCode { get; set; }
         public RequisitionItemCondition RequisitionItemCondition { get; set; }
-        public MaterialStatus? Condition { get; set; }
+        public Condition? Condition { get; set; }
         public string? Notes { get; set; }
         public string? Stage { get; set; }
         public Vendor? vendor { get; set; }

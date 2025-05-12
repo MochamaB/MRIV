@@ -34,9 +34,9 @@
                 <span asp-validation-for="IssueStationCategory" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="IssueStation" class="control-label"></label>
-                <input asp-for="IssueStation" class="form-control" />
-                <span asp-validation-for="IssueStation" class="text-danger"></span>
+                <label asp-for="IssueStationId" class="control-label"></label>
+                <input asp-for="IssueStationId" class="form-control" />
+                <span asp-validation-for="IssueStationId" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="DeliveryStationCategory" class="control-label"></label>
@@ -44,9 +44,9 @@
                 <span asp-validation-for="DeliveryStationCategory" class="text-danger"></span>
             </div>
             <div class="form-group">
-                <label asp-for="DeliveryStation" class="control-label"></label>
-                <input asp-for="DeliveryStation" class="form-control" />
-                <span asp-validation-for="DeliveryStation" class="text-danger"></span>
+                <label asp-for="DeliveryStationId" class="control-label"></label>
+                <input asp-for="DeliveryStationId" class="form-control" />
+                <span asp-validation-for="DeliveryStationId" class="text-danger"></span>
             </div>
             <div class="form-group">
                 <label asp-for="Remarks" class="control-label"></label>
@@ -98,16 +98,7 @@
                 <input asp-for="UpdatedAt" class="form-control" />
                 <span asp-validation-for="UpdatedAt" class="text-danger"></span>
             </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="IsExternal" /> @Html.DisplayNameFor(model => model.IsExternal)
-                </label>
-            </div>
-            <div class="form-group form-check">
-                <label class="form-check-label">
-                    <input class="form-check-input" asp-for="ForwardToAdmin" /> @Html.DisplayNameFor(model => model.ForwardToAdmin)
-                </label>
-            </div>
+           
             <div class="form-group">
                 <input type="submit" value="Save" class="btn btn-primary" />
             </div>

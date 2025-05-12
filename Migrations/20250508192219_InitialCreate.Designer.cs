@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace MRIV.Migrations
 {
     [DbContext(typeof(RequisitionContext))]
-    [Migration("20250505205938_UpdateSettingsDefinition")]
-    partial class UpdateSettingsDefinition
+    [Migration("20250508192219_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -46,6 +46,10 @@ namespace MRIV.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<string>("ApprovedBy")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
                     b.Property<string>("Comments")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
@@ -64,6 +68,9 @@ namespace MRIV.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RequisitionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("StationId")
                         .HasColumnType("int");
 
                     b.Property<int?>("StepConfigId")
@@ -198,7 +205,7 @@ namespace MRIV.Migrations
                     b.Property<decimal?>("PurchasePrice")
                         .HasColumnType("decimal(18, 2)");
 
-                    b.Property<string>("SerialNumber")
+                    b.Property<string>("QRCODE")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
@@ -280,13 +287,13 @@ namespace MRIV.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
-                    b.Property<string>("Station")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
                     b.Property<string>("StationCategory")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int?>("StationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -461,6 +468,9 @@ namespace MRIV.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
+                    b.Property<int?>("MaterialSubcategoryId")
+                        .HasColumnType("int");
+
                     b.Property<string>("MimeType")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -477,6 +487,8 @@ namespace MRIV.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("MaterialSubcategoryId");
 
                     b.HasIndex("ModelType", "ModelId");
 
@@ -577,14 +589,16 @@ namespace MRIV.Migrations
                     b.Property<DateTime?>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<string>("DeliveryStation")
-                        .IsRequired()
+                    b.Property<string>("DeliveryDepartmentId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("DeliveryStationCategory")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("DeliveryStationId")
+                        .HasColumnType("int");
 
                     b.Property<int>("DepartmentId")
                         .HasColumnType("int");
@@ -601,20 +615,16 @@ namespace MRIV.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
-                    b.Property<bool?>("ForwardToAdmin")
-                        .HasColumnType("bit");
-
-                    b.Property<bool?>("IsExternal")
-                        .HasColumnType("bit");
-
-                    b.Property<string>("IssueStation")
-                        .IsRequired()
+                    b.Property<string>("IssueDepartmentId")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("IssueStationCategory")
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
+
+                    b.Property<int>("IssueStationId")
+                        .HasColumnType("int");
 
                     b.Property<int?>("MaterialAssignmentId")
                         .HasColumnType("int");
@@ -696,6 +706,75 @@ namespace MRIV.Migrations
                     b.HasIndex("RequisitionId");
 
                     b.ToTable("RequisitionItems");
+                });
+
+            modelBuilder.Entity("MRIV.Models.RoleGroup", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanAccessAcrossDepartments")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanAccessAcrossStations")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("RoleGroups");
+                });
+
+            modelBuilder.Entity("MRIV.Models.RoleGroupMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("PayrollNo")
+                        .IsRequired()
+                        .HasMaxLength(8)
+                        .HasColumnType("nvarchar(8)");
+
+                    b.Property<int>("RoleGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RoleGroupId");
+
+                    b.ToTable("RoleGroupMembers");
                 });
 
             modelBuilder.Entity("MRIV.Models.SettingDefinition", b =>
@@ -903,209 +982,6 @@ namespace MRIV.Migrations
                         });
                 });
 
-            modelBuilder.Entity("MRIV.Models.Tbrequisition", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint")
-                        .HasColumnName("id");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<string>("Addedby")
-                        .HasMaxLength(10)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(10)")
-                        .HasColumnName("addedby");
-
-                    b.Property<string>("Admin")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("admin");
-
-                    b.Property<DateTime?>("AdminDate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("admin_date");
-
-                    b.Property<string>("AdminOfficer")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("admin_officer");
-
-                    b.Property<string>("Adminapprove")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("adminapprove");
-
-                    b.Property<DateTime?>("AdminapproveDate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("adminapprove_date");
-
-                    b.Property<string>("Applicant")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("applicant");
-
-                    b.Property<string>("Code1")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("code1");
-
-                    b.Property<decimal?>("Collectorid")
-                        .HasColumnType("numeric(18, 0)")
-                        .HasColumnName("collectorid");
-
-                    b.Property<string>("Collectorname")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("collectorname");
-
-                    b.Property<string>("External")
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("external");
-
-                    b.Property<string>("Externalmail")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("externalmail");
-
-                    b.Property<DateTime?>("FwdDate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("fwd_date");
-
-                    b.Property<string>("Fwdapprove")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("fwdapprove");
-
-                    b.Property<decimal?>("Issued1")
-                        .HasColumnType("numeric(18, 0)")
-                        .HasColumnName("issued1");
-
-                    b.Property<string>("IssuedByApproval")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("issued_by_approval");
-
-                    b.Property<DateTime?>("Issuedate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("issuedate");
-
-                    b.Property<string>("Issuepoint")
-                        .HasMaxLength(150)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(150)")
-                        .HasColumnName("issuepoint");
-
-                    b.Property<string>("Item1")
-                        .HasMaxLength(8000)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(8000)")
-                        .HasColumnName("item1");
-
-                    b.Property<string>("RecComments")
-                        .HasMaxLength(255)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(255)")
-                        .HasColumnName("rec_comments");
-
-                    b.Property<string>("RecOfficer")
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("rec_officer");
-
-                    b.Property<DateTime?>("Recdate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("recdate");
-
-                    b.Property<string>("Receivedby")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("receivedby");
-
-                    b.Property<string>("ReceivingOfficerApproval")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("receiving_officer_approval");
-
-                    b.Property<string>("RejectedRec")
-                        .HasMaxLength(155)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(155)")
-                        .HasColumnName("rejected_rec");
-
-                    b.Property<string>("RejectedSup")
-                        .HasMaxLength(155)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(155)")
-                        .HasColumnName("rejected_sup");
-
-                    b.Property<string>("Remarks1")
-                        .HasMaxLength(8000)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(8000)")
-                        .HasColumnName("remarks1");
-
-                    b.Property<string>("ReqOfficer")
-                        .HasMaxLength(100)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(100)")
-                        .HasColumnName("req_officer");
-
-                    b.Property<string>("ReqOfficerApproval")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("req_officer_approval");
-
-                    b.Property<string>("ReqUsername")
-                        .HasMaxLength(50)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(50)")
-                        .HasColumnName("req_username");
-
-                    b.Property<string>("SupComments")
-                        .HasMaxLength(255)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(255)")
-                        .HasColumnName("sup_comments");
-
-                    b.Property<DateTime?>("SupDate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("sup_date");
-
-                    b.Property<DateTime?>("Sysdate")
-                        .HasColumnType("datetime")
-                        .HasColumnName("sysdate");
-
-                    b.Property<string>("Usepoint")
-                        .HasMaxLength(150)
-                        .IsUnicode(false)
-                        .HasColumnType("varchar(150)")
-                        .HasColumnName("usepoint");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("tbrequisition", null, t =>
-                        {
-                            t.ExcludeFromMigrations();
-                        });
-                });
-
             modelBuilder.Entity("MRIV.Models.WorkflowConfig", b =>
                 {
                     b.Property<int>("Id")
@@ -1274,6 +1150,13 @@ namespace MRIV.Migrations
                     b.Navigation("MaterialCategory");
                 });
 
+            modelBuilder.Entity("MRIV.Models.MediaFile", b =>
+                {
+                    b.HasOne("MRIV.Models.MaterialSubcategory", null)
+                        .WithMany("Media")
+                        .HasForeignKey("MaterialSubcategoryId");
+                });
+
             modelBuilder.Entity("MRIV.Models.Requisition", b =>
                 {
                     b.HasOne("MRIV.Models.MaterialAssignment", "MaterialAssignment")
@@ -1298,6 +1181,17 @@ namespace MRIV.Migrations
                     b.Navigation("Material");
 
                     b.Navigation("Requisition");
+                });
+
+            modelBuilder.Entity("MRIV.Models.RoleGroupMember", b =>
+                {
+                    b.HasOne("MRIV.Models.RoleGroup", "RoleGroup")
+                        .WithMany("Members")
+                        .HasForeignKey("RoleGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("RoleGroup");
                 });
 
             modelBuilder.Entity("MRIV.Models.SettingDefinition", b =>
@@ -1367,6 +1261,8 @@ namespace MRIV.Migrations
             modelBuilder.Entity("MRIV.Models.MaterialSubcategory", b =>
                 {
                     b.Navigation("Materials");
+
+                    b.Navigation("Media");
                 });
 
             modelBuilder.Entity("MRIV.Models.Requisition", b =>
@@ -1374,6 +1270,11 @@ namespace MRIV.Migrations
                     b.Navigation("Approvals");
 
                     b.Navigation("RequisitionItems");
+                });
+
+            modelBuilder.Entity("MRIV.Models.RoleGroup", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("MRIV.Models.SettingDefinition", b =>

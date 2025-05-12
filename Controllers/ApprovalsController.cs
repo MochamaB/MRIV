@@ -171,6 +171,7 @@ namespace MRIV.Controllers
                     RequisitionId = approval.RequisitionId,
                     StepNumber = approval.StepNumber,
                     ApprovalStep = approval.ApprovalStep,
+                    ApprovalAction = approval.ApprovalAction,
                     PayrollNo = approval.PayrollNo,
                     EmployeeName = displayName,
                     DepartmentId = approval.DepartmentId,
@@ -494,11 +495,13 @@ namespace MRIV.Controllers
                 RequisitionId = approval.RequisitionId,
                 ApprovalStep = approval.ApprovalStep,
                 CurrentStatus = approval.ApprovalStatus,
-                RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStation} to {approval.Requisition?.DeliveryStation}",
+                RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStationId} to {approval.Requisition?.DeliveryStationId}",
                 IssueCategory = approval.Requisition.IssueStationCategory,
-                IssueStation = approval.Requisition.IssueStation,
+                IssueStation = approval.Requisition.IssueStationId,
+                IssueDepartment = approval.Requisition.IssueDepartmentId,
                 DeliveryCategory = approval.Requisition.DeliveryStationCategory,
-                DeliveryStation = approval.Requisition.DeliveryStation,
+                DeliveryStation = approval.Requisition.DeliveryStationId,
+                DeliveryDepartment = approval.Requisition.DeliveryDepartmentId,
                 ApprovalHistory = approvalHistory
             };
 
@@ -600,11 +603,11 @@ namespace MRIV.Controllers
 
             // Update the view model
             viewModel.ApprovalHistory = approvalHistory;
-            viewModel.RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStation} to {approval.Requisition?.DeliveryStation}";
+            viewModel.RequisitionDetails = $"Requisition #{approval.RequisitionId} - From {approval.Requisition?.IssueStationId} to {approval.Requisition?.DeliveryStationId}";
             viewModel.IssueCategory = approval.Requisition.IssueStationCategory;
-            viewModel.IssueStation = approval.Requisition.IssueStation;
+            viewModel.IssueStation = approval.Requisition.IssueStationId;
             viewModel.DeliveryCategory = approval.Requisition.DeliveryStationCategory;
-            viewModel.DeliveryStation = approval.Requisition.DeliveryStation;
+            viewModel.DeliveryStation = approval.Requisition.DeliveryStationId;
             viewModel.StepNumber = approval.StepNumber;
 
             // Get employee and department information
@@ -669,9 +672,9 @@ namespace MRIV.Controllers
                 RequisitionNumber = approval.Requisition.Id,
                 IssueStationCategory = approval.Requisition.IssueStationCategory,
                 RequestingDepartment = approval.Requisition.DepartmentId,
-                RequestingStation = approval.Requisition.IssueStation,
+                RequestingStation = approval.Requisition.IssueStationId,
                 DeliveryStationCategory = approval.Requisition.DeliveryStationCategory,
-                DeliveryStation = approval.Requisition.DeliveryStation,
+                DeliveryStation = approval.Requisition.DeliveryStationId,
                 RequestDate = approval.Requisition.CreatedAt ?? DateTime.Now,
                 Status = approval.Requisition.Status.ToString(),
 
@@ -846,7 +849,7 @@ namespace MRIV.Controllers
         // POST: Approvals/SaveItemCondition
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveItemCondition(int approvalId, int requisitionItemId, int? materialId, int? materialConditionId, MaterialStatus? condition, string notes, string stage)
+        public async Task<IActionResult> SaveItemCondition(int approvalId, int requisitionItemId, int? materialId, int? materialConditionId, Condition? condition, string notes, string stage)
         {
             _logger.LogInformation($"Saving material condition for item ID: {requisitionItemId}");
             

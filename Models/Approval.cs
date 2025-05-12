@@ -16,6 +16,8 @@ namespace MRIV.Models
 
         public int? StepConfigId { get; set; }
 
+        public int StationId { get; set; }
+
         public int DepartmentId { get; set; }
 
         public int StepNumber { get; set; }
@@ -33,6 +35,10 @@ namespace MRIV.Models
 
         [Required]
         public ApprovalStatus ApprovalStatus { get; set; }
+
+        // Who approved this step
+        [StringLength(20)]
+        public string? ApprovedBy { get; set; }
 
         [StringLength(500)]
         public string? Comments { get; set; }

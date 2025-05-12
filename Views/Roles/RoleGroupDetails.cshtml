@@ -39,7 +39,7 @@
                         </div>
                         <div class="mb-3">
                             <strong>Full Department Access:</strong> 
-                            @if (roleGroup.HasFullDepartmentAccess)
+                            @if (roleGroup.CanAccessAcrossDepartments)
                             {
                                 <span class="badge bg-success">Yes</span>
                             }
@@ -52,7 +52,7 @@
                     <div class="col-md-6">
                         <div class="mb-3">
                             <strong>Full Station Access:</strong> 
-                            @if (roleGroup.HasFullStationAccess)
+                            @if (roleGroup.CanAccessAcrossStations)
                             {
                                 <span class="badge bg-success">Yes</span>
                             }

@@ -10,9 +10,11 @@ using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
 using System.Text.Json;
+using MRIV.Attributes;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class WorkflowConfigsController : Controller
     {
         private readonly RequisitionContext _context;

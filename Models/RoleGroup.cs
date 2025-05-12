@@ -22,12 +22,12 @@ namespace MRIV.Models
         /// <summary>
         /// Indicates if members can access data across all departments
         /// </summary>
-        public bool HasFullDepartmentAccess { get; set; } = true;
+        public bool CanAccessAcrossStations { get; set; } = true;
 
         /// <summary>
         /// Indicates if members can access data across all stations
         /// </summary>
-        public bool HasFullStationAccess { get; set; } = true;
+        public bool CanAccessAcrossDepartments { get; set; } = true;
 
         public bool IsActive { get; set; } = true;
 

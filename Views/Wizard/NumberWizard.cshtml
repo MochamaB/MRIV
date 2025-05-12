@@ -302,15 +302,18 @@
 
     <!-- Load The requistion Locations Script -->
    <script>
-        document.addEventListener("DOMContentLoaded", function () {
+               document.addEventListener("DOMContentLoaded", function () {
             // Elements
             const issueCategory = document.getElementById('issueStationCategory');
-            const issueStation = document.getElementById('issueStation');
+            const issueStationId = document.getElementById('issueStationId');
+            const issueDepartmentId = document.getElementById('issueDepartmentId');
+
             const deliveryCategory = document.getElementById('deliveryStationCategory');
-            const deliveryStation = document.getElementById('deliveryStation');
+            const deliveryStationId = document.getElementById('deliveryStationId');
+            const deliveryDepartmentId = document.getElementById('deliveryDepartmentId');
 
             // Load locations based on category selection
-            function loadLocations(categoryDropdown, locationDropdown) {
+            async function loadLocations(categoryDropdown, locationDropdown, isDelivery = false) {
                 const category = categoryDropdown.value;
 
                 // If no category is selected, clear the location dropdown and return
@@ -325,58 +328,106 @@
                 // Set loading state
                 locationDropdown.innerHTML = '<option value="">Loading...</option>';
 
-                // Fetch new options via AJAX
-                fetch(`/MaterialRequisition/GetLocationsForCategory?category=${category}&selectedValue=${currentSelection}`)
-                    .then(response => {
-                        if (!response.ok) {
-                            throw new Error(`HTTP error! Status: ${response.status}`);
-                        }
-                        return response.json();
-                    })
-                    .then(data => {
-                        // Clear loading option
-                        locationDropdown.innerHTML = '<option value="">Select Location</option>';
+                try {
+                    // Determine if we're loading a department or station dropdown
+                    const isDepartmentDropdown = locationDropdown === (isDelivery ? deliveryDepartmentId : issueDepartmentId);
+                    const isStationDropdown = locationDropdown === (isDelivery ? deliveryStationId : issueStationId);
+                    
+                    // Load departments for department dropdowns
+                    if (isDepartmentDropdown) {
+                        // Always load departments for department dropdowns regardless of category
+                        const response = await fetch('/Location/GetDepartmentsSelectList');
+                        const data = await response.json();
 
-                        // Populate dropdown with received data
-                        if (data && Array.isArray(data)) {
+                        locationDropdown.innerHTML = '<option value="">Select Department</option>';
+                        data.forEach(item => {
+                            const option = document.createElement('option');
+                            option.value = item.value;
+                            option.textContent = item.text;
+                            if (item.value === currentSelection) {
+                                option.selected = true;
+                            }
+                            locationDropdown.appendChild(option);
+                        });
+                    }
+                    // Load stations for station dropdowns
+                    else if (isStationDropdown) {
+                        // Handle station dropdowns based on category
+                        if (category.toLowerCase() === 'headoffice') {
+                            // For headoffice, just set HQ as the station
+                            locationDropdown.innerHTML = `
+                                <option value="">Select Station</option>
+                                <option value="0" ${currentSelection === "0" ? 'selected' : ''}>HQ</option>
+                            `;
+                        } else {
+                            // For other categories, load stations with appropriate filtering
+                            // Pass the category as a query parameter
+                            const response = await fetch(`/Location/GetStationsSelectList?category=${encodeURIComponent(category)}`);
+                            const data = await response.json();
+
+                            locationDropdown.innerHTML = '<option value="">Select Station</option>';
+                            
+                            // Apply category-specific filtering
                             data.forEach(item => {
-                                const option = document.createElement('option');
-                                option.value = item.value;
-                                option.textContent = item.text;
-                                if (item.value === currentSelection) {
-                                    option.selected = true;
+                                let shouldInclude = true;
+                                
+                                // For factory, exclude regions and zonals
+                                if (category.toLowerCase() === 'factory') {
+                                    shouldInclude = !item.text.toLowerCase().includes('region') &&
+                                                  !item.text.toLowerCase().includes('zonal');
                                 }
-                                locationDropdown.appendChild(option);
+                                // For region, only include regions
+                                else if (category.toLowerCase() === 'region') {
+                                    shouldInclude = item.text.toLowerCase().includes('region');
+                                }
+                                
+                                if (shouldInclude) {
+                                    const option = document.createElement('option');
+                                    option.value = item.value;
+                                    option.textContent = item.text;
+                                    if (item.value === currentSelection) {
+                                        option.selected = true;
+                                    }
+                                    locationDropdown.appendChild(option);
+                                }
                             });
                         }
+                    }
 
-                        // Trigger dispatch section visibility check if it exists
-                        if (typeof toggleDispatchSection === 'function') {
-                            toggleDispatchSection();
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error fetching locations:', error);
-                        locationDropdown.innerHTML = '<option value="">Error loading options</option>';
-                    });
+                    // Trigger dispatch section visibility check if it exists
+                    if (typeof toggleDispatchSection === 'function') {
+                        toggleDispatchSection();
+                    }
+                } catch (error) {
+                    console.error('Error fetching locations:', error);
+                    locationDropdown.innerHTML = '<option value="">Error loading options</option>';
+                }
             }
 
             // Set up event listeners
             if (issueCategory) {
-                issueCategory.addEventListener('change', () => loadLocations(issueCategory, issueStation));
+                issueCategory.addEventListener('change', () => {
+                    loadLocations(issueCategory, issueStationId);
+                    loadLocations(issueCategory, issueDepartmentId);
+                });
 
                 // Initialize if category already selected
                 if (issueCategory.value) {
-                    loadLocations(issueCategory, issueStation);
+                    loadLocations(issueCategory, issueStationId);
+                    loadLocations(issueCategory, issueDepartmentId);
                 }
             }
 
             if (deliveryCategory) {
-                deliveryCategory.addEventListener('change', () => loadLocations(deliveryCategory, deliveryStation));
+                deliveryCategory.addEventListener('change', () => {
+                    loadLocations(deliveryCategory, deliveryStationId, true);
+                    loadLocations(deliveryCategory, deliveryDepartmentId, true);
+                });
 
                 // Initialize if category already selected
                 if (deliveryCategory.value) {
-                    loadLocations(deliveryCategory, deliveryStation);
+                    loadLocations(deliveryCategory, deliveryStationId, true);
+                    loadLocations(deliveryCategory, deliveryDepartmentId, true);
                 }
             }
         });

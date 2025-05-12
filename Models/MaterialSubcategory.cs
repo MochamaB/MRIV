@@ -25,5 +25,7 @@ namespace MRIV.Models
         public virtual MaterialCategory? MaterialCategory { get; set; }
 
         public virtual ICollection<Material>? Materials { get; set; }
+
+        public virtual ICollection<MediaFile> Media { get; set; } = new List<MediaFile>();
     }
 }

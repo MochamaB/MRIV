@@ -31,18 +31,19 @@ namespace MRIV.Models
         [Display(Name = "Issue Point Category")]
         public string IssueStationCategory { get; set; }
 
-        [Required]
-        [Display(Name = "Issue Point")]
-        public string IssueStation { get; set; }
+        
+        public int IssueStationId  { get; set; }
+
+        public string? IssueDepartmentId { get; set; }
 
         [Required]
         [StringLength(50)]
         [Display(Name = "Delivery point category")]
         public string DeliveryStationCategory { get; set; }
 
-        [Required]
-        [Display(Name = "Delivery Point")]
-        public string DeliveryStation { get; set; }
+        public int DeliveryStationId { get; set; }
+
+        public string? DeliveryDepartmentId { get; set; }
 
         [StringLength(500)]
         public string Remarks { get; set; }
@@ -75,10 +76,6 @@ namespace MRIV.Models
         public DateTime? CreatedAt { get; set; }
 
         public DateTime? UpdatedAt { get; set; }
-
-        public bool? IsExternal { get; set; }
-
-        public bool? ForwardToAdmin { get; set; }
 
         // Add navigation property to Department
         [ForeignKey("DepartmentId")]

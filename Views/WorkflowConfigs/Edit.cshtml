@@ -51,6 +51,7 @@
                                 <th>Order</th>
                                 <th>Step Name</th>
                                 <th>Approver Role</th>
+                                <th>Step Action</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -74,6 +75,10 @@
                                             <option value="">-- Select Role --</option>
                                         </select>
                                         <span asp-validation-for="Steps[i].ApproverRole" class="text-danger"></span>
+                                    </td>
+                                    <td style="width: 40%">
+                                        <input asp-for="Steps[i].StepAction" class="form-control" />
+                                        <span asp-validation-for="Steps[i].StepAction" class="text-danger"></span>
                                     </td>
                                     <td style="width: 20%">
                                         <div class="btn-group " role="group">

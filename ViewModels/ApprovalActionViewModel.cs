@@ -31,9 +31,11 @@ namespace MRIV.ViewModels
 
         // Additional properties for display
         public string? IssueCategory { get; set; }
-        public string? IssueStation {  get; set; }
+        public int? IssueStation {  get; set; }
+        public string? IssueDepartment { get; set; }
         public string? DeliveryCategory { get; set; }
-        public string? DeliveryStation { get; set; }
+        public int? DeliveryStation { get; set; }
+        public string? DeliveryDepartment{ get; set; }
         public string? RequisitionDetails { get; set; }
         
         public int StepNumber { get; set; }

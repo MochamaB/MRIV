@@ -25,8 +25,11 @@ namespace MRIV.ViewModels
         public SelectList? DeliveryStationCategories { get; set; }
 
         //  dynamic locations based on selected category
-        public SelectList? IssueLocations { get; set; }
-        public SelectList? DeliveryLocations { get; set; }
+        public SelectList? IssueStations { get; set; }
+        public SelectList? IssueDepartments { get; set; }
+        public SelectList? DeliveryStations { get; set; }
+        public SelectList? DeliveryDepartments{ get; set; }
+
         public EmployeeBkp? LoggedInUserEmployee { get; set; } 
         public Department? LoggedInUserDepartment { get; set; }
         public Station? LoggedInUserStation { get; set; }
@@ -82,6 +85,8 @@ namespace MRIV.ViewModels
         public string EmployeeName { get; set; }
         public int DepartmentId { get; set; }
         public string DepartmentName { get; set; }
+        public int StationId { get; set; }
+        public string StationName { get; set; }
         public ApprovalStatus ApprovalStatus { get; set; }
         public DateTime CreatedAt { get; set; }
 

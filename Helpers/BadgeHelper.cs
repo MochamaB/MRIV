@@ -26,10 +26,6 @@ namespace MRIV.Helpers
         {
             return status switch
             {
-                MaterialStatus.GoodCondition => "badge-active",
-                MaterialStatus.MinorDamage => "badge-warning",
-                MaterialStatus.MajorDamage => "badge-danger",
-                MaterialStatus.Faulty => "badge-danger",
                 MaterialStatus.UnderMaintenance => "badge-information",
                 MaterialStatus.LostOrStolen => "badge-dark",
                 MaterialStatus.Disposed => "badge-secondary",
@@ -79,7 +75,23 @@ namespace MRIV.Helpers
                 _ => "bg-primary" // Default class
             };
         }
-        
+
+        public static string GetMaterialConditionBadgeClass(Condition? status)
+        {
+            return status switch
+            {
+                Condition.GoodCondition => "badge-active",
+                Condition.MinorDamage => "badge-warning",
+                Condition.MajorDamage => "badge-danger",
+                Condition.Faulty => "badge-danger",
+                Condition.UnderMaintenance => "badge-information",
+                Condition.LostOrStolen => "badge-dark",
+                Condition.Disposed => "badge-secondary",
+                null => "badge-light", // Handle null case (optional)
+                _ => "bg-primary" // Default class
+            };
+        }
+
         public static string GetFunctionalStatusBadgeClass(FunctionalStatus status)
         {
             return status switch

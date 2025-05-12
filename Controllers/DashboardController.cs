@@ -18,15 +18,18 @@ namespace MRIV.Controllers
         private readonly RequisitionContext _context;
         private readonly IEmployeeService _employeeService;
         private readonly IDashboardService _dashboardService;
+        private readonly IDepartmentService _departmentService;
 
         public DashboardController(
             RequisitionContext context, 
             IEmployeeService employeeService,
-            IDashboardService dashboardService)
+            IDashboardService dashboardService,
+            IDepartmentService departmentService)
         {
             _context = context;
             _employeeService = employeeService;
             _dashboardService = dashboardService;
+            _departmentService = departmentService;
         }
 
         // Default dashboard now directly returns the MyRequisitions view

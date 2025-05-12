@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 using System.Text.Json;
@@ -117,28 +117,51 @@ namespace MRIV.Services
         // CODE FOR AJAX METHOD
         public async Task<List<object>> GetLocationItemsForJsonAsync(string categoryCode = null, string selectedValue = null)
         {
-            if (string.IsNullOrEmpty(categoryCode))
-                return new List<object>();
-
-            // Get all categories and filter in memory for case-insensitive comparison
-            var categories = await _requisitionContext.StationCategories.ToListAsync();
-            var category = categories.FirstOrDefault(c =>
-                string.Equals(c.Code, categoryCode, StringComparison.OrdinalIgnoreCase));
-
-            if (category == null)
-                return new List<object>();
-
-            // Return the appropriate data format based on the data source
-            switch (category.DataSource?.ToLower())
+            try
             {
-                case "department":
-                    var departments = await _ktdaContext.Departments.ToListAsync();
-                    return departments.Select(d => new { value = d.DepartmentName, text = d.DepartmentName }).ToList<object>();
+                if (string.IsNullOrEmpty(categoryCode))
+                    return new List<object>();
 
-                case "station":
+                // Get all categories and filter in memory for case-insensitive comparison
+                var categories = await _requisitionContext.StationCategories.ToListAsync();
+                var category = categories.FirstOrDefault(c =>
+                    string.Equals(c.Code, categoryCode, StringComparison.OrdinalIgnoreCase));
+
+                if (category == null)
+                    return new List<object>();
+
+                // Determine what type of data to return based on the requested category
+                List<object> result = new List<object>();
+
+                // If category is headoffice or department-related, return departments
+                if (categoryCode.ToLower() == "headoffice" || category.DataSource?.ToLower() == "department")
+                {
+                    var departments = await _ktdaContext.Departments.ToListAsync();
+                    return departments.Select(d => new { value = d.DepartmentId, text = d.DepartmentName }).ToList<object>();
+                }
+                // If category is factory, region, or station-related, return stations
+                else if (categoryCode.ToLower() == "factory" || categoryCode.ToLower() == "region" || category.DataSource?.ToLower() == "station")
+                {
                     var stations = await _ktdaContext.Stations.ToListAsync();
 
-                    // Apply filters if specified
+                    // Apply category-specific filters
+                    if (categoryCode.ToLower() == "factory")
+                    {
+                        // For factory, exclude stations with "region" or "zonal" in their name
+                        stations = stations.Where(s => 
+                            !s.StationName.Contains("region", StringComparison.OrdinalIgnoreCase) &&
+                            !s.StationName.Contains("zonal", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+                    else if (categoryCode.ToLower() == "region")
+                    {
+                        // For region, only include stations with "region" in their name
+                        stations = stations.Where(s => 
+                            s.StationName.Contains("region", StringComparison.OrdinalIgnoreCase))
+                            .ToList();
+                    }
+                    
+                    // Apply additional filters if specified in the category
                     if (!string.IsNullOrEmpty(category.FilterCriteria))
                     {
                         try
@@ -167,25 +190,37 @@ namespace MRIV.Services
                         }
                         catch (JsonException ex)
                         {
-                            // Log the error
-                            _logger.LogError(ex, "Error parsing FilterCriteria JSON for category {CategoryCode}", categoryCode);
+                            // Log the error but continue with unfiltered stations
+                            Console.WriteLine($"Error parsing FilterCriteria JSON: {ex.Message}");
                         }
                     }
 
-                    return stations.Select(s => new { value = s.StationName, text = s.StationName }).ToList<object>();
-
-                case "vendor":
+                    return stations.Select(s => new { value = s.StationId.ToString(), text = s.StationName }).ToList<object>();
+                }
+                // If category is vendor-related, return vendors
+                else if (category.DataSource?.ToLower() == "vendor")
+                {
                     var vendors = await _vendorService.GetVendorsAsync();
                     return vendors.Select(v => new { value = v.VendorID.ToString(), text = v.Name }).ToList<object>();
+                }
 
-                default:
-                    return new List<object>();
+                // Default empty list if no matching category
+                return new List<object>();
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Console.WriteLine($"Error in GetLocationItemsForJsonAsync: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                
+                // Return an empty list instead of throwing
+                return new List<object>();
             }
         }
         public async Task InitializeUserLocationAsync(Requisition requisition, EmployeeBkp employee, Department department, Station station)
         {
             // Only initialize if values are not already set
-            if (!string.IsNullOrEmpty(requisition.IssueStationCategory) && !string.IsNullOrEmpty(requisition.IssueStation))
+            if (!string.IsNullOrEmpty(requisition.IssueStationCategory) || requisition.IssueStationId != 0)
                 return;
 
             // Determine if user is at HQ/headoffice or factory/region
@@ -196,7 +231,8 @@ namespace MRIV.Services
 
                 if (department != null)
                 {
-                    requisition.IssueStation = department.DepartmentName;
+                    requisition.IssueStationId = 0;
+                    requisition.IssueDepartmentId = department.DepartmentId;
                 }
             }
             else if (station != null)
@@ -206,13 +242,13 @@ namespace MRIV.Services
 
                 if (stationName.Contains("region"))
                 {
-                    requisition.IssueStationCategory = "region";
-                    requisition.IssueStation = station.StationName;
+                    requisition.IssueStationId = station.StationId;
+                    requisition.IssueDepartmentId = department.DepartmentId;
                 }
                 else
                 {
-                    requisition.IssueStationCategory = "factory";
-                    requisition.IssueStation = station.StationName;
+                    requisition.IssueStationId = station.StationId;
+                    requisition.IssueDepartmentId = department.DepartmentId;
                 }
             }
         }
