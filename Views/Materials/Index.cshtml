@@ -1,192 +1,159 @@
+@model MRIV.ViewModels.MaterialsIndexViewModel
 @using MRIV.Enums
 @using MRIV.Helpers
-@using MRIV.ViewModels
-@model IEnumerable<MRIV.Models.Material>
-
 
 @{
     ViewData["Title"] = "Materials";
-    var vendorNames = ViewBag.VendorNames as Dictionary<string, string>;
-    var pagination = ViewBag.Pagination as PaginationViewModel;
 }
 
 <div class="row">
-<div class="col-lg-12">
-    <div class="card">
-        <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
-            <div class="d-flex align-items-center">
-                <h5 class="card-title mb-0 flex-grow-1">Materials Inventory</h5>
-                <div class="flex-shrink-0">
-                    <div class="d-flex gap-2 flex-wrap">
-                        <div class="search-box">
-                            <input type="text" class="form-control search" placeholder="Search...">
-                            <i class="ri-search-line search-icon"></i>
-                        </div>
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Materials Inventory</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search...">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
 
-                        <!-- Filter Toggle Button -->
-                        @await Html.PartialAsync("_FilterToggleButton")
+                            @await Html.PartialAsync("_FilterToggleButton")
 
-                        <!-- Add other action buttons here -->
                             <a href="@Url.Action("Create", "Materials")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
-                            <i class="ri-add-line align-bottom me-1"></i> New Material
-                        </a>
+                                <i class="ri-add-line align-bottom me-1"></i> New Material
+                            </a>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Filters Partial View -->
-        @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
+            @await Html.PartialAsync("_Filters", Model.Filters)
 
-        <!-- Table Content -->
-        <div class="card-body">
-            <div class="table-responsive">
-                <table class="table table-bordered align-middle mb-0">
-                    <thead>
-                        <tr>
-                            <th>
-                                Id
-                            </th>
-                            <th style="width: 80px;">
-                                Icon
-                            </th>
-                            <th>
-                                Material Category
-                            </th>
-                            <th>
-                                @Html.DisplayNameFor(model => model.Code)
-                            </th>
-                            <th>
-                                @Html.DisplayNameFor(model => model.Name)
-                            </th>
-                            <th>
-                                @Html.DisplayNameFor(model => model.Description)
-                            </th>
-                            <th>
-                                Current Location
-                            </th>
-                            <th>
-                                @Html.DisplayNameFor(model => model.VendorId)
-                            </th>
-                            <th>
-                                @Html.DisplayNameFor(model => model.Status)
-                            </th>
-
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var item in Model)
-                        {
-                            var activeAssignment = item.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
-                            
-                                <tr class="clickable-row" data-href="@Url.Action("Details", "Materials", new { id = item.Id })">
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Id)
-                                </td>
-                                <td class="text-center">
-                                    @{
-                                        string imageUrl = "/uploads/defaultmaterialimage.svg";
-                                        string imageAlt = "Default";
-                                        string imageSource = "Default";
-                                        
-                                        if (item.Media.Any())
-                                        {
-                                            // Use material's own image if available
-                                            imageUrl = $"/{item.Media.First().FilePath}";
-                                            imageAlt = item.Name;
-                                            imageSource = "Material";
-                                        }
-                                        else if (item.MaterialCategory?.Media != null && item.MaterialCategory.Media.Any())
-                                        {
-                                            // Use category image if material has no image
-                                            imageUrl = $"/{item.MaterialCategory.Media.First().FilePath}";
-                                            imageAlt = $"{item.MaterialCategory.Name} (Category)";
-                                            imageSource = "Category";
-                                        }
-                                    }
-                                    <img src="@imageUrl" alt="@imageAlt" class="rounded" 
-                                         style="height: 50px; width: 50px; object-fit: contain;" 
-                                         data-bs-toggle="tooltip" title="Image Source: @imageSource" />
-                                </td>
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.MaterialCategory.Name)
-                                </td>
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Code)
-                                </td>
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Name)
-                                </td>
-                                <td>
-                                    @Html.DisplayFor(modelItem => item.Description)
-                                </td>
-                                <td>
-                                    @if (activeAssignment != null)
-                                    {
-                                            <div class="font-weight-bold pb-1" style="text-transform:capitalize">
-                                           @activeAssignment.StationCategory
-                                             </div>
-                                        <div>
-                                            @{
-                                                string stationName = "Unknown";
-                                                string departmentName = "Unknown";
-                                                
-                                                // Get station name from the dictionary
-                                                if (activeAssignment.StationId.HasValue && ViewBag.StationNames != null && 
-                                                    ViewBag.StationNames.ContainsKey(activeAssignment.StationId.Value))
-                                                {
-                                                    stationName = ViewBag.StationNames[activeAssignment.StationId.Value];
-                                                }
-                                                
-                                                // Get department name from the dictionary
-                                                if (activeAssignment.DepartmentId.HasValue && ViewBag.DepartmentNames != null && 
-                                                    ViewBag.DepartmentNames.ContainsKey(activeAssignment.DepartmentId.Value))
-                                                {
-                                                    departmentName = ViewBag.DepartmentNames[activeAssignment.DepartmentId.Value];
-                                                }
-                                            }
-                                            <span class="text-muted"><i class="mdi mdi-office-building-outline"></i> @stationName</span>
-                                            <small class="d-block text-muted" title="Department"><i class="mdi mdi-domain"></i> @departmentName</small>
-                                        </div>
-                                    }
-                                    else
-                                    {
-                                        <span class="text-muted">Not assigned</span>
-                                    }
-                                </td>
-                                <td>
-                                    @{
-                                        var vendorName = "None";
-                                        if (!string.IsNullOrEmpty(item.VendorId) && vendorNames.TryGetValue(item.VendorId, out string name))
-                                        {
-                                            vendorName = name;
-                                        }
-                                    }
-                                    @vendorName
-                                </td>
-                                <td>
-                                    <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
-                                        @EnumHelper.GetEnumDescription(item.Status)
-                                    </span>
-                                </td>
-
-                                <td>
-                                        <partial name="_ActionButtons" model="(item.Id, ActionButtonStyle.Dropdown)" />
-                               </td>
-
-
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Id</th>
+                                <th style="width: 80px;">Icon</th>
+                                <th>Material Category</th>
+                                <th>@Html.DisplayNameFor(model => model.Materials.First().Name) - @Html.DisplayNameFor(model => model.Materials.First().Code)</th>
+                                <th>Current Location</th>
+                                <th>Assigned</th>
+                                <th>@Html.DisplayNameFor(model => model.Materials.First().VendorId)</th>
+                                <th>@Html.DisplayNameFor(model => model.Materials.First().Status)</th>
+                                <th></th>
                             </tr>
-                        }
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.Materials)
+                            {
+                                var activeAssignment = item.MaterialAssignments?.FirstOrDefault(ma => ma.IsActive);
+                                <tr class="clickable-row" data-href="@Url.Action("Details", "Materials", new { id = item.Id })">
+                                    <td>@item.Id</td>
+                                    <td class="text-center">
+                                        @{
+                                            string imageUrl = Model.MaterialImageUrls.TryGetValue(item.Id, out var materialImage)
+                                            ? materialImage
+                                            : (Model.CategoryImageUrls.TryGetValue(item.Id, out var categoryImage)
+                                            ? categoryImage
+                                            : "/uploads/defaultmaterialimage.svg");
+
+                                            string imageAlt = item.Media.Any()
+                                            ? item.Name
+                                            : (item.MaterialCategory?.Name + " (Category)");
+                                        }
+                                        <img src="@imageUrl" alt="@imageAlt" class="rounded"
+                                             style="height: 50px; width: 50px; object-fit: contain;"
+                                             data-bs-toggle="tooltip" title="@(item.Media.Any() ? "Material Image" : "Category Image")" />
+                                    </td>
+                                    <td>@item.MaterialCategory?.Name</td>
+                                    <td>
+                                        <div class="pb-2">@item.Name</div>
+                                        <div class="text-muted">@item.Code</div>
+                                    </td>
+                                    <td>
+                                        @if (activeAssignment != null)
+                                        {
+                                            <div class="font-weight-bold pb-1" style="text-transform:capitalize">
+                                                @activeAssignment.StationCategory
+                                            </div>
+                                            <div>
+                                                @{
+                                                    var stationName = activeAssignment.StationId.HasValue && Model.StationNames.TryGetValue(activeAssignment.StationId.Value, out var sName)
+                                                    ? sName
+                                                    : "Unknown";
+
+                                                    var departmentName = activeAssignment.DepartmentId.HasValue && Model.DepartmentNames.TryGetValue(activeAssignment.DepartmentId.Value, out var dName)
+                                                    ? dName
+                                                    : "Unknown";
+                                                }
+                                                <span class="text-muted"><i class="mdi mdi-office-building-outline"></i> @stationName</span>
+                                                <small class="d-block text-muted" title="Department"><i class="mdi mdi-domain"></i> @departmentName</small>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (activeAssignment?.PayrollNo != null)
+                                        {
+                                            if (Model.EmployeeInfo.TryGetValue(activeAssignment.PayrollNo, out var employee))
+                                            {
+                                                <div class="pt-1">
+                                                    <small class="text-primary" title="Assigned To">
+                                                        <i class="mdi mdi-account-outline"></i> @employee.Name
+                                                        @if (!string.IsNullOrEmpty(employee.Designation))
+                                                        {
+                                                            <span class="text-muted">(@employee.Designation)</span>
+                                                        }
+                                                    </small>
+                                                </div>
+                                            }
+
+                                            if (Model.MaterialConditions.TryGetValue(item.Id, out var condition))
+                                            {
+                                                <div class="pt-1">
+                                                    <small title="Material Condition">
+                                                        <span class="badge @BadgeHelper.GetMaterialConditionBadgeClass(condition.Condition)">
+                                                            <i class="mdi mdi-checkbox-marked-circle-outline me-1"></i>
+                                                            @EnumHelper.GetEnumDescription(condition.Condition)
+                                                        </span>
+                                                    </small>
+                                                </div>
+                                            }
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Not assigned</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @(item.VendorId != null && Model.VendorNames.TryGetValue(item.VendorId, out var vendorName) ? vendorName : "None")
+                                    </td>
+                                    <td>
+                                        <span class="ms-2 badge @BadgeHelper.GetMaterialStatusBadgeClass(item.Status)">
+                                            @EnumHelper.GetEnumDescription(item.Status)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <partial name="_ActionButtons" model="(item.Id, ActionButtonStyle.Dropdown)" />
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (Model.Pagination != null)
+                {
+                    @await Html.PartialAsync("_Pagination", Model.Pagination)
+                }
             </div>
-            <!-- Pagination -->
-            @if (pagination != null)
-            {
-                @await Html.PartialAsync("_Pagination", pagination)
-            }
         </div>
     </div>
-</div>
 </div>
