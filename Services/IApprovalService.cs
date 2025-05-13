@@ -4,6 +4,7 @@ using MRIV.ViewModels;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.Extensions.Logging;
 using MRIV.Enums;
+using static MRIV.Constants.SettingConstants;
 
 namespace MRIV.Services
 {
@@ -118,6 +119,8 @@ namespace MRIV.Services
                             ApprovalAction = stepConfig.StepAction,
                             PayrollNo = approver is EmployeeBkp employee ? employee.PayrollNo : approver.ToString(),
                             // Set the department to default ICT which has department id = 114 if approver is not found especially in vendor dispatch
+                            StationId = approver is EmployeeBkp employee1 ?
+                            (string.IsNullOrEmpty(employee1.Station) ? 0 : Convert.ToInt32(employee1.Station)) : 0,
                             DepartmentId = approver is EmployeeBkp employee2 ?
                                 (string.IsNullOrEmpty(employee2.Department) ? 114 : Convert.ToInt32(employee2.Department)) : 114,
                             WorkflowConfigId = workflowConfig.Id,

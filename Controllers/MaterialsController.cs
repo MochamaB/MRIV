@@ -450,7 +450,7 @@ namespace MRIV.Controllers
         public async Task<IActionResult> Create()
         {
             var viewModel = new CreateMaterialViewModel();
-            
+
             // Get the user's current location/station for context
             var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             Department loggedInUserDepartment = null;
@@ -462,37 +462,58 @@ namespace MRIV.Controllers
                 loggedInUserDepartment = department;
                 loggedInUserStation = userStation;
 
-                // Set the department ID from the logged-in user
-                if (department != null)
+                if (userStation != null)
                 {
-                    var departmentId = Convert.ToInt32(department.DepartmentId);
-                    viewModel.Assignment.DepartmentId = departmentId;
-                    
-                    // Set the assignment's PayrollNo to the current user
-                    viewModel.Assignment.PayrollNo = payrollNo;
-                    viewModel.Assignment.AssignedByPayrollNo = payrollNo;
+                    // Determine if user is at HQ/headoffice or factory/region
+                    if (userStation.StationName?.ToLower() == "hq")
+                    {
+                        // User is at head office
+                        viewModel.SelectedLocationCategory = "headoffice";
+                        viewModel.Assignment.StationId = 0; // HQ has stationId 0
+                    }
+                    else if (userStation.StationName.Contains("region"))
+                    {
+                        viewModel.SelectedLocationCategory = "region";
+                        viewModel.Assignment.StationId = userStation.StationId;
+                    }
+                    else
+                    {
+                        viewModel.SelectedLocationCategory = "factory";
+                        viewModel.Assignment.StationId = userStation.StationId;
+                    }
+
+                    // Set the department ID from the logged-in user
+                    if (department != null)
+                    {
+                        var departmentId = Convert.ToInt32(department.DepartmentId);
+                        viewModel.Assignment.DepartmentId = departmentId;
+
+                        // Set the assignment's PayrollNo to the current user
+                        viewModel.Assignment.PayrollNo = payrollNo;
+                        viewModel.Assignment.AssignedByPayrollNo = payrollNo;
+                    }
                 }
             }
-            
+
             // Load material categories
             viewModel.MaterialCategories = new SelectList(await _context.MaterialCategories.ToListAsync(), "Id", "Name");
-            
+
             // Load material subcategories (empty initially, will be populated via AJAX)
             viewModel.MaterialSubcategories = new SelectList(Enumerable.Empty<SelectListItem>());
-            
+
             // Load vendors
             viewModel.Vendors = new SelectList(await _vendorService.GetVendorsAsync(), "VendorID", "Name");
-            
+
             // Load station categories for location selection
             viewModel.StationCategories = await _stationCategoryService.GetStationCategoriesSelectListAsync("both");
-            
+
             // Load all departments and set the logged-in user's department as the default
             var departments = await _ktdacontext.Departments.ToListAsync();
             viewModel.Departments = new SelectList(departments, "DepartmentId", "DepartmentName", viewModel.Assignment.DepartmentId);
-            
+
             // Set default status
             viewModel.Material.Status = MaterialStatus.Available;
-            
+
             return View(viewModel);
         }
 
@@ -661,7 +682,7 @@ namespace MRIV.Controllers
                             PayrollNo = string.IsNullOrEmpty(viewModel.Assignment?.PayrollNo) ? "NotAssigned" : viewModel.Assignment.PayrollNo,
                             AssignmentDate = DateTime.UtcNow,
                             StationCategory = viewModel.SelectedLocationCategory,
-                            StationId = viewModel.StationId,
+                            StationId = viewModel.Assignment?.StationId ?? 0,
                             DepartmentId = viewModel.Assignment?.DepartmentId ?? 0,
                             AssignmentType = viewModel.Assignment?.AssignmentType ?? RequisitionType.NewPurchase,
                             AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System",

@@ -10,9 +10,33 @@ var builder = WebApplication.CreateBuilder(args);
 // Add all the DB Contexts Here. The connection strings in GetConnectionString() is in appsettings.json.
 
 builder.Services.AddDbContext<KtdaleaveContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("KTDALeaveContext") ?? throw new InvalidOperationException("Connection string 'KTDALeaveContext' not found.")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("KTDALeaveContext") ?? throw new InvalidOperationException("Connection string 'KTDALeaveContext' not found."),
+    sqlServerOptionsAction: sqlOptions =>
+    {
+        // Configure explicit connection pooling
+        sqlOptions.MaxBatchSize(100);
+        sqlOptions.CommandTimeout(90);
+        
+        // Add connection resiliency with retry logic
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    }));
 builder.Services.AddDbContext<RequisitionContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("RequisitionContext") ?? throw new InvalidOperationException("Connection string 'KTDALeaveContext' not found.")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("RequisitionContext") ?? throw new InvalidOperationException("Connection string 'RequisitionContext' not found."),
+    sqlServerOptionsAction: sqlOptions =>
+    {
+        // Configure explicit connection pooling
+        sqlOptions.MaxBatchSize(100);
+        sqlOptions.CommandTimeout(90);
+        
+        // Add connection resiliency with retry logic
+        sqlOptions.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(30),
+            errorNumbersToAdd: null);
+    }));
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();

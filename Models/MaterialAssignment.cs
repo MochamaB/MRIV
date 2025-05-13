@@ -68,14 +68,31 @@ namespace MRIV.Models
 
     public enum AssignmentType
     {
-        NewPurchase,
-        Transfer,
-        InterFactory,
-        Maintenance,
-        Return,
-        Disposal,
-        Loan,
-        TemporaryAllocation,
-        Other
+        [Description("New Purchase")]
+        NewPurchase = 1,
+
+        [Description("Transfer")]
+        Transfer = 2,
+
+        [Description("InterFactory")]
+        InterFactory = 3,
+
+        [Description("Maintenance")]
+        Maintenance = 4,
+
+        [Description("Return")]
+        Return = 5,
+
+        [Description("Disposal")]
+        Disposal = 6,
+
+        [Description("Loan/Borrow")]
+        Loan = 7,
+
+        [Description("Temporary Allocation")]
+        TemporaryAllocation = 8,
+
+        [Description("Other")]
+        Other = 9
     }
 }

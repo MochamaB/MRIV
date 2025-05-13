@@ -85,10 +85,10 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label class="form-label">Station Location</label><span class="requiredlabel">*</span>
-                                        <select asp-for="StationId" class="form-select" asp-items="Model.Stations">
+                                        <select asp-for="Assignment.StationId" class="form-select" asp-items="Model.Stations">
                                             <option value="">Select Location</option>
                                         </select>
-                                        <span asp-validation-for="StationId" class="text-danger"></span>
+                                        <span asp-validation-for="Assignment.StationId" class="text-danger"></span>
                                     </div>
                                 </div>
                             </div>
@@ -107,7 +107,7 @@
                                 <div class="col-md-6">
                                     <div class="mb-3">
                                         <label asp-for="Assignment.AssignmentType" class="form-label">Assignment Type</label>
-                                        <select asp-for="Assignment.AssignmentType" class="form-select" asp-items="Html.GetEnumSelectList<MRIV.Models.AssignmentType>()">
+                                <select asp-for="Assignment.AssignmentType" class="form-select" asp-items="Html.GetEnumSelectList<MRIV.Enums.RequisitionType>()">
                                             <option value="">Select Assignment Type</option>
                                         </select>
                                         <span asp-validation-for="Assignment.AssignmentType" class="text-danger"></span>
@@ -332,6 +332,35 @@
     
     <script>
         $(document).ready(function() {
+            // Handle initial category selection on page load
+            var initialCategory = $('#SelectedLocationCategory').val();
+            var locationsDropdown = $('#Assignment_StationId');
+            
+            // Store the initial station ID from the model for later use
+            var initialStationId = '@Model.Assignment.StationId';
+            
+            if (initialCategory) {
+                // Special handling for headoffice category
+                if (initialCategory.toLowerCase() === 'headoffice') {
+                    // Clear and set HQ option
+                    locationsDropdown.empty();
+                    locationsDropdown.append($('<option></option>').val('0').text('Head Quarters (HQ)'));
+                    locationsDropdown.val('0');
+                    locationsDropdown.prop('disabled', true);
+                    locationsDropdown.css('backgroundColor', '#f8f9fa');
+                    
+                    // Trigger change event to update dependent fields
+                    locationsDropdown.trigger('change');
+                } else {
+                    // For other categories, we need to load stations via AJAX and then select the correct one
+                    // Store the initial station ID in a data attribute for reference after AJAX completes
+                    locationsDropdown.data('initial-station-id', initialStationId);
+                    
+                    // Trigger the change event to load stations via AJAX
+                    $('#SelectedLocationCategory').trigger('change');
+                }
+            }
+            
             // Handle material category change
             $('#Material_MaterialCategoryId').change(function() {
                 var categoryId = $(this).val();
@@ -378,7 +407,7 @@
             // Handle station category change
             $('#SelectedLocationCategory').change(function() {
                 var categoryCode = $(this).val();
-                var locationsDropdown = $('#StationId');
+                var locationsDropdown = $('#Assignment_StationId');
                 
                 // Clear locations dropdown
                 locationsDropdown.empty();
@@ -406,7 +435,7 @@
                         
                         // Fetch locations for the selected category
                         $.ajax({
-                            url: '/Materials/GetLocationsForCategory',
+                            url: '/Location/GetLocationsForCategory',
                             type: 'GET',
                             data: { category: categoryCode },
                             success: function(data) {
@@ -414,6 +443,23 @@
                                 $.each(data, function(index, item) {
                                     locationsDropdown.append($('<option></option>').val(item.value).text(item.text));
                                 });
+                                
+                                // Get the pre-selected station ID from the data attribute we set earlier
+                                var preselectedStationId = locationsDropdown.data('initial-station-id');
+                                
+                                // If there's a pre-selected station ID, set it in the dropdown
+                                if (preselectedStationId && preselectedStationId !== '') {
+                                    console.log('Setting station ID to:', preselectedStationId);
+                                    locationsDropdown.val(preselectedStationId);
+                                    
+                                    // If the value wasn't found in the dropdown, log a warning
+                                    if (locationsDropdown.val() != preselectedStationId) {
+                                        console.warn('Could not find station ID ' + preselectedStationId + ' in dropdown options');
+                                    } else {
+                                        // Successfully set the value, trigger change to update any dependent fields
+                                        locationsDropdown.trigger('change');
+                                    }
+                                }
                             },
                             error: function(xhr, status, error) {
                                 console.error("Error loading locations:", error);
@@ -426,7 +472,7 @@
             });
             
             // Handle station location change
-            $('#StationId').change(function() {
+            $('#Assignment_StationId').change(function() {
                 var locationId = $(this).val();
                 var locationText = $(this).find('option:selected').text();
                 var categoryCode = $('#SelectedLocationCategory').val();

@@ -62,10 +62,20 @@ namespace MRIV.Services
 
         public async Task<Station> GetStationByIdAsync(int id)
         {
-            return await _ktdaContext.Stations.FindAsync(id);
+            if (id == 0)
+            {
+                return new Station
+                {
+                    StationId = 0,
+                    StationName = "HQ"
+                };
+            }
+
+            return await _ktdaContext.Stations.FirstOrDefaultAsync(s => s.StationId == id)
+                   ?? new Station { StationId = id, StationName = "Unknown Station" };
         }
 
-   
+
 
         public async Task<(Department Department, Station Station)> GetUserLocationsAsync(string payrollNo)
         {

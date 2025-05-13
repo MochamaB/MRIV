@@ -56,8 +56,8 @@ namespace MRIV.ViewModels
                 
             // Initialize assignment type options
             AssignmentTypeOptions = new SelectList(
-                Enum.GetValues(typeof(AssignmentType))
-                    .Cast<AssignmentType>()
+                Enum.GetValues(typeof(RequisitionType))
+                    .Cast<RequisitionType>()
                     .Select(s => new { Value = (int)s, Text = s.ToString() }),
                 "Value", "Text");
                 
