@@ -242,11 +242,13 @@ namespace MRIV.Services
 
                 if (stationName.Contains("region"))
                 {
+                    requisition.IssueStationCategory = "region";
                     requisition.IssueStationId = station.StationId;
                     requisition.IssueDepartmentId = department.DepartmentId;
                 }
                 else
                 {
+                    requisition.IssueStationCategory = "factory";
                     requisition.IssueStationId = station.StationId;
                     requisition.IssueDepartmentId = department.DepartmentId;
                 }

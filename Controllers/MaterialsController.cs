@@ -110,6 +110,24 @@ namespace MRIV.Controllers
                     })
                     .ToListAsync()
             });
+            // Add subcategory filter
+            viewModel.Filters.Filters.Insert(1, new FilterDefinition
+            {
+                PropertyName = "MaterialSubcategoryId",
+                DisplayName = "Material Subcategory",
+                Options = await _context.MaterialSubCategories
+                    .Where(s => !filters.ContainsKey("MaterialCategoryId") ||
+                           s.MaterialCategoryId.ToString() == filters["MaterialCategoryId"])
+                    .OrderBy(c => c.Name)
+                    .Select(c => new SelectListItem
+                    {
+                        Value = c.Id.ToString(),
+                        Text = c.Name,
+                        Selected = filters.ContainsKey("MaterialSubcategoryId") &&
+                                  filters["MaterialSubcategoryId"] == c.Id.ToString()
+                    })
+                    .ToListAsync()
+            });
 
             // Process assignments and related data
             foreach (var material in materials)

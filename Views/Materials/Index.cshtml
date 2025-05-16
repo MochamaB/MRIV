@@ -157,3 +157,54 @@
         </div>
     </div>
 </div>
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Get references to the filter dropdowns
+            var categoryFilter = $('select[name="MaterialCategoryId"]');
+            var subcategoryFilter = $('select[name="MaterialSubcategoryId"]');
+
+            // Store the initial subcategory value if any
+            var initialSubcategoryId = subcategoryFilter.val();
+
+            // Handle category filter change
+            categoryFilter.change(function() {
+                var categoryId = $(this).val();
+
+                // Clear subcategory dropdown
+                subcategoryFilter.empty();
+                subcategoryFilter.append($('<option></option>').val('').text('All Subcategories'));
+
+                if (categoryId) {
+                    // Load subcategories for the selected category
+                    $.ajax({
+                        url: '/Materials/GetSubcategoriesForCategory',
+                        type: 'GET',
+                        data: { categoryId: categoryId },
+                        success: function(data) {
+                            // Populate subcategory dropdown
+                            $.each(data, function(index, item) {
+                                subcategoryFilter.append(
+                                    $('<option></option>')
+                                        .val(item.value)
+                                        .text(item.text)
+                                );
+                            });
+
+                            // If there was a previously selected subcategory and it's in the new list, select it
+                            if (initialSubcategoryId) {
+                                subcategoryFilter.val(initialSubcategoryId);
+                                initialSubcategoryId = null; // Clear after first use
+                            }
+                        }
+                    });
+                }
+            });
+
+            // Trigger change event on page load if category is already selected
+            if (categoryFilter.val()) {
+                categoryFilter.trigger('change');
+            }
+        });
+    </script>
+}

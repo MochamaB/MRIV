@@ -584,10 +584,12 @@ namespace MRIV.Controllers
 
                 // Search for materials matching the search term
                 var query = _context.Materials
-                    .Include(m => m.MaterialCategory)
-                    .Include(m => m.MaterialSubcategory)
-                    .Where(m => m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm));
-                    
+                  .Include(m => m.MaterialCategory)
+                  .Include(m => m.MaterialSubcategory)
+                  .Where(m =>
+                      (m.Name.Contains(searchTerm) || m.Code.Contains(searchTerm)) &&
+                      m.Status != MaterialStatus.InProcess);
+
                 // Only filter by location if we have a valid issue station
                 if (issueStationId != 0)
                 {

@@ -118,9 +118,12 @@ namespace MRIV.Services
                             ApprovalStep = stepConfig.StepName,
                             ApprovalAction = stepConfig.StepAction,
                             PayrollNo = approver is EmployeeBkp employee ? employee.PayrollNo : approver.ToString(),
+                            // Handle station - default to 0 if not a valid number or "HQ"
+                            StationId = approver is EmployeeBkp employee1
+                            ? (employee1.Station == "HQ" ? 0 :
+                               int.TryParse(employee1.Station, out var stationId) ? stationId : 0)
+                            : 0,
                             // Set the department to default ICT which has department id = 114 if approver is not found especially in vendor dispatch
-                            StationId = approver is EmployeeBkp employee1 ?
-                            (string.IsNullOrEmpty(employee1.Station) ? 0 : Convert.ToInt32(employee1.Station)) : 0,
                             DepartmentId = approver is EmployeeBkp employee2 ?
                                 (string.IsNullOrEmpty(employee2.Department) ? 114 : Convert.ToInt32(employee2.Department)) : 114,
                             WorkflowConfigId = workflowConfig.Id,
