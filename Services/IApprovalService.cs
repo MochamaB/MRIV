@@ -81,51 +81,54 @@ namespace MRIV.Services
                 if (ShouldIncludeStep(stepConfig, requisition))
                 {
                     // For the first step (usually supervisor), use the issue context
-                    bool isFirstStep = stepConfig.StepOrder == 1;
-                    string locationContext = await GetLocationContextAsync(requisition, isFirstStep);
+                    // Get location context with all necessary information
+                    var (locationName, contextStationId, contextDepartmentId, contextType) =
+                            await GetLocationContextAsync(requisition, stepConfig);
 
-                    // Get the appropriate approver
-                    object approver;
+                    // Get the appropriate approver using the enhanced method
+                    EmployeeBkp employeeApprover = null;
+                    string approverPayrollNo = null;
 
+                    // Special handling for vendor dispatch
                     if (stepConfig.ApproverRole.ToLower() == "vendor" && requisition.DispatchType == "vendor")
                     {
-                        // Handle vendor case specially
-                        approver = requisition.DispatchVendor;
-                    }
-                    else if (stepConfig.ApproverRole.ToLower() == "dispatchadmin" && requisition.DispatchType == "admin")
-                    {
-                        // Handle admin dispatch case specially
-                        approver = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo);
-                        _logger.LogInformation($"Using admin dispatch approver: {requisition.DispatchPayrollNo}");
+                        // For vendor dispatch, use the vendor ID
+                        approverPayrollNo = requisition.DispatchVendor;
                     }
                     else
                     {
-                        // Use new employee service method for dynamic role-based lookup
-                        approver = await _employeeService.GetEmployeeByRoleAndLocationAsync(
-                            stepConfig.ApproverRole,
-                            locationContext,
-                            requisition.DepartmentId,
-                            isFirstStep,
+                        // For all other cases, use the new context-based approver selection
+                        employeeApprover = await _employeeService.GetApproverByContextAsync(
+                            contextType,
+                            contextStationId,
+                            contextDepartmentId,
                             loggedInUserEmployee,
-                            stepConfig.RoleParameters
+                            requisition.DispatchType,
+                            requisition.DispatchPayrollNo
                         );
+
+                        // Handle special case for vendor dispatch context type
+                        if (employeeApprover == null && contextType == "Dispatch" && requisition.DispatchType == "vendor")
+                        {
+                            approverPayrollNo = "ICTdispatch";
+                        }
+                        else if (employeeApprover != null)
+                        {
+                            approverPayrollNo = employeeApprover.PayrollNo;
+                        }
                     }
 
-                    if (approver != null)
+
+                    if (!string.IsNullOrEmpty(approverPayrollNo))
                     {
                         var approval = new Approval
                         {
                             ApprovalStep = stepConfig.StepName,
                             ApprovalAction = stepConfig.StepAction,
-                            PayrollNo = approver is EmployeeBkp employee ? employee.PayrollNo : approver.ToString(),
-                            // Handle station - default to 0 if not a valid number or "HQ"
-                            StationId = approver is EmployeeBkp employee1
-                            ? (employee1.Station == "HQ" ? 0 :
-                               int.TryParse(employee1.Station, out var stationId) ? stationId : 0)
-                            : 0,
-                            // Set the department to default ICT which has department id = 114 if approver is not found especially in vendor dispatch
-                            DepartmentId = approver is EmployeeBkp employee2 ?
-                                (string.IsNullOrEmpty(employee2.Department) ? 114 : Convert.ToInt32(employee2.Department)) : 114,
+                            PayrollNo = approverPayrollNo,
+                            // Use context-based location information
+                            StationId = contextStationId,
+                            DepartmentId = contextDepartmentId,
                             WorkflowConfigId = workflowConfig.Id,
                             StepConfigId = stepConfig.Id,
                             IsAutoGenerated = true
@@ -150,20 +153,72 @@ namespace MRIV.Services
         }
 
         // Helper Method to get the station and department
-        private async Task<string> GetLocationContextAsync(Requisition requisition, bool isIssueContext)
+        private async Task<(string locationName, int stationId, int departmentId, string contextType)>
+     GetLocationContextAsync(Requisition requisition, WorkflowStepConfig stepConfig)
         {
+            // Determine context based on step properties
+            bool isIssueContext = false;
+            bool isDispatchContext = false;
+
+            // Check if it's an issue context
+            if (stepConfig.StepOrder == 1 ||
+                stepConfig.StepName.Contains("Supervisor", StringComparison.OrdinalIgnoreCase) ||
+                stepConfig.StepAction.Equals("Approve", StringComparison.OrdinalIgnoreCase))
+            {
+                isIssueContext = true;
+            }
+
+            // Check if it's a dispatch context
+            if (stepConfig.StepName.Contains("Dispatch", StringComparison.OrdinalIgnoreCase) ||
+                stepConfig.StepAction.Contains("Dispatch", StringComparison.OrdinalIgnoreCase) ||
+                stepConfig.ApproverRole.Contains("Dispatch", StringComparison.OrdinalIgnoreCase))
+            {
+                isDispatchContext = true;
+                isIssueContext = false; // Dispatch takes precedence over issue
+            }
+
+            // Set location information based on context
             if (isIssueContext)
             {
-                return await _departmentService.GetLocationNameFromIdsAsync(
-                    requisition.IssueStationId,
-                    requisition.IssueDepartmentId);
+                // Issue context (typically first approval steps)
+                int stationId = requisition.IssueStationId;
+                int departmentId = int.TryParse(requisition.IssueDepartmentId, out var deptId) ? deptId : 114;
+                string locationName = await _departmentService.GetLocationNameFromIdsAsync(
+                    requisition.IssueStationId, requisition.IssueDepartmentId);
+
+                return (locationName, stationId, departmentId, "Issue");
             }
-            else
+            else if (isDispatchContext)
             {
-                return await _departmentService.GetLocationNameFromIdsAsync(
-                    requisition.DeliveryStationId,
-                    requisition.DeliveryDepartmentId);
+                // Dispatch context
+                if (requisition.DispatchType == "vendor")
+                {
+                    // For vendor dispatch, use delivery location (destination)
+                    int stationId = requisition.IssueStationId;
+                    int departmentId = int.TryParse(requisition.DeliveryDepartmentId, out var deptId) ? deptId : 114;
+                    string locationName = await _departmentService.GetLocationNameFromIdsAsync(
+                        requisition.DeliveryStationId, requisition.DeliveryDepartmentId);
+
+                    return (locationName, stationId, departmentId, "Dispatch");
+                }
+                else if (requisition.DispatchType == "admin")
+                {
+                    // For admin dispatch, use admin department (106) but delivery station
+                    int stationId = requisition.IssueStationId;
+                    int departmentId = 106; // Admin department
+                    string locationName = "Admin Dispatch";
+
+                    return (locationName, stationId, departmentId, "Dispatch");
+                }
             }
+
+            // Default to delivery context (typically receipt steps)
+            int deliveryStationId = requisition.DeliveryStationId;
+            int deliveryDepartmentId = int.TryParse(requisition.DeliveryDepartmentId, out var deliveryDeptId) ? deliveryDeptId : 114;
+            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
+                requisition.DeliveryStationId, requisition.DeliveryDepartmentId);
+
+            return (deliveryLocationName, deliveryStationId, deliveryDepartmentId, "Delivery");
         }
 
         private bool ShouldIncludeStep(WorkflowStepConfig stepConfig, Requisition requisition)

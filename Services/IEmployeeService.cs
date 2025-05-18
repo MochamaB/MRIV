@@ -1,11 +1,20 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
+using System.Linq.Expressions;
 using static System.Collections.Specialized.BitVector32;
 
 namespace MRIV.Services
 {
     public interface IEmployeeService  // Changed from class to interface
     {
+        Task<EmployeeBkp> GetApproverByContextAsync(
+           string contextType,
+           int contextStationId,
+           int contextDepartmentId,
+           EmployeeBkp loggedInUser,
+           string dispatchType = null,
+           string dispatchPayrollNo = null);
+
         Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
         string role,
         string location,
@@ -38,6 +47,172 @@ namespace MRIV.Services
             _context = context;
         }
 
+        /// GET APPROVER
+        /// 
+        public async Task<EmployeeBkp> GetApproverByContextAsync(
+            string contextType,
+            int contextStationId,
+            int contextDepartmentId,
+            EmployeeBkp loggedInUser,
+            string dispatchType = null,
+            string dispatchPayrollNo = null)
+        {
+            // IsApprover query - reusable predicate
+            Expression<Func<EmployeeBkp, bool>> isApprover = e =>
+                !string.IsNullOrEmpty(e.PayrollNo) && e.EmpisCurrActive == 0;
+
+            // CASE 1: ISSUE CONTEXT
+            if (contextType == "Issue")
+            {
+                // Primary: Try immediate supervisor of logged-in user
+                if (!string.IsNullOrEmpty(loggedInUser?.Supervisor))
+                {
+                    var supervisor = await _context.EmployeeBkps
+                        .Where(e => e.PayrollNo == loggedInUser.Supervisor)
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (supervisor != null)
+                        return supervisor;
+                }
+
+                // Fallback 1: Station-based supervisor (Non-HQ)
+                if (contextStationId != 0)
+                {
+                    // Try to find field supervisor at the station
+                    var fieldSupervisor = await _context.EmployeeBkps
+                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Role == "fieldsupervisor")
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (fieldSupervisor != null)
+                        return fieldSupervisor;
+
+                    // Try to find field user at the station
+                    var fieldUser = await _context.EmployeeBkps
+                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Role == "fielduser")
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (fieldUser != null)
+                        return fieldUser;
+                }
+
+                // Fallback 2: Department-based supervisor (HQ)
+                if (contextStationId == 0)
+                {
+                    var hqSupervisor = await _context.EmployeeBkps
+                        .Where(e => e.Station == "HQ" || e.Station == "0")
+                        .Where(e => e.Department == contextDepartmentId.ToString())
+                        .Where(e => e.Role == "supervisor")
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (hqSupervisor != null)
+                        return hqSupervisor;
+                }
+
+                // Final Fallback: Any supervisor in the department
+                var departmentSupervisor = await _context.EmployeeBkps
+                    .Where(e => e.Department == contextDepartmentId.ToString())
+                    .Where(e => e.Role.Contains("supervisor"))
+                    .Where(isApprover)
+                    .FirstOrDefaultAsync();
+
+                if (departmentSupervisor != null)
+                    return departmentSupervisor;
+            }
+
+            // CASE 2: DISPATCH CONTEXT
+            else if (contextType == "Dispatch")
+            {
+                // Vendor Dispatch
+                if (dispatchType == "vendor")
+                {
+                    // Return a special value that will be handled by the caller
+                    // Since this isn't a real employee, we'll return null and let the caller handle it
+                    return null; // Caller will set "ICTdispatch"
+                }
+
+                // Admin Dispatch
+                else if (dispatchType == "admin" && !string.IsNullOrEmpty(dispatchPayrollNo))
+                {
+                    var adminDispatcher = await _context.EmployeeBkps
+                        .Where(e => e.PayrollNo == dispatchPayrollNo)
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (adminDispatcher != null)
+                        return adminDispatcher;
+                }
+            }
+
+            // CASE 3: DELIVERY CONTEXT
+            else if (contextType == "Delivery")
+            {
+                // Primary: Station and Department Match
+                var departmentEmployee = await _context.EmployeeBkps
+                    .Where(e => e.Station == (contextStationId == 0 ? "HQ" : contextStationId.ToString()))
+                    .Where(e => e.Department == contextDepartmentId.ToString())
+                    .Where(isApprover)
+                    .FirstOrDefaultAsync();
+
+                if (departmentEmployee != null)
+                    return departmentEmployee;
+
+                // Fallback 1: Station-based employee (Non-HQ)
+                if (contextStationId != 0)
+                {
+                    // Try field supervisor
+                    var fieldSupervisor = await _context.EmployeeBkps
+                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Role == "fieldsupervisor")
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (fieldSupervisor != null)
+                        return fieldSupervisor;
+
+                    // Try field user
+                    var fieldUser = await _context.EmployeeBkps
+                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Role == "fielduser")
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (fieldUser != null)
+                        return fieldUser;
+
+                    // Fallback 2: IT Department at station
+                    var itEmployee = await _context.EmployeeBkps
+                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Department == "114") // IT Department
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (itEmployee != null)
+                        return itEmployee;
+                }
+
+                // Fallback 3: HQ Department Employee
+                if (contextStationId == 0)
+                {
+                    var hqEmployee = await _context.EmployeeBkps
+                        .Where(e => e.Station == "HQ" || e.Station == "0")
+                        .Where(e => e.Department == contextDepartmentId.ToString())
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (hqEmployee != null)
+                        return hqEmployee;
+                }
+            }
+
+            // If no approver found after all attempts, return null
+            return null;
+        }
         public async Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
             string role,
             string location,
