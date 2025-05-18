@@ -119,8 +119,7 @@ namespace MRIV.Services
                     }
 
 
-                    if (!string.IsNullOrEmpty(approverPayrollNo))
-                    {
+                  
                         var approval = new Approval
                         {
                             ApprovalStep = stepConfig.StepName,
@@ -135,7 +134,7 @@ namespace MRIV.Services
                         };
 
                         approvalSteps.Add(approval);
-                    }
+                    
                 }
             }
 
@@ -332,6 +331,10 @@ namespace MRIV.Services
                 var station = await _departmentService.GetStationByIdAsync(step.StationId);
                 stationName = station?.StationName ?? "Unknown";
             }
+            else if (step.StationId == 0)
+            {
+                stationName = "HQ - HEAD OFFICE";
+            }
 
             string departmentName = department?.DepartmentName ?? "Unknown";
             string employeeName = employee?.Fullname ?? "Unknown";
@@ -394,14 +397,7 @@ namespace MRIV.Services
 
             if (approvalSteps == null) return departmentEmployees;
 
-            // Pre-resolve location names to avoid multiple calls
-            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
-                requisition.DeliveryStationId, 
-                requisition.DeliveryDepartmentId);
-                
-            string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(
-                requisition.IssueStationId, 
-                requisition.IssueDepartmentId);
+          
 
             foreach (var step in approvalSteps)
             {
@@ -451,40 +447,13 @@ namespace MRIV.Services
 
         private async Task<IEnumerable<EmployeeBkp>> GetAppropriateEmployeesForStepAsync(Approval step, Requisition requisition)
         {
-            if (string.IsNullOrEmpty(step.ApprovalStep))
-                return new List<EmployeeBkp>();
+            // Defensive: If for some reason the step info is missing, return empty list
+            if (step == null)
+                return Enumerable.Empty<EmployeeBkp>();
 
-            // Resolve delivery location name from IDs
-            string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(
-                requisition.DeliveryStationId, 
-                requisition.DeliveryDepartmentId);
-
-            // Handle office employee scenarios
-            if (step.ApprovalStep == "Supervisor Approval" ||
-                step.ApprovalStep == "Admin Dispatch Approval" ||
-                step.ApprovalStep == "HO Employee Receipt")
-            {
-                // Try to get from department ID first
-                var departmentEmployees = await _employeeService.GetEmployeesByDepartmentAsync(step.DepartmentId);
-
-                // If we have a delivery location and no department employees, try by department name
-                if ((departmentEmployees == null || !departmentEmployees.Any()) &&
-                    !string.IsNullOrEmpty(deliveryLocationName))
-                {
-                    return await _employeeService.GetEmployeesByDepartmentNameAsync(deliveryLocationName);
-                }
-
-                return departmentEmployees ?? new List<EmployeeBkp>();
-            }
-            // Handle factory employee receipt
-            else if (step.ApprovalStep == "Factory Employee Receipt" &&
-                     !string.IsNullOrEmpty(deliveryLocationName))
-            {
-                return await _employeeService.GetFactoryEmployeesByStationAsync(deliveryLocationName);
-            }
-
-            // Return empty list for other cases
-            return new List<EmployeeBkp>();
+            // Use the new EmployeeService method to get employees filtered by location
+            // Role filtering will be handled later in PopulateDepartmentEmployeesAsync
+            return await _employeeService.GetEmployeesByLocationAsync(step.StationId, step.DepartmentId);
         }
 
         public async Task<Approval> GetMostSignificantApprovalAsync(int requisitionId)

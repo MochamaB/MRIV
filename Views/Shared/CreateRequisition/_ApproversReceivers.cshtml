@@ -1,4 +1,4 @@
-﻿@using MRIV.Enums
+@using MRIV.Enums
 @using MRIV.Helpers
 @{
     ViewData["Title"] = "Select Approvers";
@@ -40,36 +40,74 @@
                                 <b>@step.StepNumber. @step.ApprovalStep</b>
                             </h5>
                             <hr />
-                            <p class="text-muted mb-2 fw-bold">
+                            <p class="text-muted mb-2">
                                 <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
                             </p>
+                                <p class="text-muted mb-2">
+                                    <b>STATION:</b> @step.StationName
+                                </p>
                                 @if (step.ApprovalStep != "Vendor Dispatch")
                                 {
                                     <p class="text-muted">
                                         <b>DEPARTMENT:</b> @step.DepartmentName
                                     </p>
                                 }
-                            <p class="text-muted">
-                                <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>  
-                                @step.EmployeeName (@step.PayrollNo)
-                            </p>
+                           
                             <!-- Add dropdown for specific steps -->
-                            @if (Model.DepartmentEmployees != null &&
-                           Model.DepartmentEmployees.TryGetValue(step.ApprovalStep, out var selectList) &&
-                           selectList != null &&
-                           selectList.Any() &&  @* Add this check *@
-                           step.ApprovalStep != "Vendor Dispatch")
-                            {
-                                 <p class="text-muted inline-container">
-                                        <b class="label-width">CHANGE TO:</b>
-                                    @Html.DropDownList(
-                                             $"SelectedEmployee_{step.StepNumber}",
-                                             selectList,
-                                             "Select Employee",
-                                             new { @class = "formcontrol2" }
-                                             )
-                                </p>
-                            }
+                                <!-- Add dropdown for specific steps -->
+                                @if (step.ApprovalStep == "Vendor Dispatch")
+                                {
+                                    <p class="text-muted inline-container" style="text-transform:uppercase">
+                                        <b class="label-width" >TO @step.ApprovalAction:</b>
+                                        <select class="formcontrol2" disabled>
+                                            <option value="ICTDispatch" selected>ICT DISPATCH</option>
+                                        </select>
+                                        <input type="hidden" name="@("SelectedEmployee_" + step.StepNumber)" value="ICTDispatch" />
+                                    </p>
+                                }
+                                else
+                                {
+                                    SelectList finalList = null;
+                                    if (Model.DepartmentEmployees != null && Model.DepartmentEmployees.TryGetValue(step.ApprovalStep, out var selectList) && selectList != null)
+                                    {
+                                        var exists = selectList.Any(item => item.Value == step.PayrollNo);
+                                        var tempList = selectList.ToList();
+                                        if (!exists && !string.IsNullOrEmpty(step.PayrollNo) && step.PayrollNo != "unknown")
+                                        {
+                                            tempList.Insert(0, new SelectListItem {
+                                                Value = step.PayrollNo,
+                                                Text = string.IsNullOrEmpty(step.EmployeeName) ? step.PayrollNo : $"{step.EmployeeName} ({step.PayrollNo})",
+                                                Selected = true
+                                            });
+                                        }
+                                        finalList = new SelectList(tempList, "Value", "Text");
+                                    }
+                                    else
+                                    {
+                                        finalList = new SelectList(new List<SelectListItem>(), "Value", "Text");
+                                    }
+                                    <p class="text-muted inline-container" style="text-transform:uppercase">
+                                        <b class="label-width">TO @step.ApprovalAction:</b>
+                                        @if (finalList.Count() == 0 || string.IsNullOrEmpty(step.PayrollNo) || step.PayrollNo == "unknown")
+                                        {
+                                            @Html.DropDownList(
+                                                $"SelectedEmployee_{step.StepNumber}",
+                                                finalList,
+                                                "Select Employee",
+                                               new { @class = "formcontrol2", @required = "required", data_val_required = "Select approver" }
+                                            )
+                                        }
+                                        else
+                                        {
+                                            @Html.DropDownList(
+                                                $"SelectedEmployee_{step.StepNumber}",
+                                                finalList,
+                                                null,
+                                                new { @class = "formcontrol2" }
+                                            )
+                                        }
+                                    </p>
+                                }
                            
                             
                            
@@ -112,3 +150,16 @@
 
 <partial name="_WizardNavigation" />
 </form>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // For each select with class 'formcontrol2' and required
+        document.querySelectorAll('select.formcontrol2[required]').forEach(function(select) {
+            select.oninvalid = function(e) {
+                e.target.setCustomValidity('Enter approver');
+            };
+            select.oninput = function(e) {
+                e.target.setCustomValidity('');
+            };
+        });
+    });
+</script>

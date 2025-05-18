@@ -14,6 +14,8 @@ namespace MRIV.Services
            EmployeeBkp loggedInUser,
            string dispatchType = null,
            string dispatchPayrollNo = null);
+        // Add to IEmployeeService interface
+        Task<IEnumerable<EmployeeBkp>> GetEmployeesByLocationAsync(int stationId, int departmentId, string[] roles = null);
 
         Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
         string role,
@@ -79,9 +81,11 @@ namespace MRIV.Services
                 // Fallback 1: Station-based supervisor (Non-HQ)
                 if (contextStationId != 0)
                 {
+                  //  string stationIdStr = contextStationId.ToString().PadLeft(3, '0');
+                    string formattedStationId = contextStationId.ToString("D3");
                     // Try to find field supervisor at the station
                     var fieldSupervisor = await _context.EmployeeBkps
-                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Station == formattedStationId)
                         .Where(e => e.Role == "fieldsupervisor")
                         .Where(isApprover)
                         .FirstOrDefaultAsync();
@@ -91,13 +95,22 @@ namespace MRIV.Services
 
                     // Try to find field user at the station
                     var fieldUser = await _context.EmployeeBkps
-                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Station == formattedStationId)
                         .Where(e => e.Role == "fielduser")
                         .Where(isApprover)
                         .FirstOrDefaultAsync();
 
                     if (fieldUser != null)
                         return fieldUser;
+                    // Try to find fSA at the station
+                    var fieldServicesCordinator = await _context.EmployeeBkps
+                        .Where(e => e.Station == formattedStationId)
+                         .Where(e => e.Department == "114") // ICT FSA
+                        .Where(isApprover)
+                        .FirstOrDefaultAsync();
+
+                    if (fieldServicesCordinator != null)
+                        return fieldServicesCordinator;
                 }
 
                 // Fallback 2: Department-based supervisor (HQ)
@@ -152,9 +165,10 @@ namespace MRIV.Services
             // CASE 3: DELIVERY CONTEXT
             else if (contextType == "Delivery")
             {
+                string formattedStationId = contextStationId.ToString("D3");
                 // Primary: Station and Department Match
                 var departmentEmployee = await _context.EmployeeBkps
-                    .Where(e => e.Station == (contextStationId == 0 ? "HQ" : contextStationId.ToString()))
+                    .Where(e => e.Station == (contextStationId == 0 ? "HQ" : formattedStationId))
                     .Where(e => e.Department == contextDepartmentId.ToString())
                     .Where(isApprover)
                     .FirstOrDefaultAsync();
@@ -167,7 +181,7 @@ namespace MRIV.Services
                 {
                     // Try field supervisor
                     var fieldSupervisor = await _context.EmployeeBkps
-                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Station == formattedStationId)
                         .Where(e => e.Role == "fieldsupervisor")
                         .Where(isApprover)
                         .FirstOrDefaultAsync();
@@ -177,7 +191,7 @@ namespace MRIV.Services
 
                     // Try field user
                     var fieldUser = await _context.EmployeeBkps
-                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Station == formattedStationId)
                         .Where(e => e.Role == "fielduser")
                         .Where(isApprover)
                         .FirstOrDefaultAsync();
@@ -187,7 +201,7 @@ namespace MRIV.Services
 
                     // Fallback 2: IT Department at station
                     var itEmployee = await _context.EmployeeBkps
-                        .Where(e => e.Station == contextStationId.ToString())
+                        .Where(e => e.Station == formattedStationId)
                         .Where(e => e.Department == "114") // IT Department
                         .Where(isApprover)
                         .FirstOrDefaultAsync();
@@ -212,6 +226,43 @@ namespace MRIV.Services
 
             // If no approver found after all attempts, return null
             return null;
+        }
+
+        public async Task<IEnumerable<EmployeeBkp>> GetEmployeesByLocationAsync(int stationId, int departmentId, string[] roles = null)
+        {
+            // Base query for active employees
+            var query = _context.EmployeeBkps.Where(e => e.EmpisCurrActive == 0);
+
+            // Check if station is HQ (StationId = 0)
+            if (stationId == 0)
+            {
+                // For HQ, filter by both HQ station and the specific department
+                query = query
+                    .Where(e => (e.Station == "HQ" || e.Station == "0"))
+                    .Where(e => e.Department == departmentId.ToString());
+            }
+            else
+            {
+                // For field stations, filter by station ID only (padded to 3 digits)
+                string formattedStationId = stationId.ToString("D3");
+                query = query.Where(e => e.Station == formattedStationId);
+
+                // Add ALL Field Systems Administrators (regardless of station)
+                var factoryFSAQuery = _context.EmployeeBkps
+                    .Where(e => e.EmpisCurrActive == 0 &&
+                               e.Designation.ToLower().Contains("field systems administr"));
+
+                query = query.Union(factoryFSAQuery).Distinct();
+            }
+
+            // Apply role filtering if roles are provided
+            if (roles != null && roles.Length > 0)
+            {
+                query = query.Where(e => e.Role != null && roles.Contains(e.Role, StringComparer.OrdinalIgnoreCase));
+            }
+
+            // Order by name for consistent results
+            return await query.OrderBy(e => e.Fullname).ToListAsync();
         }
         public async Task<EmployeeBkp> GetEmployeeByRoleAndLocationAsync(
             string role,

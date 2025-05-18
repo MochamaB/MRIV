@@ -420,12 +420,30 @@
 
             if (deliveryCategory) {
                 deliveryCategory.addEventListener('change', () => {
+                    if (deliveryCategory.value.toLowerCase() === "headoffice") 
+                    {
+                        if (deliveryStationId) {
+                            deliveryStationId.value = "0"; // HQ
+                        }
+                        if (deliveryDepartmentId) {
+                            deliveryDepartmentId.value = "114"; // ICT department
+                        }
+                    }
                     loadLocations(deliveryCategory, deliveryStationId, true);
                     loadLocations(deliveryCategory, deliveryDepartmentId, true);
                 });
 
                 // Initialize if category already selected
                 if (deliveryCategory.value) {
+                    if (deliveryCategory.value.toLowerCase() === "headoffice") 
+                    {
+                        if (deliveryStationId) {
+                            deliveryStationId.value = "0";
+                        }
+                        if (deliveryDepartmentId) {
+                            deliveryDepartmentId.value = "114";
+                        }
+                    }
                     loadLocations(deliveryCategory, deliveryStationId, true);
                     loadLocations(deliveryCategory, deliveryDepartmentId, true);
                 }
