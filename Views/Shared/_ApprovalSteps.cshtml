@@ -22,24 +22,24 @@
                                 <b>UPDATED ON:</b> @step.CreatedAt.ToString("dd MMM yyyy HH:mm")
                             </p>
                             <p class="text-muted">
-                                <b>@(step.ApprovalStep == "Vendor Dispatch" ? "DISPATCH BY:" : "APPROVAL BY:")</b>
-                                @step.EmployeeName (@step.PayrollNo)
+                                <b>STATION:</b> @step.StationName
+                            </p>
+                            <p class="text-muted">
+                                <b>DEPARTMENT:</b> @step.DepartmentName
+                            </p>
+
+                            <p class="text-muted" style="text-transform:uppercase">
+                                <b>TO @step.ApprovalAction:</b>
+                                @if (step.ApprovalStep != "Vendor Dispatch")
+                                {
+                                    @step.EmployeeName @:(@step.PayrollNo)
+                                }
+                                else
+                                {
+                                    @:ICT DISPATCH
+                                }
                             </p>
                            
-                            @if (step.ApprovalStep != "Vendor Dispatch")
-                            {
-                                <p class="text-muted">
-                                    <b>DEPARTMENT:</b> @step.DepartmentName
-                                </p>
-                                @if (step.StationId > 0)
-                                {
-                                    <p class="text-muted">
-                                        <b>STATION:</b> @step.StationName
-                                    </p>
-                                }
-                            }
-
-
                             <p class="text-muted">
                                 <b>STATUS:</b>
                                 <span class=" ms-2 badge @BadgeHelper.GetApprovalsBadgeClass(step.ApprovalStatus)">

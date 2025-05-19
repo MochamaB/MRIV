@@ -6,30 +6,105 @@
                 url: '@Url.Action("GetUnreadNotifications", "Notifications")',
                 type: 'GET',
                 success: function (data) {
-                    $('#notificationDropdownMenu').html(data);
+                    // Clear loading indicator
+                    $('#notificationLoadingIndicator').hide();
+
+                    // Find the notifications container
+                    var container = $('#all-noti-tab [data-simplebar]');
+
+                    // Display notifications
+                    if (data.length === 0) {
+                        container.html('<div class="text-center my-3">No new notifications</div>');
+                    } else {
+                        var notificationsHtml = '';
+
+                        // Create HTML for each notification
+                        $.each(data, function(i, notification) {
+                            var timeAgo = moment(notification.createdAt).fromNow();
+                            var iconClass = getNotificationIconClass(notification.notificationType);
+                            var icon = getNotificationIcon(notification.notificationType);
+
+                            notificationsHtml += `
+                                <div class="text-reset notification-item d-block" data-id="${notification.id}">
+                                    <div class="d-flex">
+                                        <div class="avatar-xs me-3">
+                                            <span class="avatar-title ${iconClass} rounded-circle fs-16">
+                                                <i class="${icon}"></i>
+                                            </span>
+                                        </div>
+                                        <div class="flex-1">
+                                            <a href="${notification.url || '#'}" class="stretched-link">
+                                                <h6 class="mt-0 mb-1 fs-13 fw-semibold">${notification.title}</h6>
+                                            </a>
+                                            <div class="fs-13 text-muted">
+                                                <p class="mb-1">${notification.message}</p>
+                                            </div>
+                                            <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
+                                                <span><i class="mdi mdi-clock-outline"></i> ${timeAgo}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+                        });
+
+                        container.html(notificationsHtml);
+
+                        // Add click handler for notification items
+                        $('.notification-item').on('click', function() {
+                            markAsRead($(this).data('id'));
+                        });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#notificationLoadingIndicator').hide();
+                    console.log("Error loading notifications: " + error);
                 }
             });
         }
-    
-        // Load notifications when dropdown is opened
-        $('#notificationDropdown').on('show.bs.dropdown', function() {
-            loadNotifications();
-        });
 
-        // Update notification count periodically (every 60 seconds)
+        // Function to get notification icon class based on type
+        function getNotificationIconClass(type) {
+            switch(String(type).toLowerCase()) {
+                case 'approval': return 'bg-success';
+                case 'rejection': return 'bg-danger';
+                case 'dispatch': return 'bg-primary';
+                case 'receipt': return 'bg-info';
+                default: return 'bg-secondary';
+            }
+        }
+
+        // Function to get notification icon based on type
+        function getNotificationIcon(type) {
+            switch(String(type).toLowerCase()) {
+                case 'approval': return 'mdi mdi-check-circle';
+                case 'rejection': return 'mdi mdi-close-circle';
+                case 'dispatch': return 'mdi mdi-truck';
+                case 'receipt': return 'mdi mdi-package';
+                case 'requisition': return 'mdi mdi-file-document';
+                default: return 'mdi mdi-bell';
+            }
+        }
+
+        // Update notification count
         function updateNotificationCount() {
             $.ajax({
                 url: '@Url.Action("GetUnreadCount", "Notifications")',
                 type: 'GET',
                 success: function (response) {
-                    const $count = $('.notification-count');
-                    $count.text(response.count);
+                    // Update count in the badge
+                    var count = response.count;
+                    var $badge = $('.topbar-badge');
 
-                    if (response.count > 0) {
-                        $count.removeClass('d-none');
+                    if (count > 0) {
+                        $badge.text(count);
+                        $badge.removeClass('d-none');
                     } else {
-                        $count.addClass('d-none');
+                        $badge.addClass('d-none');
                     }
+
+                    // Update count in dropdown header
+                    $('.nav-tabs-custom a[href="#all-noti-tab"]').html(`All (${count})`);
                 },
                 error: function(xhr, status, error) {
                     console.log("Error fetching notification count: " + error);
@@ -37,22 +112,30 @@
             });
         }
 
-        // Initial load
-        updateNotificationCount();
-
-        // Set up interval for periodic updates
-        setInterval(updateNotificationCount, 60000); // Every minute
-
-        // Mark as read when clicking a notification
-        $(document).on('click', '.notification-item', function() {
-            const id = $(this).data('id');
-
-            // Mark as read in background
+        // Mark notification as read
+        function markAsRead(id) {
             $.ajax({
                 url: '@Url.Action("MarkAsRead", "Notifications")',
                 type: 'POST',
-                data: { id: id }
+                data: { id: id },
+                success: function() {
+                    // Update notification count after marking as read
+                    updateNotificationCount();
+                }
             });
+        }
+
+        // Initial load
+        updateNotificationCount();
+
+        // Load notifications when dropdown is clicked
+        $('#page-header-notifications-dropdown').on('click', function() {
+            // Show loading indicator
+            $('#notificationLoadingIndicator').show();
+            loadNotifications();
         });
+
+        // Refresh notification count periodically
+        setInterval(updateNotificationCount, 60000); // Every minute
     });
 </script>

@@ -86,8 +86,10 @@
                         }
                     </dd>
 
-                <dt class="col-sm-6">Issue Station</dt>
-                    <dd class="col-sm-6"> @Model.Requisition.IssueStationId</dd>
+                    <dt class="col-sm-6">Issue Station</dt>
+                    <dd class="col-sm-6"> @Model.issueStationDetail.StationName</dd>
+                    <dt class="col-sm-6">Issue Department</dt>
+                    <dd class="col-sm-6"> @Model.issueDepartmentDetail.DepartmentName</dd>
 
                 <dt class="col-sm-6">Delivery Station Category</dt>
                     <dd class="col-sm-6">
@@ -102,8 +104,10 @@
                         }
                         </dd>
 
-                <dt class="col-sm-6">Delivery Station</dt>
-                    <dd class="col-sm-6"> @Model.Requisition.DeliveryStationId</dd>
+                    <dt class="col-sm-6">Delivery Station</dt>
+                    <dd class="col-sm-6"> @Model.deliveryStationDetail.StationName</dd>
+                    <dt class="col-sm-6">Delivery Department</dt>
+                    <dd class="col-sm-6"> @Model.deliveryDepartmentDetail.DepartmentName</dd>
 
                 <dt class="col-sm-6">Remarks</dt>
                     <dd class="col-sm-6"> @Model.Requisition.Remarks</dd>
@@ -181,8 +185,16 @@
                                 <td>@item.Name</td>
                                 <td style="min-width: 200px;max-width: 200px; word-break: break-word; white-space: normal;">@item.Description</td>
                                 <td>@item.Quantity</td>
-                                <td>@item.Condition</td>
-                                <td>@item.Status</td>
+                                <td>
+                                    <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.Condition)">
+                                        @EnumHelper.GetEnumDescription(item.Condition)
+                                    </span>
+                                    </td>
+                                <td>
+                                    <span class="badge @BadgeHelper.GetRequisitionItemStatusBadgeClass(item.Status)">
+                                        @EnumHelper.GetEnumDescription(item.Status)
+                                    </span>
+                                </td>
                                 <td>@(item.Material?.Code ?? "N/A")</td>
                                 <td>@(vendorName?.Name ?? "N/A")</td>
                             </tr>

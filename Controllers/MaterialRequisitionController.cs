@@ -755,13 +755,14 @@ namespace MRIV.Controllers
         }
 
         [HttpPost]
-    public async Task<IActionResult> CreateApprovals(IFormCollection form, string direction = null)
+        public async Task<IActionResult> CreateApprovals(IFormCollection form, string direction = null)
         {
             // Handle Previous button
             if (direction?.ToLower() == "previous")
             {
                 return RedirectToAction("RequisitionItems");
             }
+
             // 1. Retrieve session data
             var requisition = HttpContext.Session.GetObject<Requisition>("WizardRequisition");
             var approvalSteps = HttpContext.Session.GetObject<List<Approval>>("WizardApprovalSteps");
@@ -771,52 +772,75 @@ namespace MRIV.Controllers
                 return RedirectToAction("RequisitionDetails"); // Handle missing session data
             }
 
-            // 2. Update collector information
-            requisition.CollectorName = form["Requisition.CollectorName"];
-            requisition.CollectorId = form["Requisition.CollectorId"];
+            // Track if any changes were made
+            bool changesMade = false;
 
-            // 3. Update selected approvers
+            // 2. Update collector information only if changed
+            var newCollectorName = form["Requisition.CollectorName"];
+            var newCollectorId = form["Requisition.CollectorId"];
+
+            if (newCollectorName != requisition.CollectorName || newCollectorId != requisition.CollectorId)
+            {
+                requisition.CollectorName = newCollectorName;
+                requisition.CollectorId = newCollectorId;
+                changesMade = true;
+            }
+
+            // 3. Update selected approvers only if changed
             foreach (var step in approvalSteps)
             {
                 var key = $"SelectedEmployee_{step.StepNumber}";
                 if (form.ContainsKey(key))
                 {
                     var selectedPayroll = form[key];
-                    if (!string.IsNullOrEmpty(selectedPayroll))
-                    {
-                        // Update approval step with selected employee
-                        step.PayrollNo = selectedPayroll;
-                        var employee = await _employeeService.GetEmployeeByPayrollAsync(selectedPayroll);
-                        // If this is a regular employee (not vendor dispatch)
-                        if (step.ApprovalStep != "Vendor Dispatch" && employee != null)
-                        {
-                            // Update the department ID based on the selected employee
-                            step.DepartmentId = Convert.ToInt32(employee.Department);
 
-                            // If this is HO Employee Receipt or Factory Employee Receipt,
-                            // we might need to update other related information as well
-                            if (step.ApprovalStep == "Factory Employee Receipt" ||
-                                step.ApprovalStep == "HO Employee Receipt")
-                            {
-                                // You might want to update requisition.DeliveryStation here
-                                // if employee selection should affect that
-                            }
+                    // Only proceed if the value has changed and is not empty
+                    if (!string.IsNullOrEmpty(selectedPayroll) && selectedPayroll != step.PayrollNo)
+                    {
+                        // Skip if this is Vendor Dispatch (since it's fixed to ICTDispatch)
+                        if (step.ApprovalStep == "Vendor Dispatch")
+                        {
+                            continue;
                         }
 
+                        // Verify the employee exists
+                        var employee = await _employeeService.GetEmployeeByPayrollAsync(selectedPayroll);
+                        if (employee == null)
+                        {
+                            ModelState.AddModelError(key, "Selected employee is not valid");
+                            continue;
+                        }
+
+                        // Update approval step with selected employee
+                        step.PayrollNo = selectedPayroll;
+                        step.DepartmentId = Convert.ToInt32(employee.Department);
+
+                        changesMade = true;
+
+                        // Handle special cases for receipt steps if needed
+                        if (step.ApprovalStep == "Factory Employee Receipt" ||
+                            step.ApprovalStep == "HO Employee Receipt")
+                        {
+                            // Update related information if needed
+                        }
                     }
                 }
             }
 
+            // Only save to session if changes were made
+            if (changesMade)
+            {
                 // 4. Save updated data to session
                 HttpContext.Session.SetObject("WizardRequisition", requisition);
                 HttpContext.Session.SetObject("WizardApprovalSteps", approvalSteps);
 
-                    // Set a success message in TempData
-                    TempData["SuccessMessage"] = "Approvals and Receivers Added successfully!";
+                // Set a success message in TempData
+                TempData["SuccessMessage"] = "Approvals and Receivers updated successfully!";
+            }
 
-                    // 5. Move to next wizard step (assuming current step is 4)
-                    return RedirectToAction("WizardSummary");
-    }
+            // 5. Move to next wizard step (assuming current step is 4)
+            return RedirectToAction("WizardSummary");
+        }
 
         [HttpGet]
         public async Task<IActionResult> WizardSummaryAsync()
@@ -888,6 +912,10 @@ namespace MRIV.Controllers
                 Requisition = requisition,
                 RequisitionItems = requisitionItems,
                 ApprovalSteps = approvalStepViewModels,
+                issueStationDetail = await _locationService.GetStationByIdAsync(requisition.IssueStationId),
+                issueDepartmentDetail = await _locationService.GetDepartmentByIdAsync(requisition.IssueDepartmentId),
+                deliveryStationDetail = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId),
+                deliveryDepartmentDetail = await _locationService.GetDepartmentByIdAsync(requisition.DeliveryDepartmentId),
                 employeeDetail = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo),
                 departmentDetail = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId),
                 dispatchEmployee = await _employeeService.GetEmployeeByPayrollAsync(requisition.DispatchPayrollNo),
@@ -920,6 +948,7 @@ namespace MRIV.Controllers
         }
 
         [HttpPost]
+
         public async Task<IActionResult> CompleteWizard(string direction = null)
         {
             // Handle Previous button
@@ -940,139 +969,146 @@ namespace MRIV.Controllers
                     return RedirectToAction("Ticket");
                 }
 
-                // Use a transaction to ensure all operations succeed or fail together
-                using var transaction = await _context.Database.BeginTransactionAsync();
-                try
+                // Create an execution strategy
+                var strategy = _context.Database.CreateExecutionStrategy();
+
+                // Execute all database operations within the strategy
+                await strategy.ExecuteAsync(async () =>
                 {
-                    // 1. Save the requisition
-                    requisition.Status = RequisitionStatus.NotStarted;
-                    requisition.UpdatedAt = DateTime.Now; // Set updated timestamp
-                    _context.Requisitions.Add(requisition);
-                    await _context.SaveChangesAsync();
-
-                    // 2. Process requisition items
-                    foreach (var item in requisitionItems)
+                    // Use a transaction to ensure all operations succeed or fail together
+                    using var transaction = await _context.Database.BeginTransactionAsync();
+                    try
                     {
-                        // Link to parent requisition
-                        item.RequisitionId = requisition.Id;
+                        // 1. Save the requisition
+                        requisition.Status = RequisitionStatus.NotStarted;
+                        requisition.UpdatedAt = DateTime.Now; // Set updated timestamp
+                        _context.Requisitions.Add(requisition);
+                        await _context.SaveChangesAsync();
 
-                        // Handle material creation
-                        if (item.SaveToInventory && item.Material != null)
+                        // 2. Process requisition items
+                        foreach (var item in requisitionItems)
                         {
-                            // Check if material already exists by code
-                            var existingMaterial = await _context.Materials
-                                .FirstOrDefaultAsync(m => m.Code == item.Material.Code);
+                            // Link to parent requisition
+                            item.RequisitionId = requisition.Id;
 
-                            if (existingMaterial != null)
+                            // Handle material creation
+                            if (item.SaveToInventory && item.Material != null)
                             {
-                                // Use existing material
-                                item.MaterialId = existingMaterial.Id;
-                                item.Material = null; // Prevent duplicate creation
+                                // Check if material already exists by code
+                                var existingMaterial = await _context.Materials
+                                    .FirstOrDefaultAsync(m => m.Code == item.Material.Code);
 
-                                // Update existing material status to InProcess to lock it
-                                existingMaterial.Status = MaterialStatus.InProcess;
-                                _context.Materials.Update(existingMaterial);
+                                if (existingMaterial != null)
+                                {
+                                    // Use existing material
+                                    item.MaterialId = existingMaterial.Id;
+                                    item.Material = null; // Prevent duplicate creation
+
+                                    // Update existing material status to InProcess to lock it
+                                    existingMaterial.Status = MaterialStatus.InProcess;
+                                    _context.Materials.Update(existingMaterial);
+                                }
+                                else
+                                {
+                                    // Create new material
+                                    _context.Materials.Add(item.Material);
+                                    await _context.SaveChangesAsync(); // Generate MaterialId
+                                    item.MaterialId = item.Material.Id;
+                                }
                             }
                             else
                             {
-                                // Create new material
-                                _context.Materials.Add(item.Material);
-                                await _context.SaveChangesAsync(); // Generate MaterialId
-                                item.MaterialId = item.Material.Id;
+                                // Ensure material is null if not saving to inventory
+                                item.Material = null;
+                                item.MaterialId = null;
+                            }
+
+                            // Add requisition item
+                            _context.RequisitionItems.Add(item);
+                        }
+
+                        // Save all requisition items to get their IDs
+                        await _context.SaveChangesAsync();
+
+                        // 3. Now that we have requisition items with IDs, create material assignments and conditions
+                        foreach (var item in requisitionItems)
+                        {
+                            if (item.MaterialId.HasValue)
+                            {
+                                // Create initial MaterialAssignment for the material
+                                var materialAssignment = new MaterialAssignment
+                                {
+                                    MaterialId = item.MaterialId.Value,
+                                    PayrollNo = requisition.PayrollNo,
+                                    AssignmentDate = DateTime.UtcNow,
+                                    StationCategory = requisition.IssueStationCategory,
+                                    StationId = requisition.IssueStationId,
+                                    DepartmentId = requisition.DepartmentId,
+                                    AssignmentType = requisition.RequisitionType,
+                                    RequisitionId = requisition.Id,
+                                    AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                    IsActive = true
+                                };
+                                _context.MaterialAssignments.Add(materialAssignment);
+
+                                // Save to get the assignment ID
+                                await _context.SaveChangesAsync();
+
+                                // Now create the condition record with valid IDs
+                                var materialCondition = new MaterialCondition
+                                {
+                                    MaterialId = item.MaterialId.Value,
+                                    RequisitionId = requisition.Id,
+                                    RequisitionItemId = item.Id, // Now this ID exists in the database
+                                    MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
+                                    ConditionCheckType = ConditionCheckType.Initial,
+                                    Stage = "Creation",
+                                    Condition = Condition.GoodCondition,
+                                    FunctionalStatus = FunctionalStatus.FullyFunctional,
+                                    CosmeticStatus = CosmeticStatus.Excellent,
+                                    InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                    InspectionDate = DateTime.UtcNow,
+                                    Notes = "Initial condition at creation"
+                                };
+                                _context.MaterialConditions.Add(materialCondition);
+                                await _context.SaveChangesAsync();
                             }
                         }
-                        else
+
+                        // 4. Save approval steps
+                        foreach (var step in approvalSteps)
                         {
-                            // Ensure material is null if not saving to inventory
-                            item.Material = null;
-                            item.MaterialId = null;
+                            step.RequisitionId = requisition.Id; // Link to parent
+                            step.CreatedAt = DateTime.Now;      // Add timestamp
                         }
 
-                        // Add requisition item
-                        _context.RequisitionItems.Add(item);
+                        _context.Approvals.AddRange(approvalSteps); // Add all steps at once
+                        await _context.SaveChangesAsync();
+
+                        // 5. Send notifications to requisition creator and first approver
+                        await SendRequisitionNotifications(requisition, requisitionItems, approvalSteps);
+
+                        // Commit the transaction
+                        await transaction.CommitAsync();
                     }
-
-                    // Save all requisition items to get their IDs
-                    await _context.SaveChangesAsync();
-
-                    // 3. Now that we have requisition items with IDs, create material assignments and conditions
-                    foreach (var item in requisitionItems)
+                    catch
                     {
-                        if (item.MaterialId.HasValue)
-                        {
-                            // Create initial MaterialAssignment for the material
-                            var materialAssignment = new MaterialAssignment
-                            {
-                                MaterialId = item.MaterialId.Value,
-                                PayrollNo = requisition.PayrollNo,
-                                AssignmentDate = DateTime.UtcNow,
-                                StationCategory = requisition.IssueStationCategory,
-                                StationId = requisition.IssueStationId,
-                                DepartmentId = requisition.DepartmentId,
-                                AssignmentType = requisition.RequisitionType,
-                                RequisitionId = requisition.Id,
-                                AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                IsActive = true
-                            };
-                            _context.MaterialAssignments.Add(materialAssignment);
-
-                            // Save to get the assignment ID
-                            await _context.SaveChangesAsync();
-
-                            // Now create the condition record with valid IDs
-                            var materialCondition = new MaterialCondition
-                            {
-                                MaterialId = item.MaterialId.Value,
-                                RequisitionId = requisition.Id,
-                                RequisitionItemId = item.Id, // Now this ID exists in the database
-                                MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
-                                ConditionCheckType = ConditionCheckType.Initial,
-                                Stage = "Creation",
-                                Condition = Condition.GoodCondition,
-                                FunctionalStatus = FunctionalStatus.FullyFunctional,
-                                CosmeticStatus = CosmeticStatus.Excellent,
-                                InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                InspectionDate = DateTime.UtcNow,
-                                Notes = "Initial condition at creation"
-                            };
-                            _context.MaterialConditions.Add(materialCondition);
-                            await _context.SaveChangesAsync();
-                        }
+                        // Roll back the transaction on error
+                        await transaction.RollbackAsync();
+                        throw; // Re-throw to be caught by outer try-catch
                     }
+                });
 
-                    // 4. Save approval steps
-                    foreach (var step in approvalSteps)
-                    {
-                        step.RequisitionId = requisition.Id; // Link to parent
-                        step.CreatedAt = DateTime.Now;      // Add timestamp
-                    }
+                // Clear session data to prevent duplicate submissions
+                HttpContext.Session.Remove("WizardRequisition");
+                HttpContext.Session.Remove("WizardRequisitionItems");
+                HttpContext.Session.Remove("WizardApprovalSteps");
 
-                    _context.Approvals.AddRange(approvalSteps); // Add all steps at once
-                    await _context.SaveChangesAsync();
+                // Set success message
+                TempData["SuccessMessage"] = "Material Requisition has been created successfully. Go to approvals to track progress.";
 
-                    // 5. Send notifications to requisition creator and first approver
-                    await SendRequisitionNotifications(requisition, requisitionItems, approvalSteps);
-
-                    // Commit the transaction
-                    await transaction.CommitAsync();
-
-                    // Clear session data to prevent duplicate submissions
-                    HttpContext.Session.Remove("WizardRequisition");
-                    HttpContext.Session.Remove("WizardRequisitionItems");
-                    HttpContext.Session.Remove("WizardApprovalSteps");
-
-                    // Set success message
-                    TempData["SuccessMessage"] = "Material Requisition has been created successfully. Go to approvals to track progress.";
-
-                    // Redirect to the Requisition Index action
-                    return RedirectToAction("Index", "Requisitions");
-                }
-                catch (Exception ex)
-                {
-                    // Roll back the transaction on error
-                    await transaction.RollbackAsync();
-                    throw; // Re-throw to be caught by outer try-catch
-                }
+                // Redirect to the Requisition Index action
+                return RedirectToAction("Index", "Requisitions");
             }
             catch (Exception ex)
             {
@@ -1080,7 +1116,7 @@ namespace MRIV.Controllers
                 Console.WriteLine($"Error completing requisition: {ex.Message}");
                 Console.WriteLine(ex.StackTrace);
 
-                TempData["ErrorMessage"] = "An error occurred while saving the requisition. Please try again.";
+                TempData["ErrorMessage"] = $"An error occurred while saving the requisition: {ex.Message} <br/> {ex.StackTrace}";
                 return RedirectToAction("WizardSummary");
             }
         }

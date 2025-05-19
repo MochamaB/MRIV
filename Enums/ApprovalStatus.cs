@@ -32,5 +32,8 @@ namespace MRIV.Enums
         [Description("Not Received")]
         PendingReceive = 8,
 
+        [Description("Cancelled")]
+        Cancelled = 9,
+
     }
 }

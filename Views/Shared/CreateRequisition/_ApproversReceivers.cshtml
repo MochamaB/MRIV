@@ -58,7 +58,7 @@
                                 @if (step.ApprovalStep == "Vendor Dispatch")
                                 {
                                     <p class="text-muted inline-container" style="text-transform:uppercase">
-                                        <b class="label-width" >TO @step.ApprovalAction:</b>
+                                        <b class="label-width">TO @step.ApprovalAction:</b>
                                         <select class="formcontrol2" disabled>
                                             <option value="ICTDispatch" selected>ICT DISPATCH</option>
                                         </select>
@@ -70,42 +70,57 @@
                                     SelectList finalList = null;
                                     if (Model.DepartmentEmployees != null && Model.DepartmentEmployees.TryGetValue(step.ApprovalStep, out var selectList) && selectList != null)
                                     {
-                                        var exists = selectList.Any(item => item.Value == step.PayrollNo);
+                                        // Convert to list for manipulation
                                         var tempList = selectList.ToList();
-                                        if (!exists && !string.IsNullOrEmpty(step.PayrollNo) && step.PayrollNo != "unknown")
+
+                                        // Find if the current payroll exists in the list
+                                        var existingItem = tempList.FirstOrDefault(item => item.Value == step.PayrollNo);
+
+                                        // If not exists and payroll is valid, add it
+                                        if (existingItem == null && !string.IsNullOrEmpty(step.PayrollNo) && step.PayrollNo != "unknown")
                                         {
-                                            tempList.Insert(0, new SelectListItem {
+                                            tempList.Insert(0, new SelectListItem
+                                            {
                                                 Value = step.PayrollNo,
                                                 Text = string.IsNullOrEmpty(step.EmployeeName) ? step.PayrollNo : $"{step.EmployeeName} ({step.PayrollNo})",
                                                 Selected = true
                                             });
                                         }
-                                        finalList = new SelectList(tempList, "Value", "Text");
+                                        else if (existingItem != null)
+                                        {
+                                            // Ensure the existing item is selected
+                                            foreach (var item in tempList)
+                                            {
+                                                item.Selected = (item.Value == step.PayrollNo);
+                                            }
+                                        }
+
+                                        finalList = new SelectList(tempList, "Value", "Text", step.PayrollNo);
                                     }
                                     else
                                     {
                                         finalList = new SelectList(new List<SelectListItem>(), "Value", "Text");
                                     }
+
                                     <p class="text-muted inline-container" style="text-transform:uppercase">
                                         <b class="label-width">TO @step.ApprovalAction:</b>
                                         @if (finalList.Count() == 0 || string.IsNullOrEmpty(step.PayrollNo) || step.PayrollNo == "unknown")
                                         {
                                             @Html.DropDownList(
-                                                $"SelectedEmployee_{step.StepNumber}",
-                                                finalList,
-                                                "Select Employee",
-                                               new { @class = "formcontrol2", @required = "required", data_val_required = "Select approver" }
-                                            )
-                                        }
+                                            $"SelectedEmployee_{step.StepNumber}",
+                                                                finalList,
+                                                                "Select Employee",
+                                                                new { @class = "formcontrol2", @required = "required", data_val_required = "Select approver" }
+                                                                )
+                                                                }
                                         else
                                         {
                                             @Html.DropDownList(
-                                                $"SelectedEmployee_{step.StepNumber}",
-                                                finalList,
-                                                null,
-                                                new { @class = "formcontrol2" }
-                                            )
-                                        }
+                                            $"SelectedEmployee_{step.StepNumber}",
+                                                                finalList,
+                                                                new { @class = "formcontrol2" }
+                                                                )
+                                                                }
                                     </p>
                                 }
                            

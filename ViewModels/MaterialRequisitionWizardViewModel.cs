@@ -33,10 +33,12 @@ namespace MRIV.ViewModels
         public EmployeeBkp? LoggedInUserEmployee { get; set; } 
         public Department? LoggedInUserDepartment { get; set; }
         public Station? LoggedInUserStation { get; set; }
-
-        public EmployeeBkp? employeeDetail { get; set; }
         public Department? departmentDetail { get; set; }
-        public Station? stationDetail { get; set; }
+        public EmployeeBkp? employeeDetail { get; set; }
+        public Department? issueDepartmentDetail { get; set; }
+        public Station? issueStationDetail { get; set; }
+        public Department? deliveryDepartmentDetail { get; set; }
+        public Station? deliveryStationDetail { get; set; }
         public List<Vendor> Vendors { get; set; } = new();
         public List<RequisitionItem> RequisitionItems { get; set; } = new();
         public List<MaterialCategory> MaterialCategories { get; set; } = new();

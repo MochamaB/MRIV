@@ -109,17 +109,14 @@ namespace MRIV.Models
         [Description("Assignment")]
         Assignment = 1,
 
-        [Description("Return")]
-        Return = 2,
-
         [Description("Periodic")]
-        Periodic = 3,
+        Periodic = 2,
 
         [Description("Damage")]
-        Damage = 4,
+        Damage = 3,
 
         [Description("Disposal")]
-        Disposal = 5
+        Disposal = 4
     }
 
     public enum FunctionalStatus
@@ -137,15 +134,15 @@ namespace MRIV.Models
     public enum CosmeticStatus
     {
         [Description("Excellent")]
-        Excellent,
+        Excellent = 0,
 
         [Description("Good")]
-        Good,
+        Good = 1,
 
         [Description("Fair")]
-        Fair,
+        Fair = 2,
 
         [Description("Poor")]
-        Poor
+        Poor = 3
     }
 }

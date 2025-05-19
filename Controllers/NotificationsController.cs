@@ -4,7 +4,6 @@ using MRIV.Services;
 
 namespace MRIV.Controllers
 {
-    // Controllers/NotificationsController.cs
     public class NotificationsController : Controller
     {
         private readonly INotificationService _notificationService;
@@ -22,6 +21,10 @@ namespace MRIV.Controllers
                 return RedirectToAction("Index", "Login");
 
             var notifications = await _notificationService.GetUserNotificationsAsync(payrollNo);
+
+            // Set ViewBag for notification count
+            await SetNotificationCount();
+
             return View(notifications);
         }
 
@@ -66,6 +69,20 @@ namespace MRIV.Controllers
             });
 
             return Json(notificationData);
+        }
+
+        // Helper method to set notification count in ViewBag
+        private async Task SetNotificationCount()
+        {
+            var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (!string.IsNullOrEmpty(payrollNo))
+            {
+                ViewBag.UnreadNotifications = await _notificationService.GetUnreadCountAsync(payrollNo);
+            }
+            else
+            {
+                ViewBag.UnreadNotifications = 0;
+            }
         }
     }
 }
