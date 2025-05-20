@@ -1,0 +1,263 @@
+@model MRIV.Models.EmployeeBkp
+
+@{
+    ViewData["Title"] = "Edit Employee";
+    var departments = ViewBag.Departments as List<MRIV.Models.Department>;
+    var stations = ViewBag.Stations as List<MRIV.Models.Station>;
+    var roles = ViewBag.Roles as List<string>;
+    var employees = ViewBag.Employees as List<MRIV.Models.EmployeeBkp>;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Edit Employee</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input type="hidden" asp-for="EmpisCurrActive" />
+                    <input type="hidden" asp-for="OrgGroup" />
+                    <input type="hidden" asp-for="Pass" />
+                    <input type="hidden" asp-for="LastPay" />
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Basic Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="PayrollNo" class="form-label">Payroll Number</label>
+                                            <input asp-for="PayrollNo" class="form-control" readonly />
+                                            <span asp-validation-for="PayrollNo" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="RollNo" class="form-label">Roll Number</label>
+                                            <input asp-for="RollNo" class="form-control" readonly />
+                                            <span asp-validation-for="RollNo" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="EmployeId" class="form-label">Employee ID</label>
+                                            <input asp-for="EmployeId" class="form-control" />
+                                            <span asp-validation-for="EmployeId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="SurName" class="form-label">Surname</label>
+                                            <input asp-for="SurName" class="form-control" required />
+                                            <span asp-validation-for="SurName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="OtherNames" class="form-label">Other Names</label>
+                                            <input asp-for="OtherNames" class="form-control" required />
+                                            <span asp-validation-for="OtherNames" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="EmailAddress" class="form-label">Email Address</label>
+                                            <input asp-for="EmailAddress" class="form-control" type="email" />
+                                            <span asp-validation-for="EmailAddress" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="Username" class="form-label">Username</label>
+                                            <input asp-for="Username" class="form-control" />
+                                            <span asp-validation-for="Username" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="PasswordP" class="form-label">Password</label>
+                                            <input asp-for="PasswordP" class="form-control" type="password" />
+                                            <span asp-validation-for="PasswordP" class="text-danger"></span>
+                                            <small class="text-muted">Leave blank to keep current password</small>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label class="form-label">Status</label>
+                                            <div class="form-control bg-light">
+                                                @if (Model.EmpisCurrActive == 0)
+                                                {
+                                                    <span class="badge bg-success">Active</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">Inactive</span>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Job Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Designation" class="form-label">Designation</label>
+                                        <input asp-for="Designation" class="form-control" />
+                                        <span asp-validation-for="Designation" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Department" class="form-label">Department</label>
+                                        <select asp-for="Department" class="form-select">
+                                            <option value="">-- Select Department --</option>
+                                            @foreach (var dept in departments)
+                                            {
+                                                <option value="@dept.DepartmentId" selected="@(Model.Department == dept.DepartmentId ? "selected" : null)">
+                                                    @dept.DepartmentName
+                                                </option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Department" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Station" class="form-label">Station</label>
+                                        <select asp-for="Station" class="form-select">
+                                            <option value="">-- Select Station --</option>
+                                            @foreach (var station in stations)
+                                            {
+                                                <option value="@station.StationId" selected="@(Model.Station == station.StationId.ToString() ? "selected" : null)">
+                                                    @station.StationName
+                                                </option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Station" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Role" class="form-label">Role</label>
+                                        <select asp-for="Role" class="form-select">
+                                            <option value="">-- Select Role --</option>
+                                            @foreach (var role in roles)
+                                            {
+                                                <option value="@role" selected="@(Model.Role == role ? "selected" : null)">
+                                                    @role
+                                                </option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Role" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Scale" class="form-label">Scale</label>
+                                        <input asp-for="Scale" class="form-control" />
+                                        <span asp-validation-for="Scale" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Employment Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="HireDate" class="form-label">Hire Date</label>
+                                        <input asp-for="HireDate" class="form-control" type="date" value="@(Model.HireDate.HasValue ? Model.HireDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                        <span asp-validation-for="HireDate" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="ServiceYears" class="form-label">Service Years</label>
+                                        <input asp-for="ServiceYears" class="form-control" type="number" min="0" />
+                                        <span asp-validation-for="ServiceYears" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="ContractEnd" class="form-label">Contract End Date</label>
+                                        <input asp-for="ContractEnd" class="form-control" type="date" value="@(Model.ContractEnd.HasValue ? Model.ContractEnd.Value.ToString("yyyy-MM-dd") : "")" />
+                                        <span asp-validation-for="ContractEnd" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="RetireDate" class="form-label">Retirement Date</label>
+                                        <input asp-for="RetireDate" class="form-control" type="date" value="@(Model.RetireDate.HasValue ? Model.RetireDate.Value.ToString("yyyy-MM-dd") : "")" />
+                                        <span asp-validation-for="RetireDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Reporting Structure</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="Supervisor" class="form-label">Supervisor</label>
+                                            <select asp-for="Supervisor" class="form-select">
+                                                <option value="">-- Select Supervisor --</option>
+                                                @foreach (var emp in employees.OrderBy(e => e.Fullname))
+                                                {
+                                                    <option value="@emp.PayrollNo" selected="@(Model.Supervisor == emp.PayrollNo ? "selected" : null)">
+                                                        @emp.Fullname - @(string.IsNullOrEmpty(emp.Designation) ? "No Designation" : emp.Designation) (@emp.PayrollNo)
+                                                    </option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="Supervisor" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="Hod" class="form-label">Head of Department</label>
+                                            <select asp-for="Hod" class="form-select">
+                                                <option value="">-- Select HOD --</option>
+                                                @foreach (var emp in employees.OrderBy(e => e.Fullname))
+                                                {
+                                                    <option value="@emp.PayrollNo" selected="@(Model.Hod == emp.PayrollNo ? "selected" : null)">
+                                                        @emp.Fullname - @(string.IsNullOrEmpty(emp.Designation) ? "No Designation" : emp.Designation) (@emp.PayrollNo)
+                                                    </option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="Hod" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-success">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize select2 for better dropdown experience
+            if ($.fn.select2) {
+                $('select[name="Department"], select[name="Station"], select[name="Role"], select[name="Supervisor"], select[name="Hod"]').select2({
+                    theme: "bootstrap-5",
+                    placeholder: "-- Select --",
+                    allowClear: true
+                });
+            }
+        });
+    </script>
+}

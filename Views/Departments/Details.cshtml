@@ -1,0 +1,71 @@
+@model MRIV.Models.Department
+
+@{
+    ViewData["Title"] = "Department Details";
+    var departmentHeadName = ViewBag.DepartmentHeadName;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Department Details</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <a href="@Url.Action("Edit", "Departments", new { id = Model.DepartmentCode })" class="btn btn-success btn-sm d-flex align-items-center py-2">
+                                <i class="ri-pencil-line align-bottom me-1"></i> Edit
+                            </a>
+                            <a href="@Url.Action("Index", "Departments")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Code</label>
+                            <div class="form-control bg-light">@Model.DepartmentCode</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department ID</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.DepartmentId) ? "-" : Model.DepartmentId)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Name</label>
+                            <div class="form-control bg-light">@Model.DepartmentName</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Head</label>
+                            <div class="form-control bg-light">
+                                @if (!string.IsNullOrEmpty(Model.DepartmentHd))
+                                {
+                                    <span>@departmentHeadName</span>
+                                    <small class="d-block text-muted">(@Model.DepartmentHd)</small>
+                                }
+                                else
+                                {
+                                    <span>Not assigned</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Email Address</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Emailaddress) ? "-" : Model.Emailaddress)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Organization Code</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.OrgCode) ? "-" : Model.OrgCode)</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

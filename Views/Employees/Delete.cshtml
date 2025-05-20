@@ -1,0 +1,103 @@
+@model MRIV.Models.EmployeeBkp
+
+@{
+    ViewData["Title"] = "Delete Employee";
+    var departmentName = ViewBag.DepartmentName;
+    var stationName = ViewBag.StationName;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Deactivate Employee</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <div class="d-flex">
+                        <i class="ri-alert-line fs-3 me-2"></i>
+                        <div>
+                            <h5 class="alert-heading">Are you sure you want to deactivate this employee?</h5>
+                            <p class="mb-0">This action will mark the employee as inactive in the system. The employee record will be preserved but will no longer appear in active employee lists.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div asp-validation-summary="All" class="text-danger"></div>
+
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="card border">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Employee Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Payroll Number</label>
+                                    <div class="form-control bg-light">@Model.PayrollNo</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Full Name</label>
+                                    <div class="form-control bg-light">@Model.Fullname</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Designation</label>
+                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Designation) ? "-" : Model.Designation)</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Email Address</label>
+                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.EmailAddress) ? "-" : Model.EmailAddress)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card border">
+                            <div class="card-header bg-light">
+                                <h5 class="mb-0">Employment Details</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Department</label>
+                                    <div class="form-control bg-light">@departmentName</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Station</label>
+                                    <div class="form-control bg-light">@stationName</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Role</label>
+                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Role) ? "-" : Model.Role)</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label text-muted">Hire Date</label>
+                                    <div class="form-control bg-light">
+                                        @(Model.HireDate.HasValue ? Model.HireDate.Value.ToString("dd MMM yyyy") : "-")
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="Delete" method="post" class="mt-4">
+                    <input type="hidden" name="id" value="@Model.PayrollNo" />
+                    <input type="hidden" name="rollNo" value="@Model.RollNo" />
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Deactivate</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

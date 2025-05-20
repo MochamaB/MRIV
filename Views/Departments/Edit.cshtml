@@ -1,0 +1,101 @@
+@model MRIV.Models.Department
+
+@{
+    ViewData["Title"] = "Edit Department";
+    var employees = ViewBag.Employees as List<MRIV.Models.EmployeeBkp>;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Edit Department</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("Index", "Departments")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="Edit" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    <input type="hidden" asp-for="DepartmentCode" />
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DepartmentCode" class="form-label">Department Code</label>
+                                <input class="form-control" value="@Model.DepartmentCode" disabled />
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="DepartmentId" class="form-label">Department ID</label>
+                                <input asp-for="DepartmentId" class="form-control" />
+                                <span asp-validation-for="DepartmentId" class="text-danger"></span>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="DepartmentName" class="form-label">Department Name</label>
+                                <input asp-for="DepartmentName" class="form-control" required />
+                                <span asp-validation-for="DepartmentName" class="text-danger"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="DepartmentHd" class="form-label">Department Head</label>
+                                <select asp-for="DepartmentHd" class="form-select">
+                                    <option value="">-- Select Department Head --</option>
+                                    @foreach (var employee in employees.OrderBy(e => e.Fullname))
+                                    {
+                                        <option value="@employee.PayrollNo" selected="@(Model.DepartmentHd == employee.PayrollNo ? "selected" : null)">
+                                            @employee.Fullname - @(string.IsNullOrEmpty(employee.Designation) ? "No Designation" : employee.Designation) (@employee.PayrollNo)
+                                        </option>
+                                    }
+                                </select>
+                                <span asp-validation-for="DepartmentHd" class="text-danger"></span>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="Emailaddress" class="form-label">Email Address</label>
+                                <input asp-for="Emailaddress" class="form-control" type="email" />
+                                <span asp-validation-for="Emailaddress" class="text-danger"></span>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="UserName" class="form-label">Username</label>
+                                <input asp-for="UserName" class="form-control" />
+                                <span asp-validation-for="UserName" class="text-danger"></span>
+                            </div>
+                            <div class="mb-3">
+                                <label asp-for="OrgCode" class="form-label">Organization Code</label>
+                                <input asp-for="OrgCode" class="form-control" />
+                                <span asp-validation-for="OrgCode" class="text-danger"></span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-outline-primary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize select2 for better dropdown experience
+            if ($.fn.select2) {
+                $('select[name="DepartmentHd"]').select2({
+                    theme: "bootstrap-5",
+                    placeholder: "-- Select Department Head --",
+                    allowClear: true
+                });
+            }
+        });
+    </script>
+}

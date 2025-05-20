@@ -25,7 +25,8 @@ namespace MRIV.Extensions
         public static async Task<FilterViewModel> CreateFiltersAsync<T>(
             this IQueryable<T> query,
             Expression<Func<T, object>>[] propertiesToFilter,
-            Dictionary<string, string> currentFilters = null)
+            Dictionary<string, string> currentFilters = null,
+            Dictionary<string, Dictionary<string, string>> displayNames = null)
         {
             var model = new FilterViewModel();
             currentFilters ??= new Dictionary<string, string>();
@@ -101,10 +102,57 @@ namespace MRIV.Extensions
                         var isSelected = currentFilters.TryGetValue(propertyName, out var currentValue) && 
                                         currentValue == stringValue;
                         
+                        // Try to get display name from the dictionary
+                        string displayText = stringValue;
+                        
+                        // Log debugging information
+                        Console.WriteLine($"Processing filter option: {propertyName} = {stringValue}");
+                        
+                        if (displayNames != null)
+                        {
+                            Console.WriteLine($"  Display names dictionary exists with {displayNames.Count} entries");
+                            
+                            if (displayNames.TryGetValue(propertyName, out var propertyDisplayNames))
+                            {
+                                Console.WriteLine($"  Found property display names for {propertyName} with {propertyDisplayNames.Count} entries");
+                                Console.WriteLine($"  Looking for key: {stringValue}");
+                                
+                                if (propertyDisplayNames.TryGetValue(stringValue, out var nameValue))
+                                {
+                                    Console.WriteLine($"  Found display name: {nameValue}");
+                                    displayText = nameValue;
+                                }
+                                else
+                                {
+                                    Console.WriteLine($"  No display name found for value: {stringValue}");
+                                    // Try with leading zeros for station IDs (e.g., "63" -> "063")
+                                    if (propertyName == "Station" && int.TryParse(stringValue, out int stationId))
+                                    {
+                                        string paddedId = stationId.ToString().PadLeft(3, '0');
+                                        Console.WriteLine($"  Trying with padded ID: {paddedId}");
+                                        
+                                        if (propertyDisplayNames.TryGetValue(paddedId, out nameValue))
+                                        {
+                                            Console.WriteLine($"  Found display name with padded ID: {nameValue}");
+                                            displayText = nameValue;
+                                        }
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine($"  No property display names found for {propertyName}");
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("  No display names dictionary provided");
+                        }
+                        
                         filter.Options.Add(new SelectListItem
                         {
                             Value = stringValue,
-                            Text = stringValue,
+                            Text = displayText,
                             Selected = isSelected
                         });
                     }

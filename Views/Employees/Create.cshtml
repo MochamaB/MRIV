@@ -1,0 +1,353 @@
+@model MRIV.Models.EmployeeBkp
+
+@{
+    ViewData["Title"] = "Create Employee";
+    var departments = ViewBag.Departments as List<MRIV.Models.Department>;
+    var stations = ViewBag.Stations as List<MRIV.Models.Station>;
+    var roles = ViewBag.Roles as List<string>;
+    var scales = ViewBag.Scales as List<string> ?? new List<string>();
+    var employees = ViewBag.Employees as List<MRIV.Models.EmployeeBkp>;
+    // We'll use JavaScript to auto-populate the RollNo from PayrollNo
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Create New Employee</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Basic Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="PayrollNo" class="form-label">Payroll Number</label><span class="requiredlabel">*</span>
+                                            <input asp-for="PayrollNo" class="form-control" required />
+                                            <span asp-validation-for="PayrollNo" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="RollNo" class="form-label">Roll Number</label><span class="requiredlabel">*</span>
+                                            <input asp-for="RollNo" class="form-control" required readonly />
+                                            <small class="text-muted">Auto-populated from the last 5 digits of Payroll Number</small>
+                                            <span asp-validation-for="RollNo" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="EmployeId" class="form-label">Employee ID Number</label><span class="requiredlabel">*</span>
+                                            <input asp-for="EmployeId" class="form-control" />
+                                            <span asp-validation-for="EmployeId" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="SurName" class="form-label">Surname</label><span class="requiredlabel">*</span>
+                                            <input asp-for="SurName" class="form-control" required />
+                                            <span asp-validation-for="SurName" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="OtherNames" class="form-label">Other Names</label><span class="requiredlabel">*</span>
+                                            <input asp-for="OtherNames" class="form-control" required />
+                                            <span asp-validation-for="OtherNames" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="EmailAddress" class="form-label">Email Address</label><span class="requiredlabel">*</span>
+                                            <input asp-for="EmailAddress" class="form-control" type="email" />
+                                            <span asp-validation-for="EmailAddress" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row">
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="Username" class="form-label">Username</label><span class="requiredlabel">*</span>
+                                            <input asp-for="Username" class="form-control" value="" />
+                                            <span asp-validation-for="Username" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-4 mb-3">
+                                            <label asp-for="PasswordP" class="form-label">Password</label>
+                                            <input asp-for="PasswordP" class="form-control" type="password" value="" autocomplete="new-password" />
+                                            <span asp-validation-for="PasswordP" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Job Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="Designation" class="form-label">Designation</label><span class="requiredlabel">*</span>
+                                        <input asp-for="Designation" class="form-control" />
+                                        <span asp-validation-for="Designation" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Station" class="form-label">Station</label><span class="requiredlabel">*</span>
+                                        <select asp-for="Station" class="formcontrol2" id="stationSelect">
+                                            <option value="">-- Select Station --</option>
+                                            <option value="HQ">Head Office (HQ)</option>
+                                            @foreach (var station in stations)
+                                            {
+                                                <option value="@station.StationId">@station.StationName</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Station" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Department" class="form-label">Department</label><span class="requiredlabel">*</span>
+                                        <select asp-for="Department" class="formcontrol2">
+                                            <option value="">-- Select Department --</option>
+                                            @foreach (var dept in departments)
+                                            {
+                                                <option value="@dept.DepartmentId">@dept.DepartmentName</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Department" class="text-danger"></span>
+                                    </div>
+                                   
+                                    <div class="mb-3">
+                                        <label asp-for="Role" class="form-label">Role</label><span class="requiredlabel">*</span>
+                                        <select asp-for="Role" class="formcontrol2">
+                                            <option value="">-- Select Role --</option>
+                                            @foreach (var role in roles)
+                                            {
+                                                <option value="@role">@role</option>
+                                            }
+                                        </select>
+                                        <span asp-validation-for="Role" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="Scale" class="form-label">Scale</label><span class="requiredlabel">*</span>
+                                        <input asp-for="Scale" class="form-control" />
+                                        <span asp-validation-for="Scale" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card border h-100">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Employment Information</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <label asp-for="HireDate" class="form-label">Hire Date</label><span class="requiredlabel">*</span>
+                                        <input asp-for="HireDate" class="form-control" type="date" />
+                                        <span asp-validation-for="HireDate" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="ServiceYears" class="form-label">Service Years</label>
+                                        <input asp-for="ServiceYears" class="form-control" type="number" min="0" />
+                                        <span asp-validation-for="ServiceYears" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="ContractEnd" class="form-label">Contract End Date</label>
+                                        <input asp-for="ContractEnd" class="form-control" type="date" />
+                                        <span asp-validation-for="ContractEnd" class="text-danger"></span>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label asp-for="RetireDate" class="form-label">Retirement Date</label>
+                                        <input asp-for="RetireDate" class="form-control" type="date" />
+                                        <span asp-validation-for="RetireDate" class="text-danger"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-12">
+                            <div class="card border">
+                                <div class="card-header bg-light">
+                                    <h5 class="mb-0">Reporting Structure</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="Supervisor" class="form-label">Supervisor</label><span class="requiredlabel">*</span>
+                                            <select asp-for="Supervisor" class="formcontrol2" id="supervisorSelect">
+                                                <option value="">-- Select Supervisor --</option>
+                                                @foreach (var emp in employees.OrderBy(e => e.Fullname))
+                                                {
+                                                    <option value="@emp.PayrollNo" data-department="@emp.Department">
+                                                        @emp.Fullname - @(string.IsNullOrEmpty(emp.Designation) ? "No Designation" : emp.Designation) (@emp.PayrollNo)
+                                                    </option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="Supervisor" class="text-danger"></span>
+                                        </div>
+                                        <div class="col-md-6 mb-3">
+                                            <label asp-for="Hod" class="form-label">Head of Department</label><span class="requiredlabel">*</span>
+                                            <select asp-for="Hod" class="formcontrol2" id="hodSelect">
+                                                <option value="">-- Select HOD --</option>
+                                                @foreach (var emp in employees.OrderBy(e => e.Fullname))
+                                                {
+                                                    <option value="@emp.PayrollNo" data-department="@emp.Department">
+                                                        @emp.Fullname - @(string.IsNullOrEmpty(emp.Designation) ? "No Designation" : emp.Designation) (@emp.PayrollNo)
+                                                    </option>
+                                                }
+                                            </select>
+                                            <span asp-validation-for="Hod" class="text-danger"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end gap-2 mt-4">
+                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize select2 for better dropdown experience
+            if ($.fn.select2) {
+                $('select[name="Department"], select[name="Station"], select[name="Role"], select[name="Supervisor"], select[name="Hod"], select[name="Scale"]').select2({
+                    theme: "bootstrap-5",
+                    placeholder: "-- Select --",
+                    allowClear: true
+                });
+            }
+            
+            // Auto-populate RollNo from PayrollNo
+            $('#PayrollNo').on('input', function() {
+                var payrollNo = $(this).val();
+                if (payrollNo && payrollNo.length >= 5) {
+                    // Extract last 5 characters for RollNo
+                    var rollNo = payrollNo.slice(-5);
+                    $('#RollNo').val(rollNo);
+                }
+                
+                // Validate PayrollNo length
+                if (payrollNo.length > 0 && payrollNo.length != 8) {
+                    $(this).addClass('is-invalid');
+                    if (!$(this).next('.invalid-feedback').length) {
+                        $(this).after('<div class="invalid-feedback">Payroll Number must be exactly 8 characters long.</div>');
+                    }
+                } else {
+                    $(this).removeClass('is-invalid');
+                    $(this).next('.invalid-feedback').remove();
+                }
+            });
+            
+            // Clear default values for username and password
+            $('#Username').val('');
+            $('#PasswordP').val('');
+            
+            // Filter supervisors and HODs by station and department
+            function filterEmployees() {
+                var departmentId = $('#Department').val();
+                var stationId = $('#stationSelect').val();
+                
+                console.log('Filtering employees - Department:', departmentId, 'Station:', stationId);
+                
+                if (departmentId || stationId) {
+                    // Fetch employees for the selected department and/or station
+                    $.ajax({
+                        url: '@Url.Action("GetEmployeesByDepartment", "Employees")',
+                        type: 'GET',
+                        data: { 
+                            departmentId: departmentId,
+                            stationId: stationId
+                        },
+                        success: function(data) {
+                            console.log('API returned', data.length, 'employees');
+                            
+                            // Clear current options
+                            $('#supervisorSelect').empty().append('<option value="">-- Select Supervisor --</option>');
+                            $('#hodSelect').empty().append('<option value="">-- Select HOD --</option>');
+                            
+                            if (data.length === 0) {
+                                console.log('No employees found for the selected filters');
+                                // Add a message option if no employees found
+                                $('#supervisorSelect').append('<option disabled>No employees found for these filters</option>');
+                                $('#hodSelect').append('<option disabled>No employees found for these filters</option>');
+                            } else {
+                                console.log('First employee:', data[0]);
+                                
+                                // Add new options from API response
+                                $.each(data, function(index, employee) {
+                                    var optionText = employee.fullname + ' - ' + 
+                                        (employee.designation ? employee.designation : 'No Designation') + 
+                                        ' (' + employee.payrollNo + ')';
+                                        
+                                    $('#supervisorSelect').append(
+                                        $('<option></option>')
+                                            .attr('value', employee.payrollNo)
+                                            .attr('data-department', employee.department)
+                                            .attr('data-station', employee.station)
+                                            .text(optionText)
+                                    );
+                                    
+                                    $('#hodSelect').append(
+                                        $('<option></option>')
+                                            .attr('value', employee.payrollNo)
+                                            .attr('data-department', employee.department)
+                                            .attr('data-station', employee.station)
+                                            .text(optionText)
+                                    );
+                                });
+                            }
+                            
+                            // Refresh select2 to show new options
+                            if ($.fn.select2) {
+                                $('#supervisorSelect').trigger('change');
+                                $('#hodSelect').trigger('change');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching employees:', error);
+                            console.error('Status:', status);
+                            console.error('Response:', xhr.responseText);
+                            alert('Error loading employees for the selected filters. Please try again.');
+                        }
+                    });
+                } else {
+                    // If no filters selected, show all employees
+                    $('#supervisorSelect option').show();
+                    $('#hodSelect option').show();
+                    
+                    if ($.fn.select2) {
+                        $('#supervisorSelect').trigger('change');
+                        $('#hodSelect').trigger('change');
+                    }
+                }
+            }
+            
+            // Trigger filtering when department or station changes
+            $('#Department').change(filterEmployees);
+            $('#stationSelect').change(filterEmployees);
+        });
+    </script>
+}

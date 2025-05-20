@@ -1,0 +1,86 @@
+@model MRIV.Models.Department
+
+@{
+    ViewData["Title"] = "Delete Department";
+    var departmentHeadName = ViewBag.DepartmentHeadName;
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Delete Department</h5>
+                    <div class="flex-shrink-0">
+                        <a href="@Url.Action("Index", "Departments")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                            <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="alert alert-danger" role="alert">
+                    <div class="d-flex">
+                        <i class="ri-alert-line fs-3 me-2"></i>
+                        <div>
+                            <h5 class="alert-heading">Are you sure you want to delete this department?</h5>
+                            <p class="mb-0">This action cannot be undone. Deleting this department may affect related records in the system.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div asp-validation-summary="All" class="text-danger"></div>
+
+                <div class="row mt-3">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Code</label>
+                            <div class="form-control bg-light">@Model.DepartmentCode</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department ID</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.DepartmentId) ? "-" : Model.DepartmentId)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Name</label>
+                            <div class="form-control bg-light">@Model.DepartmentName</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Department Head</label>
+                            <div class="form-control bg-light">
+                                @if (!string.IsNullOrEmpty(Model.DepartmentHd))
+                                {
+                                    <span>@departmentHeadName</span>
+                                    <small class="d-block text-muted">(@Model.DepartmentHd)</small>
+                                }
+                                else
+                                {
+                                    <span>Not assigned</span>
+                                }
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Email Address</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Emailaddress) ? "-" : Model.Emailaddress)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label text-muted">Organization Code</label>
+                            <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.OrgCode) ? "-" : Model.OrgCode)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <form asp-action="Delete" method="post" class="mt-4">
+                    <input type="hidden" asp-for="DepartmentCode" />
+                    <div class="d-flex justify-content-end gap-2">
+                        <a asp-action="Index" class="btn btn-light">Cancel</a>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

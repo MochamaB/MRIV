@@ -1,0 +1,275 @@
+@model IEnumerable<MRIV.Models.Department>
+
+@{
+    ViewData["Title"] = "Departments";
+    var departmentHeadNames = ViewBag.DepartmentHeadNames as Dictionary<string, string>;
+    var departmentHeadDesignations = ViewBag.DepartmentHeadDesignations as Dictionary<string, string>;
+    var pagination = ViewBag.Pagination as MRIV.ViewModels.PaginationViewModel;
+    var totalCount = ViewBag.TotalCount;
+    var startNumber = ((pagination.CurrentPage - 1) * pagination.ItemsPerPage) + 1;
+    var currentSortField = ViewBag.SortField;
+    var currentSortOrder = ViewBag.SortOrder;
+    var searchTerm = ViewBag.SearchTerm as string;
+    
+    // Helper function to generate sort URL
+    Func<string, string> GetSortUrl = (string field) => {
+        var newSortOrder = field.Equals(currentSortField, StringComparison.OrdinalIgnoreCase) && currentSortOrder == "asc" ? "desc" : "asc";
+        return Url.Action("Index", "Departments", new { page = pagination.CurrentPage, sortField = field, sortOrder = newSortOrder, searchTerm = searchTerm });
+    };
+    
+    // Helper function to get sort icon
+    Func<string, string> GetSortIcon = (string field) => {
+        if (!field.Equals(currentSortField, StringComparison.OrdinalIgnoreCase))
+            return "mdi mdi-sort text-muted";
+            
+        return currentSortOrder == "asc" ? "mdi mdi-sort-ascending text-success" : "mdi mdi-sort-descending text-danger";
+    };
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">Departments (@totalCount total)</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <form method="get" action="@Url.Action("Index", "Departments")" class="d-flex gap-2">
+                                <input type="hidden" name="sortField" value="@currentSortField" />
+                                <input type="hidden" name="sortOrder" value="@currentSortOrder" />
+                                <div class="search-box">
+                                    <input type="text" name="searchTerm" class="form-control" placeholder="Search..." value="@searchTerm">
+                                    <i class="ri-search-line search-icon"></i>
+                                </div>
+                                <button type="submit" class="btn btn-secondary">Search</button>
+                                @if (!string.IsNullOrEmpty(searchTerm))
+                                {
+                                    <a href="@Url.Action("Index", "Departments", new { sortField = currentSortField, sortOrder = currentSortOrder })" class="btn btn-outline-primary">
+                                        <i class="ri-close-line align-bottom"></i> Clear
+                                    </a>
+                                }
+                            </form>
+
+                            <a href="@Url.Action("Create", "Departments")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                                <i class="ri-add-line align-bottom me-1"></i> Add Department
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Content -->
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered align-middle mb-0 table-hover">
+                        <thead>
+                            <tr class="table-light">
+                                <th>#</th>
+                                <th>
+                                    <a href="@GetSortUrl("DepartmentCode")" class="text-primary">
+                                        Code
+                                        <i class="@GetSortIcon("DepartmentCode") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("DepartmentId")" class="text-primary">
+                                        ID
+                                        <i class="@GetSortIcon("DepartmentId") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("DepartmentName")" class="d-flex align-items-center text-primary">
+                                        Name
+                                        <i class="@GetSortIcon("DepartmentName") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("DepartmentHd")" class="d-flex align-items-center text-primary">
+                                        Department Head
+                                        <i class="@GetSortIcon("DepartmentHd") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Emailaddress")" class="d-flex align-items-center text-primary">
+                                        Email Address
+                                        <i class="@GetSortIcon("Emailaddress") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Any())
+                            {
+                                int rowNumber = startNumber;
+                                foreach (var department in Model)
+                                {
+                                    <tr class="clickable-row" data-href="@Url.Action("Details", "Departments", new { id = department.DepartmentCode })">
+                                        <td>@(rowNumber++)</td>
+                                        <td><a href="@Url.Action("Details", "Departments", new { id = department.DepartmentCode })" class="fw-bold">@department.DepartmentCode</a></td>
+                                        <td>@department.DepartmentId</td>
+                                        <td>@department.DepartmentName</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(department.DepartmentHd) && departmentHeadNames.ContainsKey(department.DepartmentHd))
+                                            {
+                                                <div class="font-weight-bold">@departmentHeadNames[department.DepartmentHd]</div>
+                                                @if (!string.IsNullOrEmpty(departmentHeadDesignations[department.DepartmentHd]))
+                                                {
+                                                    <span class="badge bg-primary">@departmentHeadDesignations[department.DepartmentHd]</span>
+                                                }
+                                                <small class="d-block text-muted mt-1">(@department.DepartmentHd)</small>
+                                            }
+                                            else if (!string.IsNullOrEmpty(department.DepartmentHd))
+                                            {
+                                                <span>@department.DepartmentHd</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">Not assigned</span>
+                                            }
+                                        </td>
+                                        <td>@(string.IsNullOrEmpty(department.Emailaddress) ? "-" : department.Emailaddress)</td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <a href="@Url.Action("Details", "Departments", new { id = department.DepartmentCode })" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                                                    <i class="mdi mdi-eye mdi-24px text-warning"></i>
+                                                </a>
+                                                <a href="@Url.Action("Edit", "Departments", new { id = department.DepartmentCode })" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
+                                                    <i class="mdi mdi-pencil mdi-24px text-primary"></i>
+                                                </a>
+                                                <a href="@Url.Action("Delete", "Departments", new { id = department.DepartmentCode })" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
+                                                    <i class="mdi mdi-trash-can mdi-24px text-danger"></i>
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="7" class="text-center">
+                                        @if (!string.IsNullOrEmpty(searchTerm))
+                                        {
+                                            <div class="p-3">
+                                                <div class="text-center">
+                                                    <i class="ri-search-line display-5 text-muted"></i>
+                                                    <h5 class="mt-2">No results found for "@searchTerm"</h5>
+                                                    <p class="text-muted">Try adjusting your search criteria</p>
+                                                </div>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="p-3">No departments found.</div>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                
+                <!-- Pagination -->
+                @if (pagination.TotalItems > pagination.ItemsPerPage)
+                {
+                    <div class="d-flex justify-content-end mt-3">
+                        <nav aria-label="Page navigation">
+                            <ul class="pagination">
+                                @if (pagination.CurrentPage > 1)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="First">
+                                            <span aria-hidden="true">&laquo;&laquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage - 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Previous">
+                                            <span aria-hidden="true">&laquo;</span>
+                                        </a>
+                                    </li>
+                                }
+
+                                @{
+                                    int totalPages = (int)Math.Ceiling((double)pagination.TotalItems / pagination.ItemsPerPage);
+                                    int startPage = Math.Max(1, pagination.CurrentPage - 2);
+                                    int endPage = Math.Min(totalPages, startPage + 4);
+                                    startPage = Math.Max(1, endPage - 4);
+                                }
+
+                                @for (int i = startPage; i <= endPage; i++)
+                                {
+                                    <li class="page-item @(i == pagination.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = i, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })">@i</a>
+                                    </li>
+                                }
+
+                                @if (pagination.CurrentPage < totalPages)
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage + 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Next">
+                                            <span aria-hidden="true">&raquo;</span>
+                                        </a>
+                                    </li>
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = totalPages, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm })" aria-label="Last">
+                                            <span aria-hidden="true">&raquo;&raquo;</span>
+                                        </a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize tooltips
+            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+                return new bootstrap.Tooltip(tooltipTriggerEl)
+            });
+            
+            // Make rows clickable
+            $(".clickable-row").click(function(e) {
+                // Don't navigate if clicking on a link or button
+                if (!$(e.target).is('a') && !$(e.target).is('button') && 
+                    !$(e.target).parent().is('a') && !$(e.target).parent().is('button') &&
+                    !$(e.target).hasClass('mdi') && !$(e.target).parent().hasClass('mdi')) {
+                    window.location = $(this).data("href");
+                }
+            });
+            
+            // Add hover effect to clickable rows
+            $(".clickable-row").hover(
+                function() {
+                    $(this).addClass('table-hover-custom');
+                },
+                function() {
+                    $(this).removeClass('table-hover-custom');
+                }
+            );
+        });
+    </script>
+    
+    <style>
+        .clickable-row {
+            cursor: pointer;
+        }
+        
+        .table-hover-custom {
+            background-color: rgba(0, 123, 255, 0.05) !important;
+        }
+        
+        .badge {
+            font-size: 85%;
+            font-weight: 500;
+            padding: 0.35em 0.65em;
+        }
+    </style>
+}
