@@ -162,14 +162,23 @@ namespace MRIV.Controllers
                     (e.Designation != null && e.Designation.ToLower().Contains(searchTerm)) ||
                     (e.EmailAddress != null && e.EmailAddress.ToLower().Contains(searchTerm)));
             }
-            
-            // Get total count for pagination after filtering - use optimized count query
+
+            // Get total count for pagination after filtering
             var totalEmployees = await employeesQuery.CountAsync();
-                
+
             // Apply sorting
             employeesQuery = ApplySorting(employeesQuery, sortField, sortOrder);
-            
-            // Apply pagination - only select needed fields for the list view to optimize query
+
+            // Expose filter/search values for use in pagination and sort links
+            ViewBag.DepartmentFilter = filters.ContainsKey("Department") ? filters["Department"] : string.Empty;
+            ViewBag.StationFilter = filters.ContainsKey("Station") ? filters["Station"] : string.Empty;
+            ViewBag.RoleFilter = filters.ContainsKey("Role") ? filters["Role"] : string.Empty;
+            ViewBag.DesignationFilter = filters.ContainsKey("Designation") ? filters["Designation"] : string.Empty;
+            ViewBag.SearchTerm = searchTerm;
+            ViewBag.SortField = sortField;
+            ViewBag.SortOrder = sortOrder;
+
+            // Apply pagination
             var employees = await employeesQuery
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
@@ -660,6 +669,12 @@ namespace MRIV.Controllers
                 return NotFound();
             }
             
+            return await PrepareEditView(employee);
+        }
+        
+        // Helper method to prepare Edit view with all needed data
+        private async Task<IActionResult> PrepareEditView(EmployeeBkp employee)
+        {
             // Get departments for dropdown
             var departments = await _ktdaContext.Departments
                 .OrderBy(d => d.DepartmentName)
@@ -678,11 +693,41 @@ namespace MRIV.Controllers
                 .OrderBy(r => r)
                 .ToListAsync();
                 
-            // Get employees for supervisor and HOD dropdowns (excluding current employee)
-            var employees = await _ktdaContext.EmployeeBkps
-                .Where(e => e.EmpisCurrActive == 0 && e.PayrollNo != id)
-                .OrderBy(e => e.Fullname)
-                .ToListAsync();
+            // Get employees for supervisor and HOD dropdowns filtered by department and station if available
+            var employeesQuery = _ktdaContext.EmployeeBkps
+                .Where(e => e.EmpisCurrActive == 0 && e.PayrollNo != employee.PayrollNo);
+                
+            // Apply department filter if available
+            if (!string.IsNullOrEmpty(employee.Department))
+            {
+                employeesQuery = employeesQuery.Where(e => e.Department == employee.Department);
+            }
+            
+            // Apply station filter if available
+            if (!string.IsNullOrEmpty(employee.Station))
+            {
+                // Handle special case for HQ
+                if (employee.Station.Equals("HQ", StringComparison.OrdinalIgnoreCase))
+                {
+                    employeesQuery = employeesQuery.Where(e => e.Station == "HQ" || e.Station.Contains("Head"));
+                }
+                else
+                {
+                    // Try to match station ID with or without leading zeros
+                    int stationIdNumber;
+                    if (int.TryParse(employee.Station, out stationIdNumber))
+                    {
+                        employeesQuery = employeesQuery.Where(e => e.Station == employee.Station || 
+                                                    e.Station == stationIdNumber.ToString().PadLeft(3, '0'));
+                    }
+                    else
+                    {
+                        employeesQuery = employeesQuery.Where(e => e.Station == employee.Station);
+                    }
+                }
+            }
+            
+            var employees = await employeesQuery.OrderBy(e => e.Fullname).ToListAsync();
                 
             ViewBag.Departments = departments;
             ViewBag.Stations = stations;
@@ -729,36 +774,7 @@ namespace MRIV.Controllers
             }
             
             // If we got this far, something failed, redisplay form
-            // Get departments for dropdown
-            var departments = await _ktdaContext.Departments
-                .OrderBy(d => d.DepartmentName)
-                .ToListAsync();
-                
-            // Get stations for dropdown
-            var stations = await _ktdaContext.Stations
-                .OrderBy(s => s.StationName)
-                .ToListAsync();
-                
-            // Get roles for dropdown
-            var roles = await _ktdaContext.EmployeeBkps
-                .Where(e => !string.IsNullOrEmpty(e.Role))
-                .Select(e => e.Role)
-                .Distinct()
-                .OrderBy(r => r)
-                .ToListAsync();
-                
-            // Get employees for supervisor and HOD dropdowns (excluding current employee)
-            var employees = await _ktdaContext.EmployeeBkps
-                .Where(e => e.EmpisCurrActive == 0 && e.PayrollNo != id)
-                .OrderBy(e => e.Fullname)
-                .ToListAsync();
-                
-            ViewBag.Departments = departments;
-            ViewBag.Stations = stations;
-            ViewBag.Roles = roles;
-            ViewBag.Employees = employees;
-            
-            return View(employee);
+            return await PrepareEditView(employee);
         }
 
         // GET: Employees/Delete/5

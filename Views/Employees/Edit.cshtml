@@ -15,7 +15,7 @@
                 <div class="d-flex align-items-center">
                     <h5 class="card-title mb-0 flex-grow-1">Edit Employee</h5>
                     <div class="flex-shrink-0">
-                        <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
+                        <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary  d-flex align-items-center">
                             <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
                         </a>
                     </div>
@@ -118,7 +118,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label asp-for="Department" class="form-label">Department</label>
-                                        <select asp-for="Department" class="form-select">
+                                        <select asp-for="Department" class="formcontrol2">
                                             <option value="">-- Select Department --</option>
                                             @foreach (var dept in departments)
                                             {
@@ -131,8 +131,16 @@
                                     </div>
                                     <div class="mb-3">
                                         <label asp-for="Station" class="form-label">Station</label>
-                                        <select asp-for="Station" class="form-select">
+                                        <select asp-for="Station" class="formcontrol2">
                                             <option value="">-- Select Station --</option>
+                                            @if (Model.Station == "HQ")
+                                            {
+                                                <option value="HQ" selected="selected">Head Office (HQ)</option>
+                                            }
+                                            else
+                                            {
+                                                <option value="HQ">Head Office (HQ)</option>
+                                            }
                                             @foreach (var station in stations)
                                             {
                                                 <option value="@station.StationId" selected="@(Model.Station == station.StationId.ToString() ? "selected" : null)">
@@ -144,7 +152,7 @@
                                     </div>
                                     <div class="mb-3">
                                         <label asp-for="Role" class="form-label">Role</label>
-                                        <select asp-for="Role" class="form-select">
+                                        <select asp-for="Role" class="formcontrol2">
                                             <option value="">-- Select Role --</option>
                                             @foreach (var role in roles)
                                             {
@@ -205,7 +213,7 @@
                                     <div class="row">
                                         <div class="col-md-6 mb-3">
                                             <label asp-for="Supervisor" class="form-label">Supervisor</label>
-                                            <select asp-for="Supervisor" class="form-select">
+                                            <select asp-for="Supervisor" class="formcontrol2">
                                                 <option value="">-- Select Supervisor --</option>
                                                 @foreach (var emp in employees.OrderBy(e => e.Fullname))
                                                 {
@@ -218,7 +226,7 @@
                                         </div>
                                         <div class="col-md-6 mb-3">
                                             <label asp-for="Hod" class="form-label">Head of Department</label>
-                                            <select asp-for="Hod" class="form-select">
+                                            <select asp-for="Hod" class="formcontrol2">
                                                 <option value="">-- Select HOD --</option>
                                                 @foreach (var emp in employees.OrderBy(e => e.Fullname))
                                                 {
@@ -237,7 +245,7 @@
                     
                     <div class="d-flex justify-content-end gap-2 mt-4">
                         <a asp-action="Index" class="btn btn-light">Cancel</a>
-                        <button type="submit" class="btn btn-success">Save Changes</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -257,6 +265,78 @@
                     placeholder: "-- Select --",
                     allowClear: true
                 });
+            }
+            
+            // Function to filter employees by department and station
+            function filterEmployees() {
+                var departmentId = $('#Department').val();
+                var stationId = $('#Station').val();
+                
+                // Only proceed if at least one filter is selected
+                if (departmentId || stationId) {
+                    console.log('Filtering employees by department:', departmentId, 'and station:', stationId);
+                    
+                    // Show loading indicator
+                    $('#Supervisor, #Hod').html('<option value="">Loading...</option>');
+                    
+                    // Make AJAX call to get filtered employees
+                    $.ajax({
+                        url: '@Url.Action("GetEmployeesByDepartment", "Employees")',
+                        type: 'GET',
+                        data: { departmentId: departmentId, stationId: stationId },
+                        success: function(data) {
+                            console.log('Received', data.length, 'employees');
+                            
+                            // Store current selections
+                            var currentSupervisor = $('#Supervisor').val();
+                            var currentHod = $('#Hod').val();
+                            
+                            // Clear and rebuild dropdowns
+                            $('#Supervisor, #Hod').empty();
+                            $('#Supervisor, #Hod').append('<option value="">-- Select --</option>');
+                            
+                            // Add employees to dropdowns
+                            $.each(data, function(i, emp) {
+                                var optionText = emp.fullname + ' - ' + 
+                                    (emp.designation || 'No Designation') + 
+                                    ' (' + emp.payrollNo + ')';
+                                    
+                                // Add to Supervisor dropdown
+                                $('#Supervisor').append(
+                                    $('<option></option>')
+                                        .attr('value', emp.payrollNo)
+                                        .text(optionText)
+                                        .prop('selected', emp.payrollNo === currentSupervisor)
+                                );
+                                
+                                // Add to HOD dropdown
+                                $('#Hod').append(
+                                    $('<option></option>')
+                                        .attr('value', emp.payrollNo)
+                                        .text(optionText)
+                                        .prop('selected', emp.payrollNo === currentHod)
+                                );
+                            });
+                            
+                            // Refresh select2 to show changes
+                            if ($.fn.select2) {
+                                $('#Supervisor, #Hod').trigger('change');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('Error fetching employees:', error);
+                            alert('Error loading employees. Please try again.');
+                        }
+                    });
+                }
+            }
+            
+            // Trigger filtering when department or station changes
+            $('#Department, #Station').change(filterEmployees);
+            
+            // Initial filtering if both department and station are already selected
+            if ($('#Department').val() && $('#Station').val()) {
+                filterEmployees();
             }
         });
     </script>

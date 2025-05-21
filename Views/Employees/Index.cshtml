@@ -15,10 +15,10 @@
     var searchTerm = ViewBag.SearchTerm as string;
     
     // Get filter values from query string
-    var departmentFilter = Context.Request.Query["Department"].ToString();
-    var stationFilter = Context.Request.Query["Station"].ToString();
-    var roleFilter = Context.Request.Query["Role"].ToString();
-    var designationFilter = Context.Request.Query["Designation"].ToString();
+    var departmentFilter = ViewBag.DepartmentFilter as string ?? Context.Request.Query["Department"].ToString();
+    var stationFilter = ViewBag.StationFilter as string ?? Context.Request.Query["Station"].ToString();
+    var roleFilter = ViewBag.RoleFilter as string ?? Context.Request.Query["Role"].ToString();
+    var designationFilter = ViewBag.DesignationFilter as string ?? Context.Request.Query["Designation"].ToString();
     
     // Helper function to generate sort URL
     Func<string, string> GetSortUrl = (string field) => {
@@ -27,9 +27,14 @@
             page = pagination.CurrentPage, 
             sortField = field, 
             sortOrder = newSortOrder, 
-            searchTerm = searchTerm
+            searchTerm = ViewBag.SearchTerm,
+            Department = ViewBag.DepartmentFilter,
+            Station = ViewBag.StationFilter,
+            Role = ViewBag.RoleFilter,
+            Designation = ViewBag.DesignationFilter
         });
     };
+
     
     // Helper function to get sort icon
     Func<string, string> GetSortIcon = (string field) => {
@@ -214,12 +219,12 @@
                                 @if (pagination.CurrentPage > 1)
                                 {
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm, departmentFilter = departmentFilter, stationFilter = stationFilter, roleFilter = roleFilter })" aria-label="First">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = ViewBag.SearchTerm, Department = ViewBag.DepartmentFilter, Station = ViewBag.StationFilter, Role = ViewBag.RoleFilter, Designation = ViewBag.DesignationFilter })" aria-label="First">
                                             <span aria-hidden="true">&laquo;&laquo;</span>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage - 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm, departmentFilter = departmentFilter, stationFilter = stationFilter, roleFilter = roleFilter })" aria-label="Previous">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage - 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = ViewBag.SearchTerm, Department = ViewBag.DepartmentFilter, Station = ViewBag.StationFilter, Role = ViewBag.RoleFilter, Designation = ViewBag.DesignationFilter })" aria-label="Previous">
                                             <span aria-hidden="true">&laquo;</span>
                                         </a>
                                     </li>
@@ -235,19 +240,19 @@
                                 @for (int i = startPage; i <= endPage; i++)
                                 {
                                     <li class="page-item @(i == pagination.CurrentPage ? "active" : "")">
-                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = i, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm, departmentFilter = departmentFilter, stationFilter = stationFilter, roleFilter = roleFilter })">@i</a>
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = i, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = ViewBag.SearchTerm, Department = ViewBag.DepartmentFilter, Station = ViewBag.StationFilter, Role = ViewBag.RoleFilter, Designation = ViewBag.DesignationFilter })">@i</a>
                                     </li>
                                 }
 
                                 @if (pagination.CurrentPage < totalPages)
                                 {
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage + 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm, departmentFilter = departmentFilter, stationFilter = stationFilter, roleFilter = roleFilter })" aria-label="Next">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = pagination.CurrentPage + 1, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = ViewBag.SearchTerm, Department = ViewBag.DepartmentFilter, Station = ViewBag.StationFilter, Role = ViewBag.RoleFilter, Designation = ViewBag.DesignationFilter })" aria-label="Next">
                                             <span aria-hidden="true">&raquo;</span>
                                         </a>
                                     </li>
                                     <li class="page-item">
-                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = totalPages, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = searchTerm, departmentFilter = departmentFilter, stationFilter = stationFilter, roleFilter = roleFilter })" aria-label="Last">
+                                        <a class="page-link" href="@Url.Action(pagination.Action, pagination.Controller, new { page = totalPages, sortField = currentSortField, sortOrder = currentSortOrder, searchTerm = ViewBag.SearchTerm, Department = ViewBag.DepartmentFilter, Station = ViewBag.StationFilter, Role = ViewBag.RoleFilter, Designation = ViewBag.DesignationFilter })" aria-label="Last">
                                             <span aria-hidden="true">&raquo;&raquo;</span>
                                         </a>
                                     </li>
