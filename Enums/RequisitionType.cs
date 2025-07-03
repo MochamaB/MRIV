@@ -4,25 +4,25 @@ namespace MRIV.Enums
 {
     public enum RequisitionType
     {
-        [Description("New Purchase")]
+        [Description("New Purchase and Transfer")]
         NewPurchase = 1,
 
         [Description("Transfer")]
         Transfer = 2,
 
-        [Description("Inter Factory")]
+        [Description("Inter Factory Transfer")]
         InterFactory = 3,
 
-        [Description("Maintenance/Repair")]
+        [Description("Send For Maintenance/Repair")]
         Maintenance = 4,
 
-        [Description("Return")]
+        [Description("Return To ICT")]
         Return = 5,
 
         [Description("Disposal")]
         Disposal = 6,
 
-        [Description("Loan/Borrow")]
+        [Description("Loan Transfer")]
         Loan = 7,
 
         [Description("Temporary Allocation")]

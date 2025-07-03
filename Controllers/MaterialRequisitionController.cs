@@ -484,16 +484,16 @@ namespace MRIV.Controllers
             if (requisitionItems == null || !requisitionItems.Any())
             {
                 requisitionItems = new List<RequisitionItem>
-        {
-            new RequisitionItem
-            {
-                Material = new Material(),
-                Status = RequisitionItemStatus.PendingApproval,
-                Condition = RequisitionItemCondition.GoodCondition,
-                Quantity = 1,
-                SaveToInventory = false
-            }
-        };
+                {
+                    new RequisitionItem
+                    {
+                        Material = new Material(),
+                        Status = RequisitionItemStatus.PendingApproval,
+                      //  Condition = RequisitionItemCondition.GoodCondition,
+                        Quantity = 1,
+                        SaveToInventory = false
+                    }
+                };
 
                 // Save to session
                 HttpContext.Session.SetObject("WizardRequisitionItems", requisitionItems);
@@ -1035,43 +1035,65 @@ namespace MRIV.Controllers
                         {
                             if (item.MaterialId.HasValue)
                             {
-                                // Create initial MaterialAssignment for the material
-                                var materialAssignment = new MaterialAssignment
-                                {
-                                    MaterialId = item.MaterialId.Value,
-                                    PayrollNo = requisition.PayrollNo,
-                                    AssignmentDate = DateTime.UtcNow,
-                                    StationCategory = requisition.IssueStationCategory,
-                                    StationId = requisition.IssueStationId,
-                                    DepartmentId = requisition.DepartmentId,
-                                    AssignmentType = requisition.RequisitionType,
-                                    RequisitionId = requisition.Id,
-                                    AssignedByPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                    IsActive = true
-                                };
-                                _context.MaterialAssignments.Add(materialAssignment);
+                                // Get the current active assignment for this material
+                                var activeAssignment = await _context.MaterialAssignments
+                                    .Where(ma => ma.MaterialId == item.MaterialId.Value && ma.IsActive)
+                                    .OrderByDescending(ma => ma.AssignmentDate)
+                                    .FirstOrDefaultAsync();
 
-                                // Save to get the assignment ID
-                                await _context.SaveChangesAsync();
+                                var loggedInPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
 
-                                // Now create the condition record with valid IDs
-                                var materialCondition = new MaterialCondition
+                                // Only create a new assignment and condition if not already assigned to the logged-in user
+                                if (activeAssignment == null || activeAssignment.PayrollNo != loggedInPayrollNo)
                                 {
-                                    MaterialId = item.MaterialId.Value,
-                                    RequisitionId = requisition.Id,
-                                    RequisitionItemId = item.Id, // Now this ID exists in the database
-                                    MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
-                                    ConditionCheckType = ConditionCheckType.Initial,
-                                    Stage = "Creation",
-                                    Condition = Condition.GoodCondition,
-                                    FunctionalStatus = FunctionalStatus.FullyFunctional,
-                                    CosmeticStatus = CosmeticStatus.Excellent,
-                                    InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
-                                    InspectionDate = DateTime.UtcNow,
-                                    Notes = "Initial condition at creation"
-                                };
-                                _context.MaterialConditions.Add(materialCondition);
-                                await _context.SaveChangesAsync();
+                                    // Deactivate the previous assignment if it exists
+                                    if (activeAssignment != null)
+                                    {
+                                        activeAssignment.IsActive = false;
+                                        activeAssignment.ReturnDate = DateTime.UtcNow;
+                                        _context.MaterialAssignments.Update(activeAssignment);
+                                        await _context.SaveChangesAsync();
+                                    }
+
+                                    // Create new assignment to the logged-in user
+                                    var materialAssignment = new MaterialAssignment
+                                    {
+                                        MaterialId = item.MaterialId.Value,
+                                        PayrollNo = loggedInPayrollNo,
+                                        AssignmentDate = DateTime.UtcNow,
+                                        StationCategory = requisition.IssueStationCategory,
+                                        StationId = requisition.IssueStationId,
+                                        DepartmentId = requisition.DepartmentId,
+                                        AssignmentType = requisition.RequisitionType,
+                                        RequisitionId = requisition.Id,
+                                        AssignedByPayrollNo = loggedInPayrollNo,
+                                        IsActive = true
+                                    };
+                                    _context.MaterialAssignments.Add(materialAssignment);
+                                    await _context.SaveChangesAsync();
+
+
+
+                                    var condition = (Condition)item.Condition;
+                                    // Now create the condition record with valid IDs
+                                    var materialCondition = new MaterialCondition
+                                    {
+                                        MaterialId = item.MaterialId.Value,
+                                        RequisitionId = requisition.Id,
+                                        RequisitionItemId = item.Id, // Now this ID exists in the database
+                                        MaterialAssignmentId = materialAssignment.Id, // Use the created assignment ID
+                                        ConditionCheckType = ConditionCheckType.Transfer,
+                                        Stage = "Transfer Creation",
+                                        Condition = (Condition?)item.Condition, // Inherit the condition of the requisition item
+                                        FunctionalStatus = condition.GetFunctionalStatus(), //EnumExtension for FunctionalStatus
+                                        CosmeticStatus = condition.GetCosmeticStatus(),     //EnumExtension for CosmeticStatus
+                                        InspectedBy = HttpContext.Session.GetString("EmployeePayrollNo"),
+                                        InspectionDate = DateTime.UtcNow,
+                                        Notes = "Initial condition at creation"
+                                    };
+                                    _context.MaterialConditions.Add(materialCondition);
+                                    await _context.SaveChangesAsync();
+                                }
                             }
                         }
 

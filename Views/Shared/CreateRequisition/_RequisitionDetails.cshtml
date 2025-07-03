@@ -1,7 +1,10 @@
+@using MRIV.Enums
+@using MRIV.Helpers 
 @{
     ViewData["Title"] = "Select Ticket";
     var currentStep = ViewBag.CurrentStep as string;
     @model MRIV.ViewModels.MaterialRequisitionWizardViewModel
+
 
 }
 
@@ -67,22 +70,10 @@
             </div>
             <div class="form-group">
                 <label class="control-label">Requisition Type</label><span class="requiredlabel">*</span>
-                <select asp-for="Requisition.RequisitionType" class="formcontrol2">
-                    @if (Model.Requisition.TicketId == 0)
-                    {
-                        <option value="@MRIV.Enums.RequisitionType.InterFactory">Inter Factory</option>
-                    }
-                    else
-                    {
-                      <option value="@MRIV.Enums.RequisitionType.Transfer">Transfer</option>
-                        <option value="@MRIV.Enums.RequisitionType.NewPurchase">New Purchase</option>
-                        <option value="@MRIV.Enums.RequisitionType.Maintenance">Maintenance/Repair</option>
-                        <option value="@MRIV.Enums.RequisitionType.Return">Return</option>
-                        <option value="@MRIV.Enums.RequisitionType.Disposal">Disposal</option>
-                        <option value="@MRIV.Enums.RequisitionType.Loan">Loan/Borrow</option>
-                        <option value="@MRIV.Enums.RequisitionType.TemporaryAllocation"> Temporary Allocation</option>
-                        <option value="@MRIV.Enums.RequisitionType.Other">Other</option>
-                    }
+                <select asp-for="Requisition.RequisitionType"
+                        asp-items="MRIV.Extensions.EnumExtensions.GetFilteredRequisitionTypes(Model.Requisition.TicketId)"
+                        class="formcontrol2">
+                    <option value="">Select Requisition Type</option>
                 </select>
                 <span asp-validation-for="Requisition.RequisitionType" class="text-danger"></span>
             </div>
@@ -146,8 +137,8 @@
                 </select>
                 <span asp-validation-for="Requisition.DeliveryStationCategory" class="text-danger"></span>
             </div>
-            <div class="form-group mb-3">
-                <label class="control-label">Delivery Station</label><span class="requiredlabel">*</span>
+            <div class="form-group mb-3" id="deliveryStationGroup">
+                <label class="control-label" id="deliveryStationLabel">Delivery Station</label><span class="requiredlabel">*</span>
                 <select asp-for="Requisition.DeliveryStationId" id="deliveryStationId" class="formcontrol2">
                     @if (Model.Requisition.DeliveryStationId != 0)
                     {
@@ -168,7 +159,6 @@
                 </select>
                 <span asp-validation-for="Requisition.DeliveryDepartmentId" class="text-danger"></span>
             </div>
-           
         </div>
         <div class="col-md-8">
             <div class="form-group">
@@ -220,3 +210,42 @@
         <partial name="_WizardNavigation" />
         </div>
 </form>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const deliveryCategory = document.getElementById('deliveryStationCategory');
+        const deliveryStationGroup = document.getElementById('deliveryStationGroup');
+        const deliveryStationLabel = document.getElementById('deliveryStationLabel');
+        const deliveryStationId = document.getElementById('deliveryStationId');
+        const deliveryDepartmentId = document.getElementById('deliveryDepartmentId');
+        const issueDepartmentId = document.getElementById('issueDepartmentId');
+        // Save original station dropdown HTML for restoration
+        const originalStationDropdown = deliveryStationId.innerHTML;
+        deliveryCategory.addEventListener('change', function () {
+            if (this.value && this.options[this.selectedIndex].text.toLowerCase() === 'vendor') {
+                // Change label and dropdown to vendor
+                deliveryStationLabel.textContent = 'Select Vendor';
+                deliveryStationId.innerHTML = '';
+                // Add vendor options from model (rendered as JS array)
+                const vendors = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Vendors.Select(v => new { id = v.VendorID, name = v.Name })));
+                let vendorOptions = '<option value="">Select Vendor</option>';
+                vendors.forEach(function(v) {
+                    vendorOptions += `<option value="${v.id}">${v.name}</option>`;
+                });
+                deliveryStationId.innerHTML = vendorOptions;
+                // Set department to match issue department and disable
+                if (issueDepartmentId && deliveryDepartmentId) {
+                    deliveryDepartmentId.value = issueDepartmentId.value;
+                    deliveryDepartmentId.setAttribute('disabled', 'disabled');
+                }
+            } else {
+                // Restore label and dropdown
+                deliveryStationLabel.textContent = 'Delivery Station';
+                deliveryStationId.innerHTML = originalStationDropdown;
+                if (deliveryDepartmentId) {
+                    deliveryDepartmentId.removeAttribute('disabled');
+                }
+            }
+        });
+    });
+</script>

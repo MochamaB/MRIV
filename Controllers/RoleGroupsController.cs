@@ -106,13 +106,15 @@ namespace MRIV.Controllers
         // POST: RoleGroups/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Name,Description,HasFullDepartmentAccess,HasFullStationAccess")] RoleGroup roleGroup)
+        public async Task<IActionResult> Create(int id, [Bind("Id,Name,Description,CanAccessAcrossDepartments,CanAccessAcrossStations,IsActive")] RoleGroup roleGroup)
         {
             if (ModelState.IsValid)
             {
                 roleGroup.CreatedAt = DateTime.Now;
                 roleGroup.UpdatedAt = DateTime.Now;
-                roleGroup.IsActive = true;
+                roleGroup.CanAccessAcrossDepartments = roleGroup.CanAccessAcrossDepartments;
+                roleGroup.CanAccessAcrossStations = roleGroup.CanAccessAcrossStations;
+                roleGroup.IsActive = roleGroup.IsActive;
 
                 _context.Add(roleGroup);
                 await _context.SaveChangesAsync();
@@ -140,7 +142,7 @@ namespace MRIV.Controllers
         // POST: RoleGroups/Edit/{id}
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,HasFullDepartmentAccess,HasFullStationAccess,IsActive")] RoleGroup roleGroup)
+     public async Task<IActionResult> Edit(int id, [Bind("Id,Name,Description,CanAccessAcrossDepartments,CanAccessAcrossStations,IsActive")] RoleGroup roleGroup)
         {
             if (id != roleGroup.Id)
             {
@@ -182,7 +184,6 @@ namespace MRIV.Controllers
             }
             return View("~/Views/Roles/EditRoleGroup.cshtml", roleGroup);
         }
-
         // GET: RoleGroups/Delete/{id}
         public async Task<IActionResult> Delete(int? id)
         {
@@ -220,24 +221,39 @@ namespace MRIV.Controllers
         }
 
         // GET: RoleGroups/AddMember/{roleGroupId}
-        public async Task<IActionResult> AddMember(int? id)
+        public async Task<IActionResult> AddMember(int id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
             var roleGroup = await _context.RoleGroups.FindAsync(id);
             if (roleGroup == null)
             {
                 return NotFound();
             }
 
+            ViewBag.RoleGroup = roleGroup;
+
             var viewModel = new AddRoleGroupMemberViewModel
             {
                 RoleGroupId = roleGroup.Id,
                 RoleGroupName = roleGroup.Name
             };
+
+            // Add empty first items to dropdowns
+            viewModel.Stations.Add(new SelectListItem { Value = "", Text = "-- Select Station --" });
+            viewModel.Departments.Add(new SelectListItem { Value = "", Text = "-- Select Department --" });
+            viewModel.Roles.Add(new SelectListItem { Value = "", Text = "-- Select Role --" });
+            
+            // Get roles for dropdown
+            var roleOptions = await _ktdaContext.EmployeeBkps
+                .Where(e => !string.IsNullOrEmpty(e.Role))
+                .Select(e => e.Role)
+                .Distinct()
+                .OrderBy(r => r)
+                .ToListAsync();
+                
+            foreach (var role in roleOptions)
+            {
+                viewModel.Roles.Add(new SelectListItem { Value = role, Text = role });
+            }
 
             return View("~/Views/Roles/AddMember.cshtml", viewModel);
         }

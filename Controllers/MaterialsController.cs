@@ -46,7 +46,7 @@ namespace MRIV.Controllers
         }
 
         // GET: Materials
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string searchTerm = "")
         {
             // Pagination validation
             page = Math.Max(1, page);
@@ -54,20 +54,44 @@ namespace MRIV.Controllers
 
             // Get filters from query string
             var filters = Request.Query
-                .Where(k => k.Key != "page" && k.Key != "pageSize")
+                .Where(k => k.Key != "page" && k.Key != "pageSize" && k.Key != "searchTerm")
                 .ToDictionary(k => k.Key, v => v.Value.ToString());
 
             // Base query
             var query = _context.Materials
                 .Include(m => m.MaterialCategory)
-                 .Include(m => m.MaterialSubcategory)
+                .Include(m => m.MaterialSubcategory)
                 .Include(m => m.MaterialAssignments.Where(ma => ma.IsActive))
                     .ThenInclude(ma => ma.MaterialConditions.OrderByDescending(mc => mc.InspectionDate))
                 .AsQueryable();
 
             // Apply filters
             query = query.ApplyFilters(filters);
+            
+            // Apply search filter if provided
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                searchTerm = searchTerm.Trim().ToLower();
+                query = query.Where(m => 
+                    (m.Name != null && m.Name.ToLower().Contains(searchTerm)) ||
+                    (m.Code != null && m.Code.ToLower().Contains(searchTerm)) ||
+                    (m.Description != null && m.Description.ToLower().Contains(searchTerm)) ||
+                    (m.MaterialCategory != null && m.MaterialCategory.Name != null && 
+                     m.MaterialCategory.Name.ToLower().Contains(searchTerm)) ||
+                    (m.MaterialSubcategory != null && m.MaterialSubcategory.Name != null && 
+                     m.MaterialSubcategory.Name.ToLower().Contains(searchTerm)) ||
+                    (m.Status != null && m.Status.ToString().ToLower().Contains(searchTerm)));
+            }
+            
+            // Get total count for pagination after filtering
             var totalItems = await query.CountAsync();
+            
+            // Set ViewBag values for preserving filters/search in pagination
+            foreach (var filter in filters)
+            {
+                ViewBag[filter.Key + "Filter"] = filter.Value;
+            }
+            ViewBag.SearchTerm = searchTerm;
 
             // Get paginated materials
             var materials = await query
@@ -1037,7 +1061,7 @@ namespace MRIV.Controllers
                         {
                             MaterialId = existingMaterial.Id,
                             MaterialAssignmentId = newAssignment.Id,
-                            ConditionCheckType = ConditionCheckType.Assignment,
+                            ConditionCheckType = ConditionCheckType.Transfer,
                             Stage = "Transfer",
                             Condition = latestCondition.Condition,
                             FunctionalStatus = viewModel.Condition.FunctionalStatus,

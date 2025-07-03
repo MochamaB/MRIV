@@ -40,7 +40,7 @@ namespace MRIV.Controllers
         }
 
         // GET: Requisitions
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string searchTerm = "")
         {
             // Ensure valid pagination parameters
             page = page < 1 ? 1 : page;
@@ -48,7 +48,7 @@ namespace MRIV.Controllers
            
             // Get filter values from request query string
             var filters = new Dictionary<string, string>();
-            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
+            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize" && k != "searchTerm"))
             {
                 // Skip if the value is null or empty
                 if (!string.IsNullOrEmpty(Request.Query[key]))
@@ -63,10 +63,10 @@ namespace MRIV.Controllers
             // Create filter view model with explicit type for the array
             ViewBag.Filters = await query.CreateFiltersAsync(
                 new Expression<Func<Requisition, object>>[] {
-            // Select which properties to create filters for
-            r => r.Status,
-            r => r.IssueStationCategory,
-            r => r.DeliveryStationCategory,
+                    // Select which properties to create filters for
+                    r => r.Status,
+                    r => r.IssueStationCategory,
+                    r => r.DeliveryStationCategory,
                     // Add other properties as needed
                 },
                 filters
@@ -74,9 +74,27 @@ namespace MRIV.Controllers
 
             // Apply filters to query
             query = query.ApplyFilters(filters);
+            
+            // Apply search filter if provided
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                searchTerm = searchTerm.Trim().ToLower();
+                query = query.Where(r => 
+                    (r.TicketId.ToString().Contains(searchTerm)) || 
+                    (r.IssueStationCategory != null && r.IssueStationCategory.ToLower().Contains(searchTerm)) ||
+                    (r.DeliveryStationCategory != null && r.DeliveryStationCategory.ToLower().Contains(searchTerm)) ||
+                    (r.Status != null && r.Status.ToString().ToLower().Contains(searchTerm)));
+            }
           
-            // Get total count for pagination
+            // Get total count for pagination after filtering
             var totalItems = await query.CountAsync();
+
+            // Set ViewBag values for preserving filters/search in pagination
+            foreach (var filter in filters)
+            {
+                ViewBag[filter.Key + "Filter"] = filter.Value;
+            }
+            ViewBag.SearchTerm = searchTerm;
 
             // Apply pagination and ordering
             var requisitions = await query

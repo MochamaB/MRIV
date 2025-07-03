@@ -295,8 +295,18 @@
 
     <!--  Script for the Ticket Search -->
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-           
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll('.search-result-item').forEach(function (item) {
+                item.addEventListener('click', function (e) {
+                    // Prevent clicking the link from triggering twice
+                    if (!e.target.closest('a')) {
+                        const url = this.dataset.url;
+                        if (url) {
+                            window.location = url;
+                        }
+                    }
+                });
+            });
         });
     </script>
 

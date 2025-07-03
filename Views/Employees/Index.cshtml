@@ -1,7 +1,7 @@
 @using MRIV.Enums
 @using MRIV.Helpers
 @using MRIV.ViewModels
-@model IEnumerable<MRIV.Models.EmployeeBkp>
+@model IEnumerable<MRIV.ViewModels.EmployeeViewModel>
 
 @{
     ViewData["Title"] = "Employees";
@@ -124,15 +124,16 @@
                                 int rowNumber = startNumber;
                                 foreach (var employee in Model)
                                 {
-                                    <tr class="clickable-row" data-href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })">
+                                    <tr class="clickable-row @(employee.EmpisCurrActive != 0 ? "text-muted" : "")" data-href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })">
                                         <td>@(rowNumber++)</td>
-                                        <td><a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="fw-bold">@employee.PayrollNo</a></td>
-                                        <td>@employee.Fullname</td>
+                                        <td><a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="fw-bold @(employee.EmpisCurrActive != 0 ? "text-muted" : "")">
+                                        @employee.PayrollNo</a></td>
+                                        <td>@employee.FullName</td>
                                         <td>@(string.IsNullOrEmpty(employee.Designation) ? "-" : employee.Designation)</td>
                                         <td>
-                                            @if (!string.IsNullOrEmpty(employee.Department) && departmentNames.ContainsKey(employee.Department))
+                                            @if (!string.IsNullOrEmpty(employee.Department) && !string.IsNullOrEmpty(employee.DepartmentName))
                                             {
-                                                <div class="font-weight-bold pb-2">@departmentNames[employee.Department]</div>
+                                                <div class="font-weight-bold pb-2">@employee.DepartmentName</div>
                                                 <small class="text-muted">@employee.Department</small>
                                             }
                                             else if (!string.IsNullOrEmpty(employee.Department))
@@ -145,9 +146,9 @@
                                             }
                                         </td>
                                         <td>
-                                            @if (!string.IsNullOrEmpty(employee.Station) && stationNames.ContainsKey(employee.Station))
+                                            @if (!string.IsNullOrEmpty(employee.Station) && !string.IsNullOrEmpty(employee.StationName))
                                             {
-                                                <div class="font-weight-bold pb-2">@stationNames[employee.Station]</div>
+                                                <div class="font-weight-bold pb-2">@employee.StationName</div>
                                                 <small class="text-muted">@employee.Station</small>
                                             }
                                             else if (!string.IsNullOrEmpty(employee.Station))
@@ -162,7 +163,7 @@
                                         <td>
                                             @if (!string.IsNullOrEmpty(employee.Role))
                                             {
-                                                <span class="text-primary">@employee.Role</span>
+                                                <span class="text-primary @(employee.EmpisCurrActive != 0 ? "text-muted" : "")">@employee.Role</span>
                                             }
                                             else
                                             {
@@ -170,16 +171,9 @@
                                             }
                                         </td>
                                         <td>
-                                            <div class="d-flex gap-2">
-                                                <a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
-                                                    <i class="mdi mdi-eye mdi-24px text-warning"></i>
-                                                </a>
-                                                <a href="@Url.Action("Edit", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit">
-                                                    <i class="mdi mdi-pencil mdi-24px text-primary"></i>
-                                                </a>
-                                                <a href="@Url.Action("Delete", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete">
-                                                    <i class="mdi mdi-trash-can mdi-24px text-danger"></i>
-                                                </a>
+                                            <div class="d-flex gap-2 align-items-center">
+                                                <a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="btn btn-sm btn-soft-primary"><i class="mdi mdi-eye-outline"></i></a>
+                                                <a href="@Url.Action("Edit", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="btn btn-sm btn-soft-warning"><i class="mdi mdi-pencil-outline"></i></a>
                                             </div>
                                         </td>
                                     </tr>

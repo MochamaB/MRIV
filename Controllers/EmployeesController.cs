@@ -37,14 +37,15 @@ namespace MRIV.Controllers
         public async Task<IActionResult> Index(int page = 1, string sortField = "Fullname", string sortOrder = "asc", string searchTerm = "")
         {
             // Set page size
-            int pageSize = 20;
+            int pageSize = 50;
             
             // Ensure valid pagination parameters
             page = page < 1 ? 1 : page;
             
-            // Start with base query for employees - only get active employees
+            // Start with base query for employees - include all employees (both active and inactive)
+            // Use AsNoTracking for read-only operations to improve performance
             var employeesQuery = _ktdaContext.EmployeeBkps
-                .Where(e => e.EmpisCurrActive == 0)
+                .AsNoTracking()
                 .AsQueryable();
                 
             // Get filter values from request query string
@@ -58,33 +59,51 @@ namespace MRIV.Controllers
                 }
             }
             
-            // Get department names for filters - use GroupBy to handle potential duplicate keys
+            // Get department names for filters - use AsNoTracking for better performance
             var departmentsList = await _ktdaContext.Departments
+                .AsNoTracking()
                 .Select(d => new { Id = d.DepartmentId.ToString(), Name = d.DepartmentName })
                 .ToListAsync();
             var allDepartments = departmentsList
                 .GroupBy(d => d.Id)
                 .ToDictionary(g => g.Key, g => g.First().Name);
             
-            // Get station names for filters - use GroupBy to handle potential duplicate keys
+            // Get station names for filters - use AsNoTracking for better performance
             var stationsList = await _ktdaContext.Stations
+                .AsNoTracking()
                 .Select(s => new { Id = s.StationId.ToString(), Name = s.StationName })
                 .ToListAsync();
+                
+            // Normalize station names - remove any existing "Head Office" entries to avoid duplicates
+            var headOfficeEntries = stationsList
+                .Where(s => s.Name.Contains("Head Office", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("Headoffice", StringComparison.OrdinalIgnoreCase) ||
+                            s.Name.Contains("HQ", StringComparison.OrdinalIgnoreCase) ||
+                            s.Id == "0" ||
+                            s.Id == "HQ")
+                .ToList();
+                
+            foreach (var entry in headOfficeEntries)
+            {
+                stationsList.Remove(entry);
+            }
+            
             var allStations = stationsList
                 .GroupBy(s => s.Id)
                 .ToDictionary(g => g.Key, g => g.First().Name);
                 
-            // Add HQ option if it doesn't exist
-            if (!allStations.ContainsKey("HQ"))
-            {
-                allStations.Add("HQ", "Head Office (HQ)");
-            }
+            // Add single standardized HQ entry
+            allStations["HQ"] = "Head Office (HQ)";
+            allStations["0"] = "Head Office (HQ)";
             
             // Get distinct station values from employees table to ensure we have the exact format used in the data
+            // Optimize by using Take(1000) to prevent excessive query time on large datasets
             var distinctStations = await employeesQuery
                 .Where(e => !string.IsNullOrEmpty(e.Station))
                 .Select(e => e.Station)
+                .OrderBy(s => s)  // Add explicit ordering before pagination
                 .Distinct()
+                .Take(1000)  // Limit to prevent excessive query time
                 .ToListAsync();
                 
             // Create a more complete station dictionary that includes both formatted and unformatted IDs
@@ -168,15 +187,12 @@ namespace MRIV.Controllers
 
             // Apply sorting
             employeesQuery = ApplySorting(employeesQuery, sortField, sortOrder);
-
-            // Expose filter/search values for use in pagination and sort links
-            ViewBag.DepartmentFilter = filters.ContainsKey("Department") ? filters["Department"] : string.Empty;
-            ViewBag.StationFilter = filters.ContainsKey("Station") ? filters["Station"] : string.Empty;
-            ViewBag.RoleFilter = filters.ContainsKey("Role") ? filters["Role"] : string.Empty;
-            ViewBag.DesignationFilter = filters.ContainsKey("Designation") ? filters["Designation"] : string.Empty;
-            ViewBag.SearchTerm = searchTerm;
-            ViewBag.SortField = sortField;
-            ViewBag.SortOrder = sortOrder;
+            
+            // If no sort field is provided, add a default sort to ensure consistent pagination
+            if (string.IsNullOrEmpty(sortField))
+            {
+                employeesQuery = employeesQuery.OrderBy(e => e.Fullname).ThenBy(e => e.PayrollNo);
+            }
 
             // Apply pagination
             var employees = await employeesQuery
@@ -184,9 +200,20 @@ namespace MRIV.Controllers
                 .Take(pageSize)
                 .ToListAsync();
 
+            // Create query for distinct departments in the filtered employee list (for the filter dropdown)
+            // Optimize by using Take(1000) to prevent excessive query time on large datasets
+            var distinctDepartments = await employeesQuery
+                .Where(e => !string.IsNullOrEmpty(e.Department))
+                .Select(e => e.Department)
+                .OrderBy(d => d)  // Add explicit ordering before pagination
+                .Distinct()
+                .Take(1000)  // Limit to prevent excessive query time
+                .ToListAsync();
+                
             // Get department names for display
             var departmentIds = employees.Where(e => !string.IsNullOrEmpty(e.Department))
                 .Select(e => e.Department)
+                .OrderBy(d => d)  // Add explicit ordering before pagination
                 .Distinct()
                 .ToList();
                 
@@ -275,7 +302,28 @@ namespace MRIV.Controllers
             ViewBag.SortOrder = sortOrder;
             ViewBag.SearchTerm = searchTerm;
 
-            return View(employees);
+            // Create view models for the employees
+            var viewModels = new List<EmployeeViewModel>();
+            foreach (var employee in employees)
+            {
+                viewModels.Add(new EmployeeViewModel
+                {
+                    PayrollNo = employee.PayrollNo,
+                    RollNo = employee.RollNo,
+                    EmployeeId = employee.EmployeId,
+                    FullName = employee.Fullname,
+                    Department = employee.Department,
+                    DepartmentName = departmentNames.ContainsKey(employee.Department) ? departmentNames[employee.Department] : "Unknown",
+                    Station = employee.Station,
+                    StationName = stationNames.ContainsKey(employee.Station) ? stationNames[employee.Station] : "Unknown",
+                    Role = employee.Role,
+                    Designation = employee.Designation,
+                    EmailAddress = employee.EmailAddress,
+                    EmpisCurrActive = (int)employee.EmpisCurrActive
+                });
+            }
+
+            return View(viewModels);
         }
 
         // GET: Employees/Details/5

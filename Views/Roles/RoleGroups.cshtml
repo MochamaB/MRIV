@@ -23,7 +23,7 @@
                             </a>
                             
                             <a href="@Url.Action("Create", "RoleGroups")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
-                                <i class="ri-add-line align-bottom me-1"></i> Create New
+                                <i class="ri-add-line align-bottom me-1"></i> New Role Group
                             </a>
                         </div>
                     </div>
@@ -31,15 +31,15 @@
             </div>
 
             <div class="card-body">
-                <div class="table-responsive">
+                <div class="">
                     <table class="table table-bordered align-middle mb-0">
                         <thead>
                             <tr class="table-light">
                                 <th>#</th>
                                 <th>Name</th>
                                 <th>Description</th>
-                                <th>Full Dept Access</th>
-                                <th>Full Station Access</th>
+                                <th>Access Data Across Stations</th>
+                                <th>Access Data Across Departments</th>
                                 <th>Members</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -55,44 +55,45 @@
                                         <td>@(rowNumber++)</td>
                                         <td>@roleGroup.Name</td>
                                         <td>@(string.IsNullOrEmpty(roleGroup.Description) ? "N/A" : roleGroup.Description)</td>
+                                         <td>
+                                            @if (roleGroup.CanAccessAcrossStations)
+                                            {
+                                                <span class="badge badge-success">Yes</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-danger">No</span>
+                                            }
+                                        </td>
                                         <td>
                                             @if (roleGroup.CanAccessAcrossDepartments)
                                             {
-                                                <span class="badge badge-soft-success">Yes</span>
+                                                <span class="badge badge-success">Yes</span>
                                             }
                                             else
                                             {
-                                                <span class="badge badge-soft-danger">No</span>
+                                                <span class="badge badge-danger">No</span>
                                             }
                                         </td>
-                                        <td>
-                                            @if (roleGroup.CanAccessAcrossStations)
-                                            {
-                                                <span class="badge badge-soft-success">Yes</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge badge-soft-danger">No</span>
-                                            }
-                                        </td>
+                                       
                                         <td>
                                             @if (memberCounts.ContainsKey(roleGroup.Id))
                                             {
-                                                <span class="badge badge-soft-primary">@memberCounts[roleGroup.Id]</span>
+                                                <span class="badge badge-primary">@memberCounts[roleGroup.Id]</span>
                                             }
                                             else
                                             {
-                                                <span class="badge badge-soft-secondary">0</span>
+                                                <span class="badge badge-primary">0</span>
                                             }
                                         </td>
                                         <td>
                                             @if (roleGroup.IsActive)
                                             {
-                                                <span class="badge badge-soft-success">Active</span>
+                                                <span class="badge badge-success">Active</span>
                                             }
                                             else
                                             {
-                                                <span class="badge badge-soft-danger">Inactive</span>
+                                                <span class="badge badge-danger">Inactive</span>
                                             }
                                         </td>
                                         <td>

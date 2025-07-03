@@ -106,17 +106,20 @@ namespace MRIV.Models
         [Description("Initial")]
         Initial = 0,
 
-        [Description("Assignment")]
-        Assignment = 1,
+        [Description("Requisition Transfer")]
+        Transfer = 1,
+
+        [Description("At Dispatch")]
+        AtDispatch = 2,
+
+        [Description("At Receipt")]
+        AtReceipt = 3,
 
         [Description("Periodic")]
-        Periodic = 2,
+        Periodic = 4,
 
-        [Description("Damage")]
-        Damage = 3,
-
-        [Description("Disposal")]
-        Disposal = 4
+        [Description("At Disposal")]
+        AtDisposal = 5
     }
 
     public enum FunctionalStatus
