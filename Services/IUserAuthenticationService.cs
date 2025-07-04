@@ -6,9 +6,9 @@ namespace MRIV.Services
 {
     public interface IUserAuthenticationService
     {
-        Task<bool> AuthenticateAsync(string payrollNo, string password);
+        Task<EmployeeBkp> AuthenticateAsync(string payrollNo, string password);
     }
-    // Authentication service implementation
+
     public class UserAuthenticationService : IUserAuthenticationService
     {
         private readonly KtdaleaveContext _context;
@@ -18,7 +18,7 @@ namespace MRIV.Services
             _context = context;
         }
 
-        public async Task<bool> AuthenticateAsync(string payrollNo, string password)
+        public async Task<EmployeeBkp> AuthenticateAsync(string payrollNo, string password)
         {
             var parameters = new[]
             {
@@ -32,10 +32,11 @@ namespace MRIV.Services
 
             if (result.Count > 0 && result.First().Passer == password)
             {
-                return true;
+                // Return employee data in the same connection context
+                return await _context.EmployeeBkps.SingleOrDefaultAsync(e => e.PayrollNo == payrollNo);
             }
 
-            return false;
+            return null;
         }
     }
 

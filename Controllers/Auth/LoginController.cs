@@ -29,61 +29,47 @@ namespace MRIV.Controllers.Auth
         [HttpPost]
         public async Task<IActionResult> Authenticate(string payrollNo, string password, string returnUrl = null)
         {
-          //  return RedirectToAction("Index", "Summary");
-            // Check if payrollNo or password is null or empty
             if (string.IsNullOrEmpty(payrollNo) || string.IsNullOrEmpty(password))
             {
                 ViewBag.ErrorMessage = "Payroll number and password are required.";
-                ViewBag.ReturnUrl = returnUrl; // Preserve returnUrl on validation error
+                ViewBag.ReturnUrl = returnUrl;
                 return View("~/Views/Auth/Login.cshtml");
             }
 
             Console.WriteLine($"Received payrollNo: {payrollNo}, password: {password}");
-            if (await _authenticationService.AuthenticateAsync(payrollNo, password))
+
+            var employee = await _authenticationService.AuthenticateAsync(payrollNo, password);
+
+            if (employee != null)
             {
-                // Fetch employee details directly using DbContext
-                var employee = await _context.EmployeeBkps.SingleOrDefaultAsync(e => e.PayrollNo == payrollNo);
+                // Store employee information in session
+                HttpContext.Session.SetObject("Employee", employee);
+                HttpContext.Session.SetString("EmployeeName", employee.Fullname);
+                HttpContext.Session.SetString("EmployeePayrollNo", employee.PayrollNo);
+                HttpContext.Session.SetString("EmployeeDepartmentID", employee.Department);
+                HttpContext.Session.SetString("EmployeeRole", employee.Role);
 
-                if (employee != null)
-                {
-                    // Store employee information in session
-                    // Store the whole employee object in session
-                    HttpContext.Session.SetObject("Employee", employee);
-                    HttpContext.Session.SetString("EmployeeName", employee.Fullname);
-                    HttpContext.Session.SetString("EmployeePayrollNo", employee.PayrollNo);
-                    HttpContext.Session.SetString("EmployeeDepartmentID", employee.Department);
-                    HttpContext.Session.SetString("EmployeeRole", employee.Role);
-
-
-                }
-                Console.WriteLine($"ReturnUrl: {returnUrl}"); // Log the returnUrl
-                
-                // Authentication successful
-                // Redirect to authenticated page
+                // Authentication successful - Handle returnUrl logic
                 if (!string.IsNullOrEmpty(returnUrl))
                 {
                     // Decode the URL before redirecting
                     returnUrl = Uri.UnescapeDataString(returnUrl);
                     Console.WriteLine($"Decoded ReturnUrl: {returnUrl}");
                     Console.WriteLine($"Is Local URL: {Url.IsLocalUrl(returnUrl)}");
-                    
+
                     // Only redirect if it's a local URL for security
                     if (Url.IsLocalUrl(returnUrl))
                     {
                         return Redirect(returnUrl);
                     }
                 }
-                
-                // Default redirect if returnUrl is empty or not local
-                Console.WriteLine("Redirecting to Dashboard Index");
+
                 return RedirectToAction("Index", "Dashboard");
             }
             else
             {
-                // Authentication failed
-                // Return login view with error message
                 ViewBag.ErrorMessage = "The payroll number and password do not match";
-                ViewBag.ReturnUrl = returnUrl; // Preserve returnUrl on authentication error
+                ViewBag.ReturnUrl = returnUrl;
                 return View("~/Views/Auth/Login.cshtml");
             }
         }

@@ -11,116 +11,156 @@
     var groupedApprovals = Model.GroupBy(a => a.RequisitionId)
         .OrderByDescending(g => g.Key)
         .ToList();
+
+    var tab = ViewBag.Tab as string ?? "new";
+    var currentPage = ViewBag.CurrentPage != null ? (int)ViewBag.CurrentPage : 1;
+    var pageSize = ViewBag.PageSize != null ? (int)ViewBag.PageSize : 20;
+    var totalItems = ViewBag.TotalItems != null ? (int)ViewBag.TotalItems : 0;
+    int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
 }
+
+<style>
+    .nav-tabs .nav-item .nav-link.active {
+        background: transparent;
+        color: #326408;
+        border-bottom: 3px solid #326408;
+    }
+    .nav-tabs .nav-item .nav-link {
+        font-style: normal;
+        font-weight: 700;
+        font-size: 17px;
+        line-height: 18px;
+        color: #212121;
+        padding: 22px 14px 14px 20px;
+        border: none;
+        font-family: "Manrope", sans-serif;
+        background: transparent;
+    }
+</style>
 
 <div class="row">
     <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
-                <div class="d-flex align-items-center">
-                    <h5 class="card-title mb-0 flex-grow-1"></h5>
-                    <div class="flex-shrink-0">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <div class="search-box">
-                                <input type="text" class="form-control search" placeholder="Search...">
-                                <i class="ri-search-line search-icon"></i>
+        <div class="card" style="padding: 1.5rem;">
+            <div class="card-body">
+                <!-- Nav tabs -->
+                <ul class="nav nav-tabs nav-border-top nav-border-top-primary mb-3" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "new" ? "active" : "")" href="@Url.Action("Index", new { tab = "new" })" role="tab">
+                            <i class="ri-time-line align-middle me-1"></i> New Approvals
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "completed" ? "active" : "")" href="@Url.Action("Index", new { tab = "completed" })" role="tab">
+                            <i class="ri-checkbox-circle-line align-middle me-1"></i> Completed Approvals
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "all" ? "active" : "")" href="@Url.Action("Index", new { tab = "all" })" role="tab">
+                            <i class="ri-list-unordered align-middle me-1"></i> All Approvals
+                        </a>
+                    </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="@tab" role="tabpanel">
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="flex-shrink-0">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <div class="search-box">
+                                        <input type="text" class="form-control search" placeholder="Search...">
+                                        <i class="ri-search-line search-icon"></i>
+                                    </div>
+                                </div>
                             </div>
-
-                            <!-- Filter Toggle Button -->
-                            @await Html.PartialAsync("_FilterToggleButton")
-
-                            <!-- Add other action buttons here -->
-
                         </div>
+                     
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>ReqID</th>
+                                        <th>Step</th>
+                                        <th>Approval Step</th>
+                                        <th>Approver</th>
+                                        <th>Status</th>
+                                        <th>Action</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var group in groupedApprovals)
+                                    {
+                                        var requisitionId = group.Key;
+                                        var approvalSteps = group.OrderBy(a => a.StepNumber).ToList();
+                                        var rowCount = approvalSteps.Count;
+
+                                        for (int i = 0; i < rowCount; i++)
+                                        {
+                                            var item = approvalSteps[i];
+                                            var isLastInGroup = (i == rowCount - 1);
+
+                                            <tr style="@(isLastInGroup ? "border-bottom: 3px solid #b4b6c1;" : "")">
+                                                @if (i == 0)
+                                                {
+                                                    <td rowspan="@rowCount" style="vertical-align: middle; background-color: #f9f9f9; text-align: center; font-weight: bold;">
+                                                        <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@requisitionId">
+                                                            @requisitionId
+                                                        </a>
+                                                    </td>
+                                                }
+                                                <td>@item.StepNumber</td>
+                                                <td>@item.ApprovalStep</td>
+                                                <td>
+                                                    <div>
+                                                        <strong>@item.EmployeeName</strong>
+                                                        @if (!string.IsNullOrEmpty(item.EmployeeDesignation))
+                                                        {
+                                                            <span> - @item.EmployeeDesignation</span>
+                                                        }
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.ApprovalStatus)">
+                                                        @EnumHelper.GetEnumDescription(item.ApprovalStatus)
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if (item.ApprovalStatus == ApprovalStatus.NotStarted)
+                                                    {
+                                                        <span class="text-muted">----</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
+                                                            <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i> @item.ApprovalAction
+                                                        </a>
+                                                    }
+                                                </td>
+                                                <td>
+                                                    <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
+                                                    <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
+                                                    <a asp-action="Delete" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
+                                                </td>
+                                            </tr>
+                                        }
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <!-- Pagination -->
+                        <nav>
+                            <ul class="pagination">
+                                @for (int i = 1; i <= totalPages; i++)
+                                {
+                                    <li class="page-item @(i == currentPage ? "active" : "")">
+                                        <a class="page-link" href="@Url.Action("Index", new { tab = tab, page = i })">@i</a>
+                                    </li>
+                                }
+                            </ul>
+                        </nav>
                     </div>
                 </div>
-            </div>
-
-            <!-- Filters Partial View -->
-            @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
-
-            <!-- Table Content -->
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-bordered align-middle mb-0">
-                        <thead>
-                            <tr>
-                                <th>ReqID</th>
-                                <th>Step</th>
-                                <th>Approval Step</th>
-                                <th>Approver</th>
-                                <th>Status</th>
-                                <th>Action</th>
-                                <th></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var group in groupedApprovals)
-                            {
-                                var requisitionId = group.Key;
-                                var approvalSteps = group.OrderBy(a => a.StepNumber).ToList();
-                                var rowCount = approvalSteps.Count;
-
-                                for (int i = 0; i < rowCount; i++)
-                                {
-                                    var item = approvalSteps[i];
-                                    var isLastInGroup = (i == rowCount - 1);
-
-                                    <tr style="@(isLastInGroup ? "border-bottom: 3px solid #b4b6c1;" : "")">
-                                        @if (i == 0)
-                                        {
-                                            <td rowspan="@rowCount" style="vertical-align: middle; background-color: #f9f9f9; text-align: center; font-weight: bold;">
-                                                <a asp-controller="Requisitions" asp-action="Details" asp-route-id="@requisitionId">
-                                                    @requisitionId
-                                                </a>
-                                            </td>
-                                        }
-                                        <td>@item.StepNumber</td>
-                                        <td>@item.ApprovalStep</td>
-                                        <td>
-                                            <div>
-                                                <strong>@item.EmployeeName</strong>
-                                                @if (!string.IsNullOrEmpty(item.EmployeeDesignation))
-                                                {
-                                                    <span> - @item.EmployeeDesignation</span>
-                                                }
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <span class="badge @BadgeHelper.GetApprovalsBadgeClass(item.ApprovalStatus)">
-                                                @EnumHelper.GetEnumDescription(item.ApprovalStatus)
-                                            </span>
-                                        </td>
-                                        <td>
-                                            @if (item.ApprovalStatus == ApprovalStatus.NotStarted)
-                                            {
-                                                <span class="text-muted">----</span>
-                                            }
-                                            else
-                                            {
-                                                <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
-                                                    <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i> @item.ApprovalAction
-                                                </a>
-                                            }
-                                          
-                                        </td>
-                                        <td>
-                                            <!-- Inline buttons code -->
-                                            <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
-                                            <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>
-                                            <a asp-action="Delete" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Delete"><i class="mdi mdi-delete mdi-24px text-danger"></i></a>
-                                        </td>
-                                    </tr>
-                                }
-                            }
-                        </tbody>
-                    </table>
-                </div>
-                <!-- Pagination -->
-                @if (pagination != null)
-                {
-                    @await Html.PartialAsync("_Pagination", pagination)
-                }
             </div>
         </div>
     </div>

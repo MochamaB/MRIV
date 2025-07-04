@@ -44,112 +44,63 @@ namespace MRIV.Controllers
         }
 
         // GET: Approvals
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10)
+        public async Task<IActionResult> Index(string tab = "new", int page = 1, int pageSize = 20)
         {
             var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
             if (userPayrollNo == null)
                 return RedirectToAction("Index", "Login");
 
-            // Ensure valid pagination parameters
-            page = page < 1 ? 1 : page;
-            pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
+            // Get all approvals visible to the user (use your visibility logic)
+            var approvalsQuery = await _visibilityService.ApplyDepartmentScopeAsync(_context.Approvals.Include(a => a.Requisition), userPayrollNo);
 
-            // Get filter values from request query string
-            var filters = new Dictionary<string, string>();
-            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize"))
+            // Define status groups
+            var newStatusInts = new[] {
+                (int)ApprovalStatus.NotStarted,
+                (int)ApprovalStatus.PendingApproval,
+                (int)ApprovalStatus.PendingDispatch,
+                (int)ApprovalStatus.PendingReceive,
+                (int)ApprovalStatus.OnHold
+            };
+
+            IQueryable<Approval> filteredQuery = approvalsQuery;
+
+            switch (tab.ToLower())
             {
-                if (!string.IsNullOrEmpty(Request.Query[key]))
-                {
-                    filters[key] = Request.Query[key];
-                }
+                case "new":
+                    filteredQuery = approvalsQuery.Where(a =>
+                        a.ApprovalStatus == ApprovalStatus.NotStarted ||
+                        a.ApprovalStatus == ApprovalStatus.PendingApproval ||
+                        a.ApprovalStatus == ApprovalStatus.PendingDispatch ||
+                        a.ApprovalStatus == ApprovalStatus.PendingReceive ||
+                        a.ApprovalStatus == ApprovalStatus.OnHold
+                    );
+                    break;
+                case "completed":
+                    filteredQuery = approvalsQuery.Where(a =>
+                        a.ApprovalStatus != ApprovalStatus.NotStarted &&
+                        a.ApprovalStatus != ApprovalStatus.PendingApproval &&
+                        a.ApprovalStatus != ApprovalStatus.PendingDispatch &&
+                        a.ApprovalStatus != ApprovalStatus.PendingReceive &&
+                        a.ApprovalStatus != ApprovalStatus.OnHold
+                    );
+                    break;
+                case "all":
+                default:
+                    // No additional filter
+                    break;
             }
 
-            // Start with base query
-            var approvals = _context.Approvals
-                .Include(a => a.Requisition)
-                .AsQueryable();
-
-            // Apply department scope filtering
-            var departmentFiltered = await _visibilityService.ApplyDepartmentScopeAsync(approvals, userPayrollNo);
-
-            // Apply ApprovalStatus filter if present
-            if (filters.TryGetValue("ApprovalStatus", out var approvalStatusStr) &&
-                Enum.TryParse<ApprovalStatus>(approvalStatusStr, out var approvalStatus))
-            {
-                departmentFiltered = departmentFiltered.Where(a => a.ApprovalStatus == approvalStatus);
-            }
-
-            // Get total count for pagination
-            var totalItems = await departmentFiltered.CountAsync();
-
-            // Apply pagination
-            var pagedApprovals = await departmentFiltered
-                //.OrderByDescending(a => a.CreatedAt)
+            // Pagination
+            var totalItems = await filteredQuery.CountAsync();
+            var pagedApprovals = await filteredQuery
+                .OrderByDescending(a => a.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Get the logged in user's role
-            var user = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
-            var userRole = user?.Role ?? string.Empty;
-
-            // Filter approvals by role parameter and restrictToPayroll condition
-            var allowedApprovals = new List<Approval>();
-            foreach (var approval in pagedApprovals)
-            {
-                bool restrictToPayroll = await _visibilityService.ShouldRestrictToPayrollAsync(approval.StepConfigId);
-                if (restrictToPayroll)
-                {
-                    if (userRole == "Admin" || approval.PayrollNo == userPayrollNo)
-                    {
-                        allowedApprovals.Add(approval);
-                    }
-                }
-                else
-                {
-                    allowedApprovals.Add(approval);
-                }
-            }
-
-            // Prepare filter view model for ApprovalStatus
-            var approvalStatusOptions = Enum.GetValues(typeof(ApprovalStatus))
-                .Cast<ApprovalStatus>()
-                .Select(s => new SelectListItem
-                {
-                    Value = ((int)s).ToString(),
-                    Text = s.ToString(),
-                    Selected = filters.TryGetValue("ApprovalStatus", out var selected) && selected == ((int)s).ToString()
-                }).ToList();
-
-            var filterViewModel = new MRIV.ViewModels.FilterViewModel
-            {
-                Filters = new List<MRIV.ViewModels.FilterDefinition>
-                {
-                    new MRIV.ViewModels.FilterDefinition
-                    {
-                        PropertyName = "ApprovalStatus",
-                        DisplayName = "Approval Status",
-                        Options = approvalStatusOptions
-                    }
-                }
-            };
-            ViewBag.Filters = filterViewModel;
-
-            // Create pagination view model
-            var paginationModel = new MRIV.ViewModels.PaginationViewModel
-            {
-                TotalItems = totalItems,
-                ItemsPerPage = pageSize,
-                CurrentPage = page,
-                Action = "Index",
-                Controller = "Approvals",
-                RouteData = filters
-            };
-            ViewBag.Pagination = paginationModel;
-
-            // Prepare view models
+            // Prepare view models as before
             var viewModels = new List<MRIV.ViewModels.ApprovalStepViewModel>();
-            foreach (var approval in allowedApprovals)
+            foreach (var approval in pagedApprovals)
             {
                 var employee = await _employeeService.GetEmployeeByPayrollAsync(approval.PayrollNo);
                 var department = await _departmentService.GetDepartmentByIdAsync(approval.DepartmentId);
@@ -181,6 +132,11 @@ namespace MRIV.Controllers
                     EmployeeDesignation = employee?.Designation ?? ""
                 });
             }
+
+            ViewBag.Tab = tab;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.PageSize = pageSize;
+            ViewBag.CurrentPage = page;
 
             return View(viewModels);
         }
