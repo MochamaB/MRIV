@@ -16,16 +16,16 @@ namespace MRIV.Services
         Task<Approval> GetMostSignificantApprovalAsync(int requisitionId);
         
         // Phase 2: Core Approval Functions
-        Task<bool> ApproveStepAsync(int approvalId, string comments);
-        Task<bool> RejectStepAsync(int approvalId, string comments);
+        Task<bool> ApproveStepAsync(int approvalId, string comments, string approvedBy);
+        Task<bool> RejectStepAsync(int approvalId, string comments, string approvedBy);
         
         // New Material Status Functions
-        Task<bool> DispatchStepAsync(int approvalId, string comments);
-        Task<bool> ReceiveStepAsync(int approvalId, string comments);
-        Task<bool> PutOnHoldStepAsync(int approvalId, string comments);
+        Task<bool> DispatchStepAsync(int approvalId, string comments, string approvedBy);
+        Task<bool> ReceiveStepAsync(int approvalId, string comments, string approvedBy);
+        Task<bool> PutOnHoldStepAsync(int approvalId, string comments, string approvedBy);
         
         // New dynamic action processor
-        Task<bool> ProcessApprovalActionAsync(int approvalId, string action, string comments);
+        Task<bool> ProcessApprovalActionAsync(int approvalId, string action, string comments, string? approvedBy);
         
         Task<Approval> GetNextStepAsync(int requisitionId, int currentStepNumber);
         Task<List<ApprovalStepViewModel>> GetApprovalHistoryAsync(int requisitionId);
@@ -46,16 +46,20 @@ namespace MRIV.Services
         private readonly IDepartmentService _departmentService;
         private readonly VendorService _vendorService;
         private readonly ILogger<ApprovalService> _logger;
+        private readonly INotificationService _notificationService;
+        private readonly INotificationManager _notificationManager;
 
         public ApprovalService(RequisitionContext context,
-                              IEmployeeService employeeService,IDepartmentService departmentService,VendorService vendorService
-            , ILogger<ApprovalService> logger)
+                              IEmployeeService employeeService, IDepartmentService departmentService, VendorService vendorService,
+                              ILogger<ApprovalService> logger, INotificationService notificationService, INotificationManager notificationManager)
         {
             _context = context;
             _employeeService = employeeService;
             _departmentService = departmentService;
             _vendorService = vendorService;
             _logger = logger;
+            _notificationService = notificationService;
+            _notificationManager = notificationManager;
         }
         public async Task<List<Approval>> CreateApprovalStepsAsync(Requisition requisition, EmployeeBkp loggedInUserEmployee)
         {
@@ -494,125 +498,157 @@ namespace MRIV.Services
         /// <param name="comments">Optional comments for the approval</param>
         /// <returns>True if successful, false otherwise</returns>
 
-        public async Task<bool> ProcessApprovalActionAsync(int approvalId, string action, string comments)
+       public async Task<bool> ProcessApprovalActionAsync(int approvalId, string action, string comments, string? approvedBy)
         {
-            _logger.LogInformation($"Processing approval action '{action}' for ID {approvalId}");
-
-            // Try to parse the action as an enum value
-            if (int.TryParse(action, out int statusValue))
+            Console.WriteLine($"=== DEBUG: Processing approval action '{action}' for ID {approvalId} ===");
+    
+            if (string.IsNullOrEmpty(action))
             {
-                var approvalStatus = (ApprovalStatus)statusValue;
-                _logger.LogInformation($"Parsed action value: {statusValue} as {approvalStatus}");
-
-                // Call the appropriate method based on the status
-                switch (approvalStatus)
-                {
-                    case ApprovalStatus.Approved:
-                        return await ApproveStepAsync(approvalId, comments);
-
-                    case ApprovalStatus.Rejected:
-                        return await RejectStepAsync(approvalId, comments);
-
-                    case ApprovalStatus.Dispatched:
-                        return await DispatchStepAsync(approvalId, comments);
-
-                    case ApprovalStatus.Received:
-                        return await ReceiveStepAsync(approvalId, comments);
-
-                    case ApprovalStatus.OnHold:
-                        return await PutOnHoldStepAsync(approvalId, comments);
-
-                    default:
-                        _logger.LogWarning($"Unsupported approval status: {approvalStatus}");
-                        return false;
-                }
+                Console.WriteLine("ERROR: Action is null or empty");
+                return false;
             }
-            else
-            {
-                // Handle string-based actions
-                string actionLower = action.ToLowerInvariant();
-                _logger.LogInformation($"Processing string-based action: {actionLower}");
 
-                if (actionLower == "approve")
-                {
-                    return await ApproveStepAsync(approvalId, comments);
-                }
-                else if (actionLower == "reject")
-                {
-                    return await RejectStepAsync(approvalId, comments);
-                }
-                else if (actionLower == "dispatch")
-                {
-                    return await DispatchStepAsync(approvalId, comments);
-                }
-                else if (actionLower == "receive")
-                {
-                    return await ReceiveStepAsync(approvalId, comments);
-                }
-                else if (actionLower == "hold" || actionLower == "onhold")
-                {
-                    return await PutOnHoldStepAsync(approvalId, comments);
-                }
-                else
-                {
-                    _logger.LogWarning($"Invalid action format: {action}");
-                    return false;
-                }
-            }
-        }
-
-        public async Task<bool> ApproveStepAsync(int approvalId, string comments)
-        {
-            Console.WriteLine($"ApproveStepAsync called for ID {approvalId}");
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
+            Console.WriteLine($"Action value: '{action}'");
+            Console.WriteLine($"Action length: {action.Length}");
+            Console.WriteLine($"Action type: {action.GetType().Name}");
 
             try
             {
-                // Get the approval
-                var approval = await _context.Approvals
-                    .Include(a => a.Requisition)
-                    .Include(a => a.StepConfig)
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
-                if (approval == null)
+                // Try to parse the action as an enum value
+                if (int.TryParse(action, out int statusValue))
                 {
-                    Console.WriteLine($"Approval with ID {approvalId} not found");
-                    return false;
-                }
+                    Console.WriteLine($"Successfully parsed action to int: {statusValue}");
+            
+                    // Validate that the parsed value is within the valid range of ApprovalStatus enum
+                    if (!Enum.IsDefined(typeof(ApprovalStatus), statusValue))
+                    {
+                        Console.WriteLine($"ERROR: Invalid approval status value: {statusValue}");
+                        Console.WriteLine($"Valid enum values are: {string.Join(", ", Enum.GetValues(typeof(ApprovalStatus)).Cast<int>())}");
+                        return false;
+                    }
 
-                // Check if the approval is in a state that can be approved
-                if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                    var approvalStatus = (ApprovalStatus)statusValue;
+                    Console.WriteLine($"Parsed action value: {statusValue} as {approvalStatus}");
+
+                    // Call the appropriate method based on the status
+                    switch (approvalStatus)
+                    {
+                        case ApprovalStatus.Approved:
+                            Console.WriteLine("Calling ApproveStepAsync");
+                            return await ApproveStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.Rejected:
+                            Console.WriteLine("Calling RejectStepAsync");
+                            return await RejectStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.Dispatched:
+                            Console.WriteLine("Calling DispatchStepAsync");
+                            return await DispatchStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.Received:
+                            Console.WriteLine("Calling ReceiveStepAsync");
+                            return await ReceiveStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.OnHold:
+                            Console.WriteLine("Calling PutOnHoldStepAsync");
+                            return await PutOnHoldStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.PendingReceive:
+                            Console.WriteLine("Handling PendingReceive - calling ReceiveStepAsync");
+                            return await ReceiveStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.PendingDispatch:
+                            Console.WriteLine("Handling PendingDispatch - calling DispatchStepAsync");
+                            return await DispatchStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.PendingApproval:
+                            Console.WriteLine("Handling PendingApproval - calling ApproveStepAsync");
+                            return await ApproveStepAsync(approvalId, comments, approvedBy);
+
+                        case ApprovalStatus.NotStarted:
+                        case ApprovalStatus.Cancelled:
+                            Console.WriteLine($"ERROR: Cannot process action for status: {approvalStatus}");
+                            return false;
+
+                        default:
+                            Console.WriteLine($"ERROR: Unsupported approval status: {approvalStatus} (value: {statusValue})");
+                            return false;
+                    }
+                }
+                else
                 {
-                    Console.WriteLine($"Approval with ID {approvalId} is not pending approval. Current status: {approval.ApprovalStatus}");
-                    return false;
+                    Console.WriteLine($"Failed to parse '{action}' as integer, trying string-based actions");
+            
+                    // Handle string-based actions as fallback
+                    string actionLower = action.ToLowerInvariant().Trim();
+                    Console.WriteLine($"Processing string-based action: '{actionLower}'");
+
+                    return actionLower switch
+                    {
+                        "approve" or "approved" => await ApproveStepAsync(approvalId, comments, approvedBy),
+                        "reject" or "rejected" => await RejectStepAsync(approvalId, comments, approvedBy),
+                        "dispatch" or "dispatched" => await DispatchStepAsync(approvalId, comments, approvedBy),
+                        "receive" or "received" => await ReceiveStepAsync(approvalId, comments, approvedBy),
+                        "hold" or "onhold" or "on hold" => await PutOnHoldStepAsync(approvalId, comments, approvedBy),
+                        _ => throw new ArgumentException($"Invalid action format: {action}")
+                    };
                 }
-
-                // Update the approval
-                approval.ApprovalStatus = ApprovalStatus.Approved;
-                approval.Comments = comments;
-                approval.UpdatedAt = DateTime.Now;
-
-                Console.WriteLine($"Setting approval ID {approvalId} status to Approved");
-                _context.Update(approval);
-                await _context.SaveChangesAsync();
-                Console.WriteLine("Approval updated in database");
-
-                // Handle next step or complete requisition
-                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
-
-                await transaction.CommitAsync();
-                Console.WriteLine("Transaction committed successfully");
-                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception in ApproveStepAsync: {ex.Message}");
+                Console.WriteLine($"EXCEPTION: Error processing approval action '{action}' for ID {approvalId}");
+                Console.WriteLine($"Exception type: {ex.GetType().Name}");
+                Console.WriteLine($"Exception message: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                await transaction.RollbackAsync();
-                Console.WriteLine("Transaction rolled back due to exception");
                 return false;
             }
+        }
+
+        public async Task<bool> ApproveStepAsync(int approvalId, string comments, string approvedByPayrollNo)
+        {
+            Console.WriteLine($"ApproveStepAsync called for ID {approvalId}");
+
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
+            {
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
+                {
+                    var approval = await _context.Approvals
+                        .Include(a => a.Requisition)
+                        .Include(a => a.StepConfig)
+                        .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                    if (approval == null)
+                        return false;
+
+                    if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                        return false;
+
+                    approval.ApprovalStatus = ApprovalStatus.Approved;
+                    approval.ApprovedBy = approvedByPayrollNo;
+                    approval.Comments = comments;
+                    approval.UpdatedAt = DateTime.Now;
+
+                    _context.Update(approval);
+                    await _context.SaveChangesAsync();
+
+                    // Get next step name for notification
+                    var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+                    string nextStepName = nextStep?.ApprovalStep ?? "Completed";
+                    await _notificationManager.NotifyApprovalStepApproved(approval, approvedByPayrollNo, nextStepName);
+
+                    await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(nextStep));
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+            });
         }
 
         /// <summary>
@@ -650,241 +686,179 @@ namespace MRIV.Services
             return nextStepStatus;
         }
 
-        /// <summary>
-        /// Rejects an approval step
-        /// </summary>
-        /// <param name="approvalId">The ID of the approval to reject</param>
-        /// <param name="comments">Required comments explaining the rejection</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> RejectStepAsync(int approvalId, string comments)
+        public async Task<bool> RejectStepAsync(int approvalId, string comments, string rejectedByPayrollNo)
         {
             _logger.LogInformation($"Rejecting step with ID {approvalId}");
-
-            // Check if comments are provided when rejecting
             if (string.IsNullOrWhiteSpace(comments))
-            {
-                _logger.LogWarning("Comments are required when rejecting an approval");
                 return false;
-            }
 
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Get the approval
-                var approval = await _context.Approvals
-                    .Include(a => a.Requisition)
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
-                if (approval == null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    _logger.LogWarning($"Approval with ID {approvalId} not found");
+                    var approval = await _context.Approvals
+                        .Include(a => a.Requisition)
+                        .Include(a => a.StepConfig)
+                        .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                    if (approval == null)
+                        return false;
+
+                    approval.ApprovalStatus = ApprovalStatus.Rejected;
+                    approval.Comments = comments;
+                    approval.UpdatedAt = DateTime.Now;
+                    _context.Update(approval);
+
+                    var requisition = approval.Requisition;
+                    if (requisition != null)
+                    {
+                        requisition.Status = RequisitionStatus.Cancelled;
+                        requisition.UpdatedAt = DateTime.Now;
+                        _context.Update(requisition);
+                    }
+
+                    await _context.SaveChangesAsync();
+
+                    await _notificationManager.NotifyApprovalStepRejected(approval, rejectedByPayrollNo, comments);
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
                     return false;
                 }
-
-                // Check if the approval is in a state that can be rejected
-                if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
-                {
-                    _logger.LogWarning($"Approval with ID {approvalId} is not pending approval. Current status: {approval.ApprovalStatus}");
-                    return false;
-                }
-
-                // Update the approval
-                approval.ApprovalStatus = ApprovalStatus.Rejected;
-                approval.Comments = comments;
-                approval.UpdatedAt = DateTime.Now;
-
-                _context.Update(approval);
-
-                // Update the requisition status to Cancelled
-                var requisition = approval.Requisition;
-                if (requisition != null)
-                {
-                    requisition.Status = RequisitionStatus.Cancelled;
-                    requisition.UpdatedAt = DateTime.Now;
-
-                    _context.Update(requisition);
-                }
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Successfully rejected approval step with ID {approvalId}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, $"Error rejecting step with ID {approvalId}");
-                return false;
-            }
+            });
         }
 
-        /// <summary>
-        /// Dispatches an approval step
-        /// </summary>
-        /// <param name="approvalId">The ID of the approval to dispatch</param>
-        /// <param name="comments">Optional comments for the dispatch</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> DispatchStepAsync(int approvalId, string comments)
+        public async Task<bool> DispatchStepAsync(int approvalId, string comments, string dispatcherPayrollNo)
         {
             _logger.LogInformation($"Dispatching step with ID {approvalId}");
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Get the approval
-                var approval = await _context.Approvals
-                    .Include(a => a.Requisition)
-                    .Include(a => a.StepConfig)
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
-                if (approval == null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    _logger.LogWarning($"Approval with ID {approvalId} not found");
+                    var approval = await _context.Approvals
+                        .Include(a => a.Requisition)
+                        .Include(a => a.StepConfig)
+                        .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                    if (approval == null)
+                        return false;
+
+                    if (approval.ApprovalStatus != ApprovalStatus.PendingDispatch && approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                        return false;
+
+                    approval.ApprovalStatus = ApprovalStatus.Dispatched;
+                    approval.Comments = comments;
+                    approval.UpdatedAt = DateTime.Now;
+                    _context.Update(approval);
+
+                    var deliveryStation = await _departmentService.GetStationByIdAsync(approval.Requisition.DeliveryStationId);
+                    string deliveryStationName = deliveryStation?.StationName ?? "Unknown";
+
+                    await _context.SaveChangesAsync();
+
+                    await _notificationManager.NotifyApprovalStepDispatched(approval, dispatcherPayrollNo, deliveryStationName);
+
+                    await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
                     return false;
                 }
-
-                // Check if the approval is in a state that can be dispatched
-                if (approval.ApprovalStatus != ApprovalStatus.PendingDispatch && approval.ApprovalStatus != ApprovalStatus.PendingApproval)
-                {
-                    _logger.LogWarning($"Approval with ID {approvalId} is not pending dispatch or approval. Current status: {approval.ApprovalStatus}");
-                    return false;
-                }
-
-                // Update the approval
-                approval.ApprovalStatus = ApprovalStatus.Dispatched;
-                approval.Comments = comments;
-                approval.UpdatedAt = DateTime.Now;
-
-                _context.Update(approval);
-                await _context.SaveChangesAsync();
-
-                // Handle next step or complete requisition
-                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
-
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Successfully dispatched approval step with ID {approvalId}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, $"Error dispatching step with ID {approvalId}");
-                return false;
-            }
+            });
         }
 
-        /// <summary>
-        /// Receives an approval step
-        /// </summary>
-        /// <param name="approvalId">The ID of the approval to receive</param>
-        /// <param name="comments">Optional comments for the receive</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> ReceiveStepAsync(int approvalId, string comments)
+        public async Task<bool> ReceiveStepAsync(int approvalId, string comments, string receiverPayrollNo)
         {
             _logger.LogInformation($"Receiving step with ID {approvalId}");
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Get the approval
-                var approval = await _context.Approvals
-                    .Include(a => a.Requisition)
-                    .Include(a => a.StepConfig)
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
-                if (approval == null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    _logger.LogWarning($"Approval with ID {approvalId} not found");
+                    var approval = await _context.Approvals
+                        .Include(a => a.Requisition)
+                        .Include(a => a.StepConfig)
+                        .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                    if (approval == null)
+                        return false;
+
+                    if (approval.ApprovalStatus != ApprovalStatus.PendingReceive && approval.ApprovalStatus != ApprovalStatus.PendingApproval)
+                        return false;
+
+                    approval.ApprovalStatus = ApprovalStatus.Received;
+                    approval.Comments = comments;
+                    approval.UpdatedAt = DateTime.Now;
+                    _context.Update(approval);
+
+                    var deliveryStation = await _departmentService.GetStationByIdAsync(approval.Requisition.DeliveryStationId);
+                    string deliveryStationName = deliveryStation?.StationName ?? "Unknown";
+
+                    await _context.SaveChangesAsync();
+
+                    await _notificationManager.NotifyApprovalStepReceived(approval, receiverPayrollNo, deliveryStationName);
+
+                    await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
                     return false;
                 }
-
-                // Check if the approval is in a state that can be received
-                if (approval.ApprovalStatus != ApprovalStatus.PendingReceive && approval.ApprovalStatus != ApprovalStatus.PendingApproval)
-                {
-                    _logger.LogWarning($"Approval with ID {approvalId} is not pending receive or approval. Current status: {approval.ApprovalStatus}");
-                    return false;
-                }
-
-                // Update the approval
-                approval.ApprovalStatus = ApprovalStatus.Received;
-                approval.Comments = comments;
-                approval.UpdatedAt = DateTime.Now;
-
-                _context.Update(approval);
-
-                // Handle next step or complete requisition
-                await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Successfully received approval step with ID {approvalId}");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, $"Error receiving step with ID {approvalId}");
-                return false;
-            }
+            });
         }
 
-        /// <summary>
-        /// Puts an approval step on hold
-        /// </summary>
-        /// <param name="approvalId">The ID of the approval to put on hold</param>
-        /// <param name="comments">Optional comments for the hold</param>
-        /// <returns>True if successful, false otherwise</returns>
-        public async Task<bool> PutOnHoldStepAsync(int approvalId, string comments)
+        public async Task<bool> PutOnHoldStepAsync(int approvalId, string comments, string putOnHoldByPayrollNo)
         {
             _logger.LogInformation($"Putting step with ID {approvalId} on hold");
-
-            using var transaction = await _context.Database.BeginTransactionAsync();
-
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            return await strategy.ExecuteAsync(async () =>
             {
-                // Get the approval
-                var approval = await _context.Approvals
-                    .Include(a => a.Requisition)
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
-                if (approval == null)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    _logger.LogWarning($"Approval with ID {approvalId} not found");
+                    var approval = await _context.Approvals
+                        .Include(a => a.Requisition)
+                        .Include(a => a.StepConfig)
+                        .FirstOrDefaultAsync(a => a.Id == approvalId);
+
+                    if (approval == null)
+                        return false;
+
+                    approval.ApprovalStatus = ApprovalStatus.OnHold;
+                    approval.Comments = comments;
+                    approval.UpdatedAt = DateTime.Now;
+                    _context.Update(approval);
+
+                    await _context.SaveChangesAsync();
+
+                    await _notificationManager.NotifyApprovalStepOnHold(approval, putOnHoldByPayrollNo, comments);
+
+                    await transaction.CommitAsync();
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    await transaction.RollbackAsync();
                     return false;
                 }
-
-                // Check if the approval is in a state that can be put on hold
-                if (approval.ApprovalStatus != ApprovalStatus.PendingApproval)
-                {
-                    _logger.LogWarning($"Approval with ID {approvalId} is not pending approval. Current status: {approval.ApprovalStatus}");
-                    return false;
-                }
-
-                // Update the approval
-                approval.ApprovalStatus = ApprovalStatus.OnHold;
-                approval.Comments = comments;
-                approval.UpdatedAt = DateTime.Now;
-
-                _context.Update(approval);
-
-                await _context.SaveChangesAsync();
-                await transaction.CommitAsync();
-
-                _logger.LogInformation($"Successfully put approval step with ID {approvalId} on hold");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                await transaction.RollbackAsync();
-                _logger.LogError(ex, $"Error putting step with ID {approvalId} on hold");
-                return false;
-            }
+            });
         }
 
         /// <summary>
@@ -927,7 +901,7 @@ namespace MRIV.Services
                     _context.Update(requisition);
                     
                     // Update material locations for all items in the requisition
-                    await UpdateMaterialLocationsAsync(requisition);
+                    await UpdateMaterialLocationsAsync(requisition, approval.PayrollNo);
                     
                     await _context.SaveChangesAsync();
                     
@@ -946,32 +920,90 @@ namespace MRIV.Services
         /// Updates the current location of materials associated with a completed requisition
         /// </summary>
         /// <param name="requisition">The completed requisition</param>
-        private async Task UpdateMaterialLocationsAsync(Requisition requisition)
+        private async Task UpdateMaterialLocationsAsync(Requisition requisition, string loggedInPayrollNo)
         {
             try
             {
                 // Get all requisition items with material IDs
                 var requisitionItems = await _context.RequisitionItems
+                    .Include(ri => ri.Material)
                     .Where(ri => ri.RequisitionId == requisition.Id && ri.MaterialId.HasValue)
                     .ToListAsync();
                 
                 if (requisitionItems.Any())
                 {
-                    // Get the delivery station's location ID
-                    var deliveryStationLocation = requisition.DeliveryStationId;
+                    // Get the delivery station and department IDs
+                    var deliveryStationId = requisition.DeliveryStationId;
+                    var deliveryDepartmentId = requisition.DeliveryDepartmentId;
+                    string locationName = await _departmentService.GetLocationNameFromIdsAsync(deliveryStationId, deliveryDepartmentId);
                     
-                    if (deliveryStationLocation != null)
-                    {
+                    if (deliveryStationId != 0)
+                    {   
                         foreach (var item in requisitionItems)
                         {
-                            if (item.MaterialId.HasValue)
+                            if (item.MaterialId.HasValue && item.Material != null)
                             {
-                                // Update the material's current location
+                                // Update material status to Assigned
+                                item.Material.Status = MaterialStatus.Assigned;
+                                item.Material.UpdatedAt = DateTime.Now;
+                                _context.Update(item.Material);
+
+
+                                // Create a new material assignment to track the location
+                                var materialAssignment = new MaterialAssignment
+                                {
+                                    MaterialId = item.MaterialId.Value,
+                                    PayrollNo = loggedInPayrollNo,
+                                    AssignmentDate = DateTime.UtcNow,
+                                    StationCategory = requisition.DeliveryStationCategory,
+                                    StationId = requisition.IssueStationId,
+                                    DepartmentId = requisition.DepartmentId,
+                                    AssignmentType = requisition.RequisitionType,
+                                    RequisitionId = requisition.Id,
+                                    AssignedByPayrollNo = requisition.PayrollNo,
+                                    IsActive = true
+                                };
+
                                 
+                                
+                                _context.MaterialAssignments.Add(materialAssignment);
+                                
+                                _logger.LogInformation($"Updated material ID {item.MaterialId} status to Assigned and created new location assignment at station ID {deliveryStationId}");
+                                
+                                // If there's a specific employee assigned, send them a notification
+                                if (!string.IsNullOrEmpty(materialAssignment.PayrollNo))
+                                {
+                                    await _notificationService.CreateNotificationAsync(
+                                        "MaterialAssigned",
+                                        new Dictionary<string, string>
+                                        {
+                                            { "MaterialName", item.Material.Name ?? "Unknown Material" },
+                                            { "MaterialCode", item.Material.Code ?? "N/A" },
+                                            { "RequisitionId", requisition.Id.ToString() },
+                                            { "DeliveryStation", locationName }
+                                        },
+                                        materialAssignment.PayrollNo
+                                    );
+                                }
                             }
                         }
                         
-                        _logger.LogInformation($"Updated locations for {requisitionItems.Count} materials to location ID {deliveryStationLocation}");
+                        _logger.LogInformation($"Updated statuses and created location assignments for {requisitionItems.Count} materials to location ID {deliveryStationId}");
+                        
+                        // Send notification about requisition completion
+                        var creator = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo);
+                        if (creator != null)
+                        {
+                            await _notificationService.CreateNotificationAsync(
+                                "RequisitionCompleted",
+                                new Dictionary<string, string>  
+                                {
+                                    { "RequisitionId", requisition.Id.ToString() },
+                                    { "DeliveryStation", locationName }
+                                },
+                                creator.PayrollNo
+                            );
+                        }
                     }
                     else
                     {

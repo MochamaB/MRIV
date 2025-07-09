@@ -52,6 +52,7 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
+builder.Services.AddScoped<INotificationManager, NotificationManager>();
 
 // Add settings service
 builder.Services.AddSettingsService();

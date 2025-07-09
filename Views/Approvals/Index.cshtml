@@ -130,11 +130,15 @@
                                                     {
                                                         <span class="text-muted">----</span>
                                                     }
-                                                    else
+                                                    else if (item.ApprovalStatus == ApprovalStatus.PendingApproval || item.ApprovalStatus == ApprovalStatus.PendingDispatch || item.ApprovalStatus == ApprovalStatus.PendingReceive)
                                                     {
-                                                        <a asp-action="ApprovalWizard" asp-route-id="@item.Id" class="text-primary">
+                                                        <a asp-action="ApprovalSummary" asp-route-id="@item.Id" class="text-primary">
                                                             <i class="mdi mdi-arrow-right-bold-circle-outline mdi-24px text-primary" style="vertical-align: middle;"></i> @item.ApprovalAction
                                                         </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        <span class="text-muted">----</span>
                                                     }
                                                 </td>
                                                 <td>

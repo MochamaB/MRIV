@@ -1,9 +1,11 @@
 using Microsoft.AspNetCore.Mvc;
+using MRIV.Attributes;
 using MRIV.Models;
 using MRIV.Services;
 
 namespace MRIV.Controllers
 {
+    [CustomAuthorize]
     public class NotificationsController : Controller
     {
         private readonly INotificationService _notificationService;

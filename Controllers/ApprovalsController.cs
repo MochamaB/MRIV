@@ -10,7 +10,7 @@ using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
 using MRIV.Attributes;
-
+using MRIV.ViewModels;
 namespace MRIV.Controllers
 {
     [CustomAuthorize]
@@ -21,6 +21,7 @@ namespace MRIV.Controllers
         private readonly VendorService _vendorService;
         private readonly IDepartmentService _departmentService;
         private readonly IApprovalService _approvalService;
+        private readonly ILocationService _locationService;
         private readonly IVisibilityAuthorizeService _visibilityService;
         private readonly ILogger<ApprovalService> _logger;
 
@@ -29,6 +30,7 @@ namespace MRIV.Controllers
             IEmployeeService employeeService, 
             VendorService vendorService,
             IApprovalService approvalService, 
+            ILocationService locationService,
             IConfiguration configuration, 
             IDepartmentService departmentService,
             IVisibilityAuthorizeService visibilityService,
@@ -38,6 +40,7 @@ namespace MRIV.Controllers
             _employeeService = employeeService;
             _vendorService = vendorService;
             _approvalService = approvalService;
+            _locationService = locationService;
             _departmentService = departmentService;
             _visibilityService = visibilityService;
             _logger = logger;
@@ -407,15 +410,16 @@ namespace MRIV.Controllers
 
       
   
-        // GET: Approvals/ApprovalWizard/5
-        public async Task<IActionResult> ApprovalWizard(int id)
+        // GET: Approvals/ApprovalSummary/5
+        public async Task<IActionResult> ApprovalSummary(int id)
         {
-            _logger.LogInformation($"Loading Approval Wizard for approval ID: {id}");
-
+            _logger.LogInformation($"Loading approval summary for approval ID: {id}");
+            
             var approval = await _context.Approvals
                 .Include(a => a.Requisition)
                 .ThenInclude(r => r.RequisitionItems)
                 .ThenInclude(ri => ri.Material)
+                .Include(a => a.StepConfig)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (approval == null)
@@ -424,194 +428,191 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
-            // Get approval history
-            var approvalHistory = await _approvalService.GetApprovalHistoryAsync(approval.RequisitionId);
+            var requisition = approval.Requisition;
+            if (requisition == null)
+            {
+                _logger.LogWarning($"Requisition not found for approval ID {id}");
+                return NotFound();
+            }
+            
+            var department = await _departmentService.GetDepartmentByIdAsync(requisition.DepartmentId);
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo);
+            var issueStation = await _locationService.GetStationByIdAsync(requisition.IssueStationId);
+            var deliveryStation = await _locationService.GetStationByIdAsync(requisition.DeliveryStationId);
+            var deliveryDepartment = await _locationService.GetDepartmentByIdAsync(requisition.DeliveryDepartmentId);
+            var vendor = requisition.DispatchType?.ToLower() == "vendor" && !string.IsNullOrEmpty(requisition.DispatchVendor)
+                ? await _vendorService.GetVendorByIdAsync(requisition.DispatchVendor)
+                : null;
 
-            // Create the wizard view model
-            var viewModel = new ApprovalWizardViewModel
+            // Approval steps and history
+            _logger.LogInformation($"Fetching approval history for requisition ID: {requisition.Id}");
+            var approvalSteps = await _approvalService.GetApprovalHistoryAsync(requisition.Id);
+            
+            if (approvalSteps == null || !approvalSteps.Any())
+            {
+                _logger.LogWarning($"No approval steps found for requisition ID {requisition.Id}");
+            }
+            else
+            {
+                _logger.LogInformation($"Found {approvalSteps.Count} approval steps");
+            }
+            
+            var currentStep = approvalSteps.FirstOrDefault(s => s.Id == approval.Id);
+
+            // Status options for the action dropdown
+            _logger.LogInformation($"Getting available status options for approval ID: {approval.Id}");
+            var statusOptions = await _approvalService.GetAvailableStatusOptionsAsync(approval.Id);
+            
+            if (statusOptions == null || !statusOptions.Any())
+            {
+                _logger.LogWarning("No status options available for the approval");
+                statusOptions = new Dictionary<string, string>(); // Initialize to empty dictionary to prevent null reference
+            }
+            else
+            {
+                _logger.LogInformation($"Found {statusOptions.Count} status options: {string.Join(", ", statusOptions.Values)}");
+            }
+
+            // Requisition items
+            var items = requisition.RequisitionItems.Select(item => new RequisitionItemConditionViewModel
+            {
+                RequisitionItemId = item.Id,
+                Name = item.Name,
+                Description = item.Description,
+                Quantity = item.Quantity,
+                MaterialId = item.MaterialId,
+                MaterialCode = item.Material?.Code,
+                RequisitionItemCondition = item.Condition,
+                Condition = null, // To be filled if needed
+                Notes = null, // To be filled if needed
+                Stage = null, // To be filled if needed
+                vendor = vendor
+            }).ToList();
+
+            // Find all relevant current steps (all pending steps for this requisition)
+            var relevantCurrentSteps = approvalSteps.Where(s => 
+                s.ApprovalStatus == ApprovalStatus.PendingApproval || 
+                s.ApprovalStatus == ApprovalStatus.PendingDispatch || 
+                s.ApprovalStatus == ApprovalStatus.PendingReceive)
+                .ToList();
+                
+            _logger.LogInformation($"Found {relevantCurrentSteps.Count} relevant current steps that need action");
+
+            var viewModel = new ApprovalSummaryViewModel
             {
                 ApprovalId = approval.Id,
-                RequisitionId = approval.RequisitionId,
-                ApprovalStep = approval.ApprovalStep ?? "Unknown", // Default value to prevent null
+                RequisitionId = requisition.Id,
+                ApprovalStep = approval.ApprovalStep,
                 StepNumber = approval.StepNumber,
-
-                // Requisition details
-                RequisitionNumber = approval.Requisition.Id,
-                IssueStationCategory = approval.Requisition.IssueStationCategory,
-                RequestingDepartment = approval.Requisition.DepartmentId,
-                RequestingStation = approval.Requisition.IssueStationId,
-                DeliveryStationCategory = approval.Requisition.DeliveryStationCategory,
-                DeliveryStation = approval.Requisition.DeliveryStationId,
-                RequestDate = approval.Requisition.CreatedAt ?? DateTime.Now,
-                Status = approval.Requisition.Status.ToString(),
-
-                // Set initial step
-                CurrentStep = "ItemConditions",
-                IsLastStep = false
+                RequisitionNumber = requisition.TicketId,
+                IssueStationCategory = requisition.IssueStationCategory,
+                RequestingDepartment = requisition.DepartmentId,
+                RequestingStation = requisition.IssueStationId,
+                DeliveryStationCategory = requisition.DeliveryStationCategory,
+                DeliveryStation = requisition.DeliveryStationId,
+                RequestDate = requisition.CreatedAt ?? DateTime.Now,
+                Status = requisition.Status.ToString(),
+                DepartmentName = department?.DepartmentName,
+                RequestingEmployeeName = employee?.Fullname,
+                IssueStationName = issueStation?.StationName,
+                DeliveryStationName = deliveryStation?.StationName,
+                DeliveryDepartmentName = deliveryDepartment?.DepartmentName,
+                Remarks = requisition.Remarks,
+                DispatchType = requisition.DispatchType,
+                DispatcherName = null, // To be filled if needed
+                VendorName = vendor?.Name,
+                CollectorName = requisition.CollectorName,
+                CollectorId = requisition.CollectorId,
+                StatusOptions = statusOptions,
+                CurrentApprovalSteps = relevantCurrentSteps, // Use all pending steps instead of just the current one
+                ApprovalHistory = approvalSteps,
+                RequisitionItems = items
             };
 
-            // Log the model to diagnose issues
-            _logger.LogInformation($"Created ViewModel - ApprovalId: {viewModel.ApprovalId}, ApprovalStep: {viewModel.ApprovalStep}");
+            // Set the current step in ViewBag for the partial view
+            ViewBag.CurrentStep = approval.ApprovalStep;
 
-            // Populate requisition items with any existing conditions
-            await PopulateRequisitionItemsWithConditions(viewModel, approval);
-
-            // Populate approval history
-            PopulateApprovalHistory(viewModel, approvalHistory);
-
-            // Load status options for when we move to the approval action step
-            viewModel.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(approval.Id);
-
-            return View(viewModel);
+            return View("ApprovalSummary", viewModel);
         }
 
-
-        // POST: Approvals/ProcessApprovalWizard
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ProcessApprovalWizard(ApprovalWizardViewModel model, string direction)
+    [HttpPost]
+    [ValidateAntiForgeryToken]
+    public async Task<IActionResult> ApprovalSummary(ApprovalSummaryViewModel model)
+    {
+        Console.WriteLine($"=== CONTROLLER DEBUG: POST ApprovalSummary called ===");
+        Console.WriteLine($"ApprovalId: {model.ApprovalId}");
+        Console.WriteLine($"Action: '{model.Action}'");
+        Console.WriteLine($"Comments: '{model.Comments}'");
+        Console.WriteLine($"Action is null: {model.Action == null}");
+        Console.WriteLine($"Action is empty: {string.IsNullOrEmpty(model.Action)}");
+        Console.WriteLine($"Action is whitespace: {string.IsNullOrWhiteSpace(model.Action)}");
+    
+        if (model.Action != null)
         {
-            _logger.LogInformation($"ProcessApprovalWizard called with direction: {direction}");
-            _logger.LogInformation($"Model state is valid: {ModelState.IsValid}");
-            _logger.LogInformation($"Model properties: ApprovalId={model.ApprovalId}, ApprovalStep={model.ApprovalStep}, CurrentStep={model.CurrentStep}");
-
-            // Handle navigation between wizard steps
-            if (direction == "next")
-            {
-                try
-                {
-                    // No need to save material conditions here as they are now saved immediately via AJAX
-                    
-                    // Reload the approval to ensure we have fresh data for the next step
-                    var approval = await GetApprovalWithBasicIncludes(model.ApprovalId);
-                    if (approval == null)
-                    {
-                        _logger.LogWarning($"Approval with ID {model.ApprovalId} not found during next step transition");
-                        return NotFound();
-                    }
-
-                    // Re-populate the necessary properties for the next step
-                    model.ApprovalStep = approval.ApprovalStep ?? "Unknown"; // Ensure it's not null
-                    model.CurrentStep = "ApprovalAction";
-                    model.IsLastStep = true;
-
-                    // Get available status options for this approval step
-                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
-
-                    // Re-populate the approval history
-                    var approvalHistory = await _approvalService.GetApprovalHistoryAsync(approval.RequisitionId);
-                    PopulateApprovalHistory(model, approvalHistory);
-
-                    _logger.LogInformation($"Moving to ApprovalAction step with model: ApprovalId={model.ApprovalId}, ApprovalStep={model.ApprovalStep}");
-                    return View("ApprovalWizard", model);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during next step transition");
-                    ModelState.AddModelError("", "An error occurred while processing your request.");
-                    return View("ApprovalWizard", model);
-                }
-            }
-            else if (direction == "previous")
-            {
-                // Move back to the previous step
-                model.CurrentStep = "ItemConditions";
-                model.IsLastStep = false;
-                _logger.LogInformation("Moving back to ItemConditions step");
-                
-                try
-                {
-                    // Reload the approval to ensure we have fresh data for the previous step
-                    var approval = await GetApprovalWithRequisitionItems(model.ApprovalId);
-                    if (approval == null)
-                    {
-                        _logger.LogWarning($"Approval with ID {model.ApprovalId} not found during previous step transition");
-                        return NotFound();
-                    }
-
-                    // Clear and repopulate the items collection
-                    model.Items.Clear();
-                    
-                    // Populate requisition items with any existing conditions
-                    await PopulateRequisitionItemsWithConditions(model, approval);
-
-                    _logger.LogInformation($"Reloaded {model.Items.Count} items for the previous step");
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "Error during previous step transition");
-                    ModelState.AddModelError("", "An error occurred while processing your request.");
-                }
-                
-                return View("ApprovalWizard", model);
-            }
-            else if (direction == "finish")
-            {
-                _logger.LogInformation("Processing finish action");
-
-                // Process the approval action
-                if (string.IsNullOrEmpty(model.Action))
-                {
-                    _logger.LogWarning("No action selected");
-                    ModelState.AddModelError("Action", "Please select an action");
-                    model.CurrentStep = "ApprovalAction";
-                    model.IsLastStep = true;
-                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
-                    return View("ApprovalWizard", model);
-                }
-
-                // Check if the action is Rejected or OnHold and validate that comments are provided
-                if ((model.Action == ((int)ApprovalStatus.Rejected).ToString() || 
-                     model.Action == ((int)ApprovalStatus.OnHold).ToString()) && 
-                    string.IsNullOrWhiteSpace(model.Comments))
-                {
-                    _logger.LogWarning("Comments required for Rejected or OnHold status");
-                    ModelState.AddModelError("Comments", "Comments are required when rejecting an approval or putting it on hold.");
-                    model.CurrentStep = "ApprovalAction";
-                    model.IsLastStep = true;
-                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
-                    var approvalHistory = await _approvalService.GetApprovalHistoryAsync(model.RequisitionId);
-                    PopulateApprovalHistory(model, approvalHistory);
-                    return View("ApprovalWizard", model);
-                }
-
-                try
-                {
-                    // No need to save material conditions here as they are now saved immediately via AJAX
-                    
-                    // Process the approval action
-                    bool success = await _approvalService.ProcessApprovalActionAsync(model.ApprovalId, model.Action, model.Comments ?? "");
-
-                    if (success)
-                    {
-                        _logger.LogInformation($"Successfully processed approval action: {model.Action}");
-                        TempData["SuccessMessage"] = "Approval action processed successfully.";
-                        return RedirectToAction(nameof(Index));
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Failed to process approval action");
-                        TempData["ErrorMessage"] = "Failed to process approval action.";
-                        return RedirectToAction(nameof(ApprovalWizard), new { id = model.ApprovalId });
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, $"Error processing approval action: {model.Action}");
-                    ModelState.AddModelError("", "An error occurred while processing your approval action.");
-                    model.CurrentStep = "ApprovalAction";
-                    model.IsLastStep = true;
-                    model.StatusOptions = await _approvalService.GetAvailableStatusOptionsAsync(model.ApprovalId);
-                    var approvalHistory = await _approvalService.GetApprovalHistoryAsync(model.RequisitionId);
-                    PopulateApprovalHistory(model, approvalHistory);
-                    return View("ApprovalWizard", model);
-                }
-            }
-
-            // Default fallback
-            _logger.LogWarning($"Unhandled direction: {direction}");
-            return RedirectToAction(nameof(Index));
+            Console.WriteLine($"Action length: {model.Action.Length}");
+            Console.WriteLine($"Action trimmed: '{model.Action.Trim()}'");
         }
+
+        if (string.IsNullOrEmpty(model.Action))
+        {
+            Console.WriteLine("Adding ModelState error: Action is required");
+            ModelState.AddModelError("Action", "Please select an action");
+        }
+        
+        if ((model.Action == ((int)ApprovalStatus.Rejected).ToString() || 
+            model.Action == ((int)ApprovalStatus.OnHold).ToString()) && 
+            string.IsNullOrWhiteSpace(model.Comments))
+        {
+            Console.WriteLine("Adding ModelState error: Comments required for Reject/OnHold");
+            ModelState.AddModelError("Comments", "Comments are required when rejecting an approval or putting it on hold.");
+        }
+        
+        if (!ModelState.IsValid)
+        {
+            Console.WriteLine("ModelState is invalid, reloading approval summary");
+            Console.WriteLine($"ModelState errors count: {ModelState.ErrorCount}");
+            foreach (var error in ModelState)
+            {
+                Console.WriteLine($"Key: {error.Key}, Errors: {string.Join(", ", error.Value.Errors.Select(e => e.ErrorMessage))}");
+            }
+            return await ApprovalSummary(model.ApprovalId);
+        }
+        
+        try
+        {
+            var approvedBy = HttpContext.Session.GetString("EmployeePayrollNo");
+            Console.WriteLine($"Calling ProcessApprovalActionAsync with ApprovalId: {model.ApprovalId}, Action: '{model.Action}'");
+            
+            bool success = await _approvalService.ProcessApprovalActionAsync(
+                model.ApprovalId, 
+                model.Action, 
+                model.Comments ?? "",
+                approvedBy);
+
+            Console.WriteLine($"ProcessApprovalActionAsync returned: {success}");
+            
+            if (success)
+            {
+                Console.WriteLine("Success! Redirecting to Index");
+                TempData["SuccessMessage"] = "Approval action processed successfully.";
+                return RedirectToAction(nameof(Index));
+            }
+            else
+            {
+                Console.WriteLine("Failed to process approval action");
+                TempData["ErrorMessage"] = "Failed to process approval action.";
+                return await ApprovalSummary(model.ApprovalId);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"EXCEPTION in controller: {ex.GetType().Name}");
+            Console.WriteLine($"Exception message: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            TempData["ErrorMessage"] = $"Exception: {ex.Message}";
+            return await ApprovalSummary(model.ApprovalId);
+        }
+    }
 
         // POST: Approvals/SaveItemCondition
         [HttpPost]
@@ -690,25 +691,6 @@ namespace MRIV.Controllers
         #region Helper Methods
 
         /// <summary>
-        /// Populates the approval history in the view model
-        /// </summary>
-        private void PopulateApprovalHistory(ApprovalWizardViewModel model, List<ApprovalStepViewModel> approvalHistory)
-        {
-            model.ApprovalHistory = approvalHistory
-                .Select(a => new ApprovalHistoryViewModel
-                {
-                    ApprovalId = a.Id,
-                    ApprovalStep = a.ApprovalStep,
-                    StepNumber = a.StepNumber,
-                    Status = a.ApprovalStatus.ToString(),
-                    ApproverName = a.EmployeeName,
-                    Comments = a.Comments,
-                    ApprovedDate = a.UpdatedAt
-                })
-                .ToList();
-        }
-
-        /// <summary>
         /// Gets an approval with basic includes (Requisition and StepConfig)
         /// </summary>
         private async Task<Approval> GetApprovalWithBasicIncludes(int approvalId)
@@ -729,56 +711,6 @@ namespace MRIV.Controllers
                 .ThenInclude(r => r.RequisitionItems)
                 .ThenInclude(ri => ri.Material)
                 .FirstOrDefaultAsync(a => a.Id == approvalId);
-        }
-
-        /// <summary>
-        /// Populates the requisition items with their material conditions
-        /// </summary>
-        private async Task PopulateRequisitionItemsWithConditions(ApprovalWizardViewModel model, Approval approval)
-        {
-            if (approval.Requisition.RequisitionItems == null)
-                return;
-
-            foreach (var item in approval.Requisition.RequisitionItems)
-            {
-                // Check if there's an existing material condition record for this item in this approval step
-                var existingCondition = await FindMaterialCondition(item.Id, approval.Id, approval.RequisitionId);
-
-                // Get vendor information if available
-                Vendor? vendor = null;
-                if (item.Material?.VendorId != null)
-                {
-                    vendor = await _vendorService.GetVendorByIdAsync(item.Material.VendorId);
-                }
-
-                var itemViewModel = new RequisitionItemConditionViewModel
-                {
-                    RequisitionItemId = item.Id,
-                    Name = item.Name ?? "N/A",
-                    MaterialId = item.MaterialId,
-                    MaterialCode = item.Material?.Code ?? "N/A",
-                    Description = item.Description ?? "N/A",
-                    Quantity = item.Quantity,
-                    RequisitionItemCondition = item.Condition,
-                    vendor = vendor
-                };
-
-                // If there's an existing condition, populate it
-                if (existingCondition != null)
-                {
-                    itemViewModel.MaterialConditionId = existingCondition.Id;
-                    itemViewModel.Condition = existingCondition.Condition;
-                    itemViewModel.Notes = existingCondition.Notes;
-                    itemViewModel.Stage = existingCondition.Stage;
-                }
-                else
-                {
-                    // Set default stage based on the approval step
-                    itemViewModel.Stage = GetStageFromApprovalStep(approval.ApprovalStep);
-                }
-
-                model.Items.Add(itemViewModel);
-            }
         }
 
         /// <summary>

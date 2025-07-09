@@ -1,0 +1,232 @@
+@model MRIV.ViewModels.ApprovalSummaryViewModel
+@using MRIV.Enums
+@using MRIV.ViewModels
+
+@{
+    ViewData["Title"] = "Approval Summary";
+}
+
+<div class="row">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header">
+                <h6><strong>Material Requisition Details</strong></h6>
+            </div>
+            <div class="card-body">
+                <dl class="row">
+                <dt class="col-sm-6">Requisition ID</dt>
+                    <dd class="col-sm-6">@Model.RequisitionId</dd>
+                    <dt class="col-sm-6">Ticket Number</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.RequisitionNumber == 0)
+                        {
+                            <span>Inter Factory Borrowing</span>
+                        }
+                        else
+                        {
+                            <span>@Model.RequisitionNumber</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-6">Requisition Department</dt>
+                    <dd class="col-sm-6">@Model.DepartmentName</dd>
+                    <dt class="col-sm-6">Requisition By</dt>
+                    <dd class="col-sm-6">@Model.RequestingEmployeeName</dd>
+                    <dt class="col-sm-6">Issue Point Category</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.IssueStationCategory?.ToLower() == "headoffice")
+                        {
+                            <span>Head Office</span>
+                        }
+                        else
+                        {
+                            <span style="text-transform: capitalize;">@Model.IssueStationCategory</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-6">Issue Station</dt>
+                    <dd class="col-sm-6">@Model.IssueStationName</dd>
+                    <dt class="col-sm-6">Issue Department</dt>
+                    <dd class="col-sm-6">@Model.DeliveryDepartmentName</dd>
+                    <dt class="col-sm-6">Delivery Point Category</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.DeliveryStationCategory?.ToLower() == "headoffice")
+                        {
+                            <span>Head Office</span>
+                        }
+                        else
+                        {
+                            <span style="text-transform: capitalize;">@Model.DeliveryStationCategory</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-6">Delivery Station</dt>
+                    <dd class="col-sm-6">
+                        @if (Model.DeliveryStationCategory?.ToLower() == "vendor")
+                        {
+                            @Model.VendorName
+                        }
+                        else
+                        {
+                            @Model.DeliveryStationName
+                        }
+                    </dd>
+                    <dt class="col-sm-6">Delivery Department</dt>
+                    <dd class="col-sm-6">@Model.DeliveryDepartmentName</dd>
+                    @if (!string.IsNullOrEmpty(Model.Remarks))
+                    {
+                        <dt class="col-sm-6">Remarks</dt>
+                        <dd class="col-sm-6">@Model.Remarks</dd>
+                    }
+                    @if (!string.IsNullOrEmpty(Model.DispatchType))
+                    {
+                        <dt class="col-sm-6">Dispatched By</dt>
+                        <dd class="col-sm-6">
+                            @if (Model.DispatchType?.ToLower() == "admin")
+                            {
+                                <span>Admin Department</span>
+                                <dt class="col-sm-6">Admin Dispatch</dt>
+                                <dd class="col-sm-6">@Model.DispatcherName</dd>
+                            }
+                            else if (Model.DispatchType?.ToLower() == "vendor")
+                            {
+                                <span>Vendor</span>
+                                <dt class="col-sm-6">Vendor Name</dt>
+                                <dd class="col-sm-6">@Model.VendorName</dd>
+                            }
+                        </dd>
+                    }
+                    <dt class="col-sm-6">Collected By</dt>
+                    <dd class="col-sm-6">@Model.CollectorName</dd>
+                    <dt class="col-sm-6">Collector ID</dt>
+                    <dd class="col-sm-6">@Model.CollectorId</dd>
+                    <dt class="col-sm-6">Created At</dt>
+                    <dd class="col-sm-6">@Model.RequestDate.ToString("dd MMM yyyy HH:mm")</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5">
+        <div class="card mb-3" style="background-color: #ffffa8;border: 1px solid #fcb900;">
+            <div class="card-header" style="background-color: #ffffa8;">
+                <h6>Current Approval Step</h6>
+            </div>
+            <div class="card-body">
+                @if (Model.CurrentApprovalSteps != null && Model.CurrentApprovalSteps.Any())
+                {
+                    @await Html.PartialAsync("~/Views/Shared/_ApprovalStepsSummary.cshtml", Model.CurrentApprovalSteps)
+                }
+                else
+                {
+                    <span class="text-muted">No current approval step requires action.</span>
+                }
+                @{
+                    var currentStep = Model.CurrentApprovalSteps.FirstOrDefault();
+                }
+                @if (currentStep != null &&
+                                (currentStep.ApprovalStatus == MRIV.Enums.ApprovalStatus.PendingApproval ||
+                                currentStep.ApprovalStatus == MRIV.Enums.ApprovalStatus.PendingDispatch ||
+                                currentStep.ApprovalStatus == MRIV.Enums.ApprovalStatus.PendingReceive))
+                {
+                    <form asp-action="ApprovalSummary" method="post">
+                        @Html.AntiForgeryToken()
+                        @Html.HiddenFor(m => m.ApprovalId)
+                        <div class="mb-3">
+                            <label asp-for="Action" class="form-label">Action</label>
+                            <select asp-for="Action" class="form-select">
+                                <option value="">-- Select Action --</option>
+                                @if (Model?.StatusOptions != null && Model.StatusOptions.Any())
+                                {
+                                    foreach (var option in Model.StatusOptions)
+                                    {
+                                        <option value="@option.Key">@option.Value</option>
+                                    }
+                                }
+                                else
+                                {
+                                    // Fallback options if no status options are provided
+                                    if (!string.IsNullOrEmpty(Model?.ApprovalStep))
+                                    {
+                                        if (Model.ApprovalStep.ToLower().Contains("dispatch"))
+                                        {
+                                            <option value="@((int)ApprovalStatus.Dispatched)">Dispatch</option>
+                                        }
+                                        else if (Model.ApprovalStep.ToLower().Contains("receiv"))
+                                        {
+                                            <option value="@((int)ApprovalStatus.Received)">Receive</option>
+                                        }
+                                        else
+                                        {
+                                            <option value="@((int)ApprovalStatus.Approved)">Approve</option>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <option value="@((int)ApprovalStatus.Approved)">Approve</option>
+                                    }
+                                    <option value="@((int)ApprovalStatus.Rejected)">Reject</option>
+                                    <option value="@((int)ApprovalStatus.OnHold)">Put On Hold</option>
+                                }
+                            </select>
+                            <span asp-validation-for="Action" class="text-danger"></span>
+                        </div>
+                        <div class="mb-3">
+                            <label asp-for="Comments" class="form-label">Comments</label>
+                            <textarea asp-for="Comments" class="form-control" rows="3"></textarea>
+                            <span asp-validation-for="Comments" class="text-danger"></span>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="text-muted">No action is required for this approval step.</span>
+                }
+
+            </div>
+        </div>
+       
+    </div>
+</div>
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6>Material Requisition Items</h6>
+            </div>
+            <div class="card-body">
+                @* You can use the partial for requisition items if it matches the model, or render a table here *@
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>No</th>
+                            <th>Name</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Material Code</th>
+                            <th>Condition</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.RequisitionItems)
+                        {
+                            int counter = 1;
+                            <tr>
+                                <td>@counter</td>
+                                <td>@item.Name</td>
+                                <td style="min-width: 200px;max-width: 200px; word-break: break-word; white-space: normal;">
+                                    @item.Description
+                                </td>
+                                <td>@item.Quantity</td>
+                                <td>@item.MaterialCode</td>
+                                <td>@item.RequisitionItemCondition</td>
+                            </tr>
+                                counter++;
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+} 
