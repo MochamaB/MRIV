@@ -1,0 +1,62 @@
+@model MRIV.ViewModels.MaterialConditionViewModel
+@using MRIV.Models
+
+<div class="modal fade" id="materialConditionModal-@Model.RequisitionItemId" tabindex="-1" aria-labelledby="materialConditionModalLabel-@Model.RequisitionItemId" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form asp-action="SaveItemCondition" asp-controller="Approvals" method="post">
+        <div class="modal-header">
+          <h5 class="modal-title" id="materialConditionModalLabel-@Model.RequisitionItemId">Record Material Condition</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          @* Hidden fields *@
+          <input type="hidden" asp-for="RequisitionId" />
+          <input type="hidden" asp-for="RequisitionItemId" />
+          <input type="hidden" asp-for="MaterialId" />
+          <input type="hidden" asp-for="MaterialAssignmentId" />
+          <input type="hidden" asp-for="ApprovalId"/>
+
+          <div class="mb-3">
+            <label asp-for="ConditionCheckType" class="form-label">Inspection Type</label>
+            <select asp-for="ConditionCheckType" class="form-select" asp-items="Html.GetEnumSelectList<ConditionCheckType>()">
+              <option value="">-- Select Inspection Type --</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="Condition" class="form-label">Condition</label>
+            <select asp-for="Condition" class="form-select" asp-items="Html.GetEnumSelectList<Condition>()">
+              <option value="">-- Select Condition --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label asp-for="FunctionalStatus" class="form-label">Functional Status</label>
+            <select asp-for="FunctionalStatus" class="form-select" asp-items="Html.GetEnumSelectList<FunctionalStatus>()">
+              <option value="">-- Select Functional Status --</option>
+            </select>
+          </div>
+
+          <div class="mb-3">
+            <label asp-for="CosmeticStatus" class="form-label">Cosmetic Status</label>
+            <select asp-for="CosmeticStatus" class="form-select" asp-items="Html.GetEnumSelectList<CosmeticStatus>()">
+              <option value="">-- Select Cosmetic Status --</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label asp-for="Stage" class="form-label">Stage</label>
+            <input asp-for="Stage" class="form-control" />
+          </div>
+          <div class="mb-3">
+            <label asp-for="Notes" class="form-label">Notes</label>
+            <textarea asp-for="Notes" class="form-control"></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+          <button type="submit" class="btn btn-primary">Save Condition</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div> 

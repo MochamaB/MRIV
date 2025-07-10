@@ -474,19 +474,45 @@ namespace MRIV.Controllers
             }
 
             // Requisition items
-            var items = requisition.RequisitionItems.Select(item => new RequisitionItemConditionViewModel
-            {
-                RequisitionItemId = item.Id,
-                Name = item.Name,
-                Description = item.Description,
-                Quantity = item.Quantity,
-                MaterialId = item.MaterialId,
-                MaterialCode = item.Material?.Code,
-                RequisitionItemCondition = item.Condition,
-                Condition = null, // To be filled if needed
-                Notes = null, // To be filled if needed
-                Stage = null, // To be filled if needed
-                vendor = vendor
+            var items = requisition.RequisitionItems.Select(item => {
+                var latestCondition = _context.MaterialConditions
+                    .Where(mc => mc.RequisitionItemId == item.Id)
+                    .OrderByDescending(mc => mc.InspectionDate)
+                    .FirstOrDefault();
+                var currentUser = HttpContext.Session.GetString("EmployeePayrollNo");
+                return new RequisitionItemViewModel
+                {
+                    RequisitionId = item.Id,
+                    MaterialName = item.Material?.Name ?? "Unknown",
+                    Description = item.Description,
+                    Quantity = item.Quantity,
+                    MaterialId = item.MaterialId,
+                    MaterialCode = item.Material?.Code ?? "",
+                    RequisitionItemCondition = item.Condition,
+                    Vendor = vendor?.Name ?? "",
+                    CurrentCondition = latestCondition != null ? new MRIV.ViewModels.MaterialConditionViewModel {
+                        RequisitionId = latestCondition.RequisitionId,
+                        MaterialId = latestCondition.MaterialId,
+                        MaterialAssignmentId = latestCondition.MaterialAssignmentId,
+                        RequisitionItemId = latestCondition.RequisitionItemId ?? item.Id,
+                        ApprovalId = approval?.Id ?? latestCondition?.ApprovalId ?? 0,
+                        Condition = latestCondition.Condition,
+                        FunctionalStatus = latestCondition.FunctionalStatus,
+                        CosmeticStatus = latestCondition.CosmeticStatus,
+                        Notes = " Condition of material requisition item on receiveing",
+                        ConditionCheckType = latestCondition.ConditionCheckType,
+                        Stage = "At Receiving",
+                        InspectionDate = DateTime.Now,
+                        InspectedBy = currentUser
+                    } : new MRIV.ViewModels.MaterialConditionViewModel {
+                        MaterialId = item.MaterialId,
+                        RequisitionItemId = item.Id,
+                        ConditionCheckType = MRIV.Models.ConditionCheckType.AtDispatch,
+                        Stage = "At-Receive",
+                        InspectionDate = DateTime.Now,
+                        InspectedBy = currentUser
+                    }
+                };
             }).ToList();
 
             // Find all relevant current steps (all pending steps for this requisition)
@@ -617,74 +643,50 @@ namespace MRIV.Controllers
         // POST: Approvals/SaveItemCondition
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> SaveItemCondition(int approvalId, int requisitionItemId, int? materialId, int? materialConditionId, Condition? condition, string notes, string stage)
+        public async Task<IActionResult> SaveItemCondition(MRIV.ViewModels.MaterialConditionViewModel model)
         {
-            _logger.LogInformation($"Saving material condition for item ID: {requisitionItemId}");
-            
+            Console.WriteLine($"Saving material condition for item ID: {model.RequisitionItemId}");
             try
             {
-                // Get the current approval to access the ApprovalStep and approver's payroll
-                var approval = await _context.Approvals
-                    .FirstOrDefaultAsync(a => a.Id == approvalId);
-
+                var approval = await _context.Approvals.FirstOrDefaultAsync(a => a.Id == model.ApprovalId);
                 if (approval == null)
                 {
-                    _logger.LogWarning($"Approval with ID {approvalId} not found when saving material condition");
+                    Console.WriteLine($"Approval with ID {model.ApprovalId} not found when saving material condition");
                     return Json(new { success = false, message = "Approval not found" });
                 }
 
-                // Skip if no condition is provided
-                if (condition == null)
+                // Always create a new MaterialCondition
+                var materialCondition = new MaterialCondition
                 {
-                    return Json(new { success = false, message = "No condition provided" });
-                }
-
-                if (materialConditionId.HasValue)
-                {
-                    // Update existing condition
-                    var existingCondition = await _context.MaterialConditions.FindAsync(materialConditionId.Value);
-                    if (existingCondition != null)
-                    {
-                        _logger.LogInformation($"Updating existing condition ID: {existingCondition.Id}");
-                        existingCondition.Condition = condition;
-                        existingCondition.Notes = notes;
-                        existingCondition.Stage = approval.ApprovalStep ?? stage ?? existingCondition.Stage;
-                        existingCondition.InspectionDate = DateTime.Now;
-                        existingCondition.InspectedBy = approval.PayrollNo ?? User.Identity?.Name ?? "System";
-                        _context.Update(existingCondition);
-                    }
-                }
-                else
-                {
-                    // Check if the MaterialId is valid
-                    int? validMaterialId = await ValidateMaterialId(materialId);
-                    
-                    // Create new condition record
-                    var materialCondition = new MaterialCondition
-                    {
-                        MaterialId = validMaterialId,
-                        RequisitionId = approval.RequisitionId,
-                        RequisitionItemId = requisitionItemId,
-                        ApprovalId = approvalId,
-                        Stage = approval.ApprovalStep ?? stage ?? "Unknown",
-                        Condition = condition,
-                        Notes = notes,
-                        InspectedBy = approval.PayrollNo ?? User.Identity?.Name ?? "System",
-                        InspectionDate = DateTime.Now
-                    };
-
-                    _context.Add(materialCondition);
-                }
-
+                    MaterialId = model.MaterialId,
+                    MaterialAssignmentId = model.MaterialAssignmentId,
+                    RequisitionId = model.RequisitionId,
+                    RequisitionItemId = model.RequisitionItemId,
+                    ApprovalId = model.ApprovalId,
+                    Condition = model.Condition,
+                    FunctionalStatus = model.FunctionalStatus,
+                    CosmeticStatus = model.CosmeticStatus,
+                    ConditionCheckType = model.ConditionCheckType,
+                    Stage = model.Stage,
+                    Notes = model.Notes,
+                    ComponentStatuses = model.ComponentStatuses,
+                    ActionRequired = model.ActionRequired,
+                    ActionDueDate = model.ActionDueDate,
+                    InspectionDate = DateTime.Now,
+                    InspectedBy = approval.PayrollNo ?? User.Identity?.Name ?? "System"
+                };
+                _context.Add(materialCondition);
                 await _context.SaveChangesAsync();
-                _logger.LogInformation("Material condition saved successfully");
-                
-                return Json(new { success = true });
+                Console.WriteLine("Material condition saved successfully");
+
+                TempData["SuccessMessage"] = "Material condition saved successfully.";
+                 return RedirectToAction("ApprovalSummary", new { id = model.ApprovalId });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error saving material condition");
-                return Json(new { success = false, message = ex.Message });
+                Console.WriteLine($"Error saving material condition: {ex.Message}");
+               TempData["ErrorMessage"] = "Error saving material condition: " + ex.Message;
+                return RedirectToAction("ApprovalSummary", new { id = model.ApprovalId });
             }
         }
 

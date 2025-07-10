@@ -125,6 +125,7 @@ namespace MRIV.ViewModels
         public int? MaterialAssignmentId { get; set; }
         public int? RequisitionId { get; set; }
         public int? RequisitionItemId { get; set; }
+        public int? ApprovalId { get; set; }
         public ConditionCheckType? ConditionCheckType { get; set; }
         public string ConditionCheckTypeDisplayName => ConditionCheckType?.ToString() ?? "Unknown";
         public string? Stage { get; set; }
@@ -148,16 +149,19 @@ namespace MRIV.ViewModels
     {
         public int Id { get; set; }
         public int RequisitionId { get; set; }
-        public string RequisitionNumber { get; set; }
         public int? MaterialId { get; set; }
         public string? MaterialName { get; set; }
+        public string? MaterialCode { get; set; }
         public string? Description { get; set; }
         public int Quantity { get; set; }
-        public decimal? UnitPrice { get; set; }
-        public decimal? TotalPrice { get; set; }
-        public string? Status { get; set; }
+        public RequisitionItemCondition RequisitionItemCondition {  get; set; }
+        public RequisitionItemStatus RequisitionItemStatus { get; set; }
+        public int SaveToInventory { get; set; }
+
+        public string? Vendor { get; set; }
         public DateTime? RequestDate { get; set; }
         public DateTime? ApprovalDate { get; set; }
         public DateTime? DeliveryDate { get; set; }
+        public MaterialConditionViewModel CurrentCondition { get; internal set; }
     }
 }

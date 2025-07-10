@@ -1,5 +1,6 @@
 @model MRIV.ViewModels.ApprovalSummaryViewModel
 @using MRIV.Enums
+@using MRIV.Helpers
 @using MRIV.ViewModels
 
 @{
@@ -182,6 +183,11 @@
 
             </div>
         </div>
+        @{
+            bool isLastStep = Model.CurrentApprovalSteps != null && Model.CurrentApprovalSteps.Count == 1 && (Model.ApprovalStep == null || Model.CurrentApprovalSteps.First().ApprovalStatus == MRIV.Enums.ApprovalStatus.PendingReceive);
+            bool isReceiveStep = Model.ApprovalStep?.ToLower().Contains("receive") == true;
+            var firstItem = Model.RequisitionItems?.FirstOrDefault();
+        }
        
     </div>
 </div>
@@ -192,33 +198,57 @@
                 <h6>Material Requisition Items</h6>
             </div>
             <div class="card-body">
-                @* You can use the partial for requisition items if it matches the model, or render a table here *@
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Name</th>
-                            <th>Description</th>
+                            <th>#</th>
+                            <th>Material</th>
+                            <th>Code/SN</th>
                             <th>Quantity</th>
-                            <th>Material Code</th>
                             <th>Condition</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach (var item in Model.RequisitionItems)
                         {
-                            int counter = 1;
                             <tr>
-                                <td>@counter</td>
-                                <td>@item.Name</td>
-                                <td style="min-width: 200px;max-width: 200px; word-break: break-word; white-space: normal;">
-                                    @item.Description
-                                </td>
-                                <td>@item.Quantity</td>
+                                <td></td>
+                                <td>@item.MaterialName</td>
                                 <td>@item.MaterialCode</td>
-                                <td>@item.RequisitionItemCondition</td>
+                                <td>@item.Quantity</td>
+                                <td>
+                                    @if (item.RequisitionItemCondition != null)
+                                    {
+                                        <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.RequisitionItemCondition)">
+                                            @EnumHelper.GetEnumDescription(item.RequisitionItemCondition)
+                                            @if (!string.IsNullOrEmpty(item.CurrentCondition.Notes))
+                                            {
+                                                <i class="mdi mdi-information mdi-12px text-info" data-bs-toggle="tooltip" title="@item.CurrentCondition.Notes"></i>
+                                            }
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge @BadgeHelper.GetRequisitionItemConditionBadgeClass(item.RequisitionItemCondition)">
+                                            @EnumHelper.GetEnumDescription(item.RequisitionItemCondition)
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (isLastStep || isReceiveStep)
+                                        {
+                                            <a href="javascript:void(0);" class="text-info edit-condition-btn" 
+                                               data-bs-toggle="modal" 
+                                               data-bs-target="#materialConditionModal-@item.MaterialId"
+                                               title="Record Current Condition">
+                                                <i class="mdi mdi-lead-pencil mdi-12px text-info" style="vertical-align: middle;"></i> Record Condition
+                                            </a>
+    
+                                           @Html.Partial("~/Views/Materials/Partials/_MaterialConditionModal.cshtml", item.CurrentCondition ?? new MRIV.ViewModels.MaterialConditionViewModel())
+                                        }
+                                </td>
                             </tr>
-                                counter++;
                         }
                     </tbody>
                 </table>
@@ -229,4 +259,5 @@
 
 @section Scripts {
     @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+    
 } 

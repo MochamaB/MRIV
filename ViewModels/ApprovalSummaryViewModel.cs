@@ -47,6 +47,6 @@ namespace MRIV.ViewModels
         public List<ApprovalStepViewModel> ApprovalHistory { get; set; } = new List<ApprovalStepViewModel>();
 
         // Requisition items
-        public List<RequisitionItemConditionViewModel> RequisitionItems { get; set; } = new List<RequisitionItemConditionViewModel>();
+        public List<RequisitionItemViewModel> RequisitionItems { get; set; } = new List<RequisitionItemViewModel>();
     }
 }

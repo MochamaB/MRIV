@@ -640,6 +640,26 @@ namespace MRIV.Services
 
                     await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(nextStep));
 
+                    // Update requisition status if this is the first approval step
+                    var requisition = approval.Requisition;
+                    if (requisition != null)
+                    {
+                        // If this is the first approval and there is a dispatch step, set to PendingDispatch
+                        var hasDispatchStep = _context.Approvals.Any(a => a.RequisitionId == requisition.Id && a.ApprovalStep.ToLower().Contains("dispatch"));
+                        if (approval.StepNumber == 1 && hasDispatchStep)
+                        {
+                            requisition.Status = RequisitionStatus.PendingDispatch;
+                        }
+                        // If this is the last step and no more steps remain, set to Completed
+                        var nextStepAfterThis = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+                        if (nextStepAfterThis == null)
+                        {
+                            requisition.Status = RequisitionStatus.Completed;
+                        }
+                        requisition.UpdatedAt = DateTime.Now;
+                        _context.Update(requisition);
+                    }
+
                     await transaction.CommitAsync();
                     return true;
                 }
@@ -768,6 +788,15 @@ namespace MRIV.Services
 
                     await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
 
+                    var requisition = approval.Requisition;
+                    if (requisition != null)
+                    {
+                        // Set to PendingReceipt after dispatch
+                        requisition.Status = RequisitionStatus.PendingReceipt;
+                        requisition.UpdatedAt = DateTime.Now;
+                        _context.Update(requisition);
+                    }
+
                     await transaction.CommitAsync();
                     return true;
                 }
@@ -812,6 +841,19 @@ namespace MRIV.Services
                     await _notificationManager.NotifyApprovalStepReceived(approval, receiverPayrollNo, deliveryStationName);
 
                     await HandleNextStepOrCompleteRequisitionAsync(approval, DetermineNextStepStatus(await GetNextStepAsync(approval.RequisitionId, approval.StepNumber)));
+
+                    var requisition = approval.Requisition;
+                    if (requisition != null)
+                    {
+                        // If this is the last step, set to Completed
+                        var nextStep = await GetNextStepAsync(approval.RequisitionId, approval.StepNumber);
+                        if (nextStep == null)
+                        {
+                            requisition.Status = RequisitionStatus.Completed;
+                        }
+                        requisition.UpdatedAt = DateTime.Now;
+                        _context.Update(requisition);
+                    }
 
                     await transaction.CommitAsync();
                     return true;
