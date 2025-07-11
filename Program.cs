@@ -44,6 +44,9 @@ builder.Services.AddScoped<IUserAuthenticationService, UserAuthenticationService
 builder.Services.AddScoped<IEmployeeService, EmployeeService>();
 builder.Services.AddScoped<IDepartmentService, DepartmentService>();
 builder.Services.AddScoped<IApprovalService, ApprovalService>();
+// Register filter services
+builder.Services.AddScoped<MRIV.Filters.IFilterOptionsProvider, MRIV.Filters.FilterOptionsProvider>();
+
 builder.Services.AddScoped<IVisibilityAuthorizeService, VisibilityAuthorizeService>();
 builder.Services.AddScoped<IStationCategoryService, StationCategoryService>();
 builder.Services.AddScoped<VendorService>();

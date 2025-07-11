@@ -25,9 +25,10 @@ namespace MRIV.Controllers
         private readonly IApprovalService _approvalService;
         private readonly VendorService _vendorService;
         private readonly ILocationService _locationService;
+        private readonly IVisibilityAuthorizeService _visibilityService;
 
         public RequisitionsController(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService,
-            IApprovalService approvalService, VendorService vendorService, KtdaleaveContext ktdaleavecontext, ILocationService location)
+            IApprovalService approvalService, VendorService vendorService, KtdaleaveContext ktdaleavecontext, ILocationService location, IVisibilityAuthorizeService visibilityService)
         {
             _context = context;
             _employeeService = employeeService;
@@ -36,74 +37,87 @@ namespace MRIV.Controllers
             _vendorService = vendorService;
             _ktdaleavecontext = ktdaleavecontext;
             _locationService = location;
-
+            _visibilityService = visibilityService;
         }
 
         // GET: Requisitions
-        public async Task<IActionResult> Index(int page = 1, int pageSize = 10, string searchTerm = "")
+        public async Task<IActionResult> Index(string tab = "pendingreceipt", int page = 1, int pageSize = 10, string searchTerm = "")
         {
             // Ensure valid pagination parameters
             page = page < 1 ? 1 : page;
             pageSize = pageSize < 1 ? 10 : (pageSize > 100 ? 100 : pageSize);
-           
+
             // Get filter values from request query string
             var filters = new Dictionary<string, string>();
-            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize" && k != "searchTerm"))
+            foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize" && k != "searchTerm" && k != "tab"))
             {
-                // Skip if the value is null or empty
                 if (!string.IsNullOrEmpty(Request.Query[key]))
                 {
                     filters[key] = Request.Query[key];
                 }
             }
-            
+
+            // Get current user's payroll number from session
+            var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (string.IsNullOrEmpty(userPayrollNo))
+                return RedirectToAction("Index", "Login");
+
             // Create base query
             var query = _context.Requisitions.AsQueryable();
 
-            // Create filter view model with explicit type for the array
-            ViewBag.Filters = await query.CreateFiltersAsync(
-                new Expression<Func<Requisition, object>>[] {
-                    // Select which properties to create filters for
-                    r => r.Status,
-                    r => r.IssueStationCategory,
-                    r => r.DeliveryStationCategory,
-                    // Add other properties as needed
-                },
-                filters
-            );
+            // 1. Apply visibility scope (new logic)
+            query = await _visibilityService.ApplyVisibilityScopeAsync(query, userPayrollNo);
 
-            // Apply filters to query
-            query = query.ApplyFilters(filters);
-            
-            // Apply search filter if provided
+            // 2. Apply tab logic (group by status)
+            switch (tab.ToLower())
+            {
+                case "notstarted":
+                    query = query.Where(r => r.Status == RequisitionStatus.NotStarted);
+                    break;
+                case "pendingdispatch":
+                    query = query.Where(r => r.Status == RequisitionStatus.PendingDispatch);
+                    break;
+                case "pendingreceipt":
+                    query = query.Where(r => r.Status == RequisitionStatus.PendingReceipt);
+                    break;
+                case "cancelled":
+                    query = query.Where(r => r.Status == RequisitionStatus.Cancelled);
+                    break;
+                case "completed":
+                    query = query.Where(r => r.Status == RequisitionStatus.Completed);
+                    break;
+                case "all":
+                default:
+                    // No additional filter
+                    break;
+            }
+
+            // 3. Apply search and filters to the full visible dataset
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 searchTerm = searchTerm.Trim().ToLower();
-                query = query.Where(r => 
-                    (r.TicketId.ToString().Contains(searchTerm)) || 
+                query = query.Where(r =>
+                    (r.TicketId.ToString().Contains(searchTerm)) ||
                     (r.IssueStationCategory != null && r.IssueStationCategory.ToLower().Contains(searchTerm)) ||
                     (r.DeliveryStationCategory != null && r.DeliveryStationCategory.ToLower().Contains(searchTerm)) ||
-                    (r.Status != null && r.Status.ToString().ToLower().Contains(searchTerm)));
+                    (r.Status != null && r.Status.ToString().ToLower().Contains(searchTerm))
+                );
             }
-          
-            // Get total count for pagination after filtering
+
+            // Apply additional filters if any
+            query = query.ApplyFilters(filters);
+
+            // 4. Get total count for pagination after filtering
             var totalItems = await query.CountAsync();
 
-            // Set ViewBag values for preserving filters/search in pagination
-            foreach (var filter in filters)
-            {
-                ViewBag[filter.Key + "Filter"] = filter.Value;
-            }
-            ViewBag.SearchTerm = searchTerm;
-
-            // Apply pagination and ordering
+            // 5. Apply pagination and ordering
             var requisitions = await query
                 .OrderByDescending(r => r.CreatedAt)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
 
-            // Create view models for the paginated data
+            // 6. Create view models for the paginated data
             var viewModels = new List<RequisitionViewModel>();
             foreach (var requisition in requisitions)
             {
@@ -123,15 +137,11 @@ namespace MRIV.Controllers
                 // Special handling for vendor delivery locations
                 if (requisition.DeliveryStationCategory?.ToLower() == "vendor" && requisition.DeliveryStationId != 0)
                 {
-                    // Try to get vendor by ID
                     var vendor = await _vendorService.GetVendorByIdAsync(requisition.DeliveryStationId.ToString());
                     deliveryStationName = vendor?.Name ?? "Unknown Vendor";
                 }
                 else
                 {
-                    // For non-vendor locations, use the station name directly
-                    // For non-vendor locations, use the station name directly
-                   
                     deliveryStationName = deliveryStation?.StationName ?? "Unknown Station";
                 }
 
@@ -182,7 +192,7 @@ namespace MRIV.Controllers
                 });
             }
 
-            // Create pagination view model
+            // 7. Create pagination view model
             var paginationModel = new PaginationViewModel
             {
                 TotalItems = totalItems,
@@ -193,8 +203,14 @@ namespace MRIV.Controllers
                 RouteData = filters
             };
 
-            // Pass pagination model to view
+            // 8. Pass tab, pagination, and search info to the view
             ViewBag.Pagination = paginationModel;
+            ViewBag.Tab = tab;
+            ViewBag.TotalItems = totalItems;
+            ViewBag.PageSize = pageSize;
+            ViewBag.CurrentPage = page;
+            ViewBag.SearchTerm = searchTerm;
+            ViewBag.Filters = filters;
 
             return View(viewModels);
         }

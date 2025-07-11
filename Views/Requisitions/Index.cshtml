@@ -6,12 +6,69 @@
 @{
     ViewData["Title"] = "Requisitions";
     var pagination = ViewBag.Pagination as PaginationViewModel;
+    var tab = ViewBag.Tab as string ?? "pendingreceipt";
+    var currentPage = ViewBag.CurrentPage != null ? (int)ViewBag.CurrentPage : 1;
+    var pageSize = ViewBag.PageSize != null ? (int)ViewBag.PageSize : 10;
+    var totalItems = ViewBag.TotalItems != null ? (int)ViewBag.TotalItems : 0;
+    int totalPages = (int)Math.Ceiling((double)totalItems / pageSize);
 }
+
+<style>
+    .nav-tabs .nav-item .nav-link.active {
+        background: transparent;
+        color: #326408;
+        border-bottom: 3px solid #326408;
+    }
+    .nav-tabs .nav-item .nav-link {
+        font-style: normal;
+        font-weight: 700;
+        font-size: 15px;
+        line-height: 18px;
+        color: #212121;
+        padding: 22px 14px 14px 20px;
+        border: none;
+        font-family: "Manrope", sans-serif;
+        background: transparent;
+    }
+</style>
 
 <div class="row">
     <div class="col-lg-12">
         <div class="card">
             <div class="card-header border-bottom-dashed" style="padding:1rem 0rem">
+                <!-- Tabbed Navigation -->
+                <ul class="nav nav-tabs nav-border-top nav-border-top-primary mb-3" role="tablist">
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "pendingreceipt" ? "active" : "")" href="@Url.Action("Index", new { tab = "pendingreceipt" })" role="tab">
+                            <i class="ri-inbox-unarchive-line align-middle me-1"></i> Pending Receipt
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "notstarted" ? "active" : "")" href="@Url.Action("Index", new { tab = "notstarted" })" role="tab">
+                            <i class="ri-time-line align-middle me-1"></i> Not Started
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "pendingdispatch" ? "active" : "")" href="@Url.Action("Index", new { tab = "pendingdispatch" })" role="tab">
+                            <i class="ri-truck-line align-middle me-1"></i> Pending Dispatch
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "completed" ? "active" : "")" href="@Url.Action("Index", new { tab = "completed" })" role="tab">
+                            <i class="ri-checkbox-circle-line align-middle me-1"></i> Completed
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "cancelled" ? "active" : "")" href="@Url.Action("Index", new { tab = "cancelled" })" role="tab">
+                            <i class="ri-close-circle-line align-middle me-1"></i> Cancelled
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link @(tab == "all" ? "active" : "")" href="@Url.Action("Index", new { tab = "all" })" role="tab">
+                            <i class="ri-list-unordered align-middle me-1"></i> All
+                        </a>
+                    </li>
+                </ul>
                 <div class="d-flex align-items-center">
                     <h5 class="card-title mb-0 flex-grow-1"></h5>
                     <div class="flex-shrink-0">
@@ -20,11 +77,7 @@
                                 <input type="text" class="form-control search" placeholder="Search...">
                                 <i class="ri-search-line search-icon"></i>
                             </div>
-
-                            <!-- Filter Toggle Button -->
                             @await Html.PartialAsync("_FilterToggleButton")
-
-                            <!-- Add other action buttons here -->
                             <a href="@Url.Action("Ticket", "MaterialRequisition")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
                                 <i class="ri-add-line align-middle me-1"></i> New Requisition Transfer
                             </a>
@@ -34,7 +87,7 @@
             </div>
 
             <!-- Filters Partial View -->
-            @await Html.PartialAsync("_Filters", (FilterViewModel)ViewBag.Filters)
+           
 
             <!-- Table Content -->
             <div class="card-body">
@@ -92,11 +145,9 @@
                                     </td>
                                     <td>
                                         <div class="pb-2">@(item.CreatedAt?.ToString("dd MMM yyyy") ?? "N/A")</div>
-
                                         <div class="@(item.DaysPending > 7 ? "text-danger" : "text-muted")">
                                             <small>Days Pending: @item.DaysPending </small>
                                         </div>
-
                                     </td>
                                     <td>
                                         <div class="pb-2">@item.DepartmentName</div>
@@ -111,7 +162,6 @@
                                         }
                                     </td>
                                     <td>
-
                                         @if (item.CurrentApprovalStepNumber.HasValue)
                                         {
                                             <div class="pb-2">
@@ -133,7 +183,6 @@
                                             <span class="text-muted">No approvals</span>
                                         }
                                     </td>
-
                                     <td>
                                         <a asp-action="Details" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details"><i class="mdi mdi-eye mdi-24px text-warning"></i></a>
                                         <a asp-action="Edit" asp-route-id="@item.Id" data-bs-toggle="tooltip" data-bs-placement="top" title="Edit"><i class="mdi mdi-lead-pencil mdi-24px text-primary"></i></a>

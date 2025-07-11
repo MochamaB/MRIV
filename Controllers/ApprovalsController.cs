@@ -53,8 +53,8 @@ namespace MRIV.Controllers
             if (userPayrollNo == null)
                 return RedirectToAction("Index", "Login");
 
-            // Get all approvals visible to the user (use your visibility logic)
-            var approvalsQuery = await _visibilityService.ApplyDepartmentScopeAsync(_context.Approvals.Include(a => a.Requisition), userPayrollNo);
+            // Get all approvals visible to the user (using new robust visibility logic)
+            var approvalsQuery = await _visibilityService.ApplyVisibilityScopeAsync(_context.Approvals.Include(a => a.Requisition), userPayrollNo);
 
             // Define status groups
             var newStatusInts = new[] {
