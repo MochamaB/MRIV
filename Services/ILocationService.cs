@@ -32,10 +32,14 @@ namespace MRIV.Services
         // Get location names by ID
         Task<string> GetDepartmentNameAsync(int departmentId);
         Task<string> GetStationNameAsync(int stationId);
-       
+
+        Task<List<Department>> GetDepartmentsSimpleListAsync();
+        Task<List<Station>> GetStationsWithZeroAsync(int? selectedId = null);
+        Task<List<Station>> GetStationsWithHQAsync(int? selectedId = null);
+
 
         // Get location display name based on type and ID
-       // Task<string> GetLocationDisplayNameAsync(LocationType locationType, int? departmentId, int? stationId, int? vendorId);
+        // Task<string> GetLocationDisplayNameAsync(LocationType locationType, int? departmentId, int? stationId, int? vendorId);
     }
 
     public class LocationService : ILocationService
@@ -232,8 +236,83 @@ namespace MRIV.Services
             return station?.StationName ?? "Unknown Station";
         }
 
-       
+        public async Task<List<Department>> GetDepartmentsSimpleListAsync()
+        {
+            try
+            {
+                return await _ktdaContext.Departments
+                    .OrderBy(d => d.DepartmentName)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting departments list");
+                return new List<Department>(); // Return empty list on error
+            }
+        }
 
-        
+        public async Task<List<Station>> GetStationsWithZeroAsync(int? selectedId = null)
+        {
+            try
+            {
+                var stations = await _ktdaContext.Stations
+                    .OrderBy(s => s.StationName)
+                    .ToListAsync();
+
+                // Prepend custom "0" station
+                var stationsWithZero = new List<Station>
+        {
+            new Station
+            {
+                StationId = 0,
+                StationName = "National Office" // or "All Stations"
+            }
+        }.Concat(stations).ToList();
+
+                return stationsWithZero;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting stations list with 0");
+                return new List<Station>
+        {
+            new Station { StationId = 0, StationName = "National Office" }
+        };
+            }
+        }
+        public async Task<List<Station>> GetStationsWithHQAsync(int? selectedId = null)
+        {
+            try
+            {
+                var stations = await _ktdaContext.Stations
+                    .OrderBy(s => s.StationName)
+                    .ToListAsync();
+
+                // Prepend HQ
+                var stationsWithHQ = new List<Station>
+        {
+            new Station
+            {
+                StationId = -0,
+                StationName = "HQ - HeadOffice"
+            }
+        }.Concat(stations).ToList();
+
+                return stationsWithHQ;
+            }
+            catch (Exception ex)
+            {
+                        _logger.LogError(ex, "Error getting stations list with HQ");
+                        return new List<Station>
+                {
+                    new Station { StationId = 0, StationName = "HQ - HeadOffice" }
+                };
+
+            }
+        }
+
+
+
+
     }
 }

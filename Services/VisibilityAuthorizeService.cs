@@ -13,17 +13,27 @@ namespace MRIV.Services
         Task<bool> CanUserAccessEntityAsync<T>(T entity, string userPayrollNo) where T : class;
         Task<bool> UserHasRoleForStep(int? stepConfigId, string userRole);
         Task<bool> ShouldRestrictToPayrollAsync(int? stepConfigId);
+        Task<List<Department>> GetVisibleDepartmentsAsync(string userPayrollNo);
+        Task<List<Station>> GetVisibleStationsAsync(string userPayrollNo);
     }
 
     public class VisibilityAuthorizeService : IVisibilityAuthorizeService
     {
         private readonly IEmployeeService _employeeService;
+        private readonly IDepartmentService _departmentService;
+        private readonly ILocationService _locationService;
         private readonly RequisitionContext _context;
+        private readonly KtdaleaveContext _ktdaleaveContext;
 
-        public VisibilityAuthorizeService(IEmployeeService employeeService, RequisitionContext context)
+
+        public VisibilityAuthorizeService(IEmployeeService employeeService, RequisitionContext context, 
+            KtdaleaveContext ktdaleaveContext, IDepartmentService departmentService, ILocationService locationService)
         {
             _employeeService = employeeService;
             _context = context;
+            _ktdaleaveContext = ktdaleaveContext;
+            _departmentService = departmentService;
+            _locationService = locationService;
         }
 
         // Helper: Normalize station (HQ as 0 or "HQ", field stations as 3-digit string)
@@ -56,6 +66,68 @@ namespace MRIV.Services
                 .Where(g => groupIds.Contains(g.Id) && g.IsActive)
                 .ToListAsync();
         }
+        // Get visible departments for a user
+        public async Task<List<Department>> GetVisibleDepartmentsAsync(string userPayrollNo)
+        {
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
+            if (employee == null)
+                return new List<Department>();
+
+            if (employee.Role == "Admin")
+                return await _ktdaleaveContext.Departments.ToListAsync();
+
+            var userDept = NormalizeDepartment(employee.Department);
+            var roleGroups = await GetActiveRoleGroupsAsync(userPayrollNo);
+            bool isInAnyGroup = roleGroups.Any();
+            bool canAccessAcrossDepartments = roleGroups.Any(g => g.CanAccessAcrossDepartments);
+
+            // If not in any group or can't access across departments, only user's department
+            if (!isInAnyGroup || !canAccessAcrossDepartments)
+            {
+                if (int.TryParse(userDept, out int deptId))
+                {
+                    return await _ktdaleaveContext.Departments
+                        .Where(d => d.DepartmentCode == deptId)
+                        .ToListAsync();
+                }
+                return new List<Department>();
+            }
+
+            // Can access across departments - return all departments
+            return await _ktdaleaveContext.Departments.ToListAsync();
+        }
+
+        // Get visible stations for a user
+        public async Task<List<Station>> GetVisibleStationsAsync(string userPayrollNo)
+        {
+            var employee = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
+            if (employee == null)
+                return new List<Station>();
+
+            if (employee.Role == "Admin")
+                return await _ktdaleaveContext.Stations.ToListAsync();
+
+            var userStation = NormalizeStation(employee.Station);
+            var roleGroups = await GetActiveRoleGroupsAsync(userPayrollNo);
+            bool isInAnyGroup = roleGroups.Any();
+            bool canAccessAcrossStations = roleGroups.Any(g => g.CanAccessAcrossStations);
+
+            // If not in any group or can't access across stations, only user's station
+            if (!isInAnyGroup || !canAccessAcrossStations)
+            {
+                if (int.TryParse(userStation, out int stationId))
+                {
+                    return await _ktdaleaveContext.Stations
+                        .Where(s => s.StationId == stationId)
+                        .ToListAsync();
+                }
+                return new List<Station>();
+            }
+
+            // Can access across stations - return all stations
+            return await _locationService.GetStationsWithHQAsync();
+        }
+
 
         // Central method for scoping queries based on user/group access
         public async Task<IQueryable<T>> ApplyVisibilityScopeAsync<T>(IQueryable<T> query, string userPayrollNo) where T : class

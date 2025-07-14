@@ -1,0 +1,218 @@
+@{
+    ViewData["Title"] = "Reports";
+}
+<style>
+/* Remove accordion background and border */
+.accordion-button {
+    background-color: transparent;
+    box-shadow: none;
+    border: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    padding: 1rem 1.5rem;
+    align-items: center;
+}
+
+.accordion-button::after {
+    width: 1.5rem;
+    height: 1.5rem;
+    background-size: 1.5rem;
+    border: 2px solid #333;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+}
+
+.accordion-button:not(.collapsed) {
+    color: #326408;
+    background-color: #ffffff;
+    -webkit-box-shadow: inset 0 calc(-1 * var(--vz-accordion-border-width)) 0 var(--vz-accordion-border-color);
+    box-shadow: inset 0 calc(-1 * var(--vz-accordion-border-width)) 0 var(--vz-accordion-border-color);
+}
+
+      
+        /* Corrected CSS: Use ":hover" instead of "::hover" */  
+        .accordion-button:hover {
+                color: #ffaf00;
+       
+            -webkit-box-shadow: inset 0 calc(-1 * var(--vz-accordion-border-width)) 0 var(--vz-accordion-border-color);  
+            box-shadow: inset 0 calc(-1 * var(--vz-accordion-border-width)) 0 var(--vz-accordion-border-color);  
+        }  
+        
+            
+.accordion-button:not(.collapsed)::after {
+    transform: rotate(180deg);
+     background-color: transparent !important;
+     color:rgb(8, 53, 19); /* Bootstrap green or your preferred shade */
+    font-weight: bold;
+}
+
+/* Add bottom border only */
+.accordion-item {
+    border: none;
+    border-bottom: 1px solid #ddd;
+    background-color: #fff;
+}
+
+/* Remove bullet points from content */
+.accordion-body ul {
+    list-style: none;
+    padding-left: 1.5rem;
+}
+
+.accordion-body li::before {
+    content: none;
+}
+
+/* Optional: spacing between accordions */
+.accordion-body {
+    font-size: 0.9rem;
+    padding: 1.5rem;
+}
+
+</style>
+<div class="card shadow-sm">
+    <div class="card-header">
+        <h5>Reporting Panel</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <!-- Material Accordion -->
+            <div class="col-md-6">
+                <div class="accordion" id="accordionLeft">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingLeft1">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseLeft1" aria-expanded="false"
+                                    aria-controls="collapseLeft1">
+                                <i class="ri-stack-line me-2" style="font-size:20px"></i> Material & Inventory
+                            </button>
+                        </h2>
+                        <div id="collapseLeft1" class="accordion-collapse collapse"
+                             aria-labelledby="headingLeft1" data-bs-parent="#accordionLeft">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Total Inventory Value</li>
+                                    <li>Material Status Breakdown</li>
+                                    <li>Condition Summary</li>
+                                    <li>Recent Material Movements</li>
+                                    <li>Low Stock/Threshold Alerts</li>
+                                    <li>Materials Pending Assignment/Return</li>
+                                    <li>Materials Due for Maintenance</li>
+                                    <li>Recently Added/Disposed Materials</li>
+                                    <li>Top Categories by Value/Count</li>
+                                    <li>Materials with Expired/Expiring Warranty</li>
+                                    <li>Inventory by Location (Category, Station, Department)</li>
+                                    <li>Status Report</li>
+                                    <li>Condition Report</li>
+                                    <li>Assignment History</li>
+                                    <li>Material Movement Log</li>
+                                    <li>Utilization Report</li>
+                                    <li>Idle/Unused Materials</li>
+                                    <li>Maintenance Due Report</li>
+                                    <li>Warranty Expiry Report</li>
+                                    <li>Lifecycle/Ageing Report</li>
+                                    <li>Stock Level Report</li>
+                                    <li>Reorder Alerts</li>
+                                    <li>Material Audit Trail</li>
+                                    <li>Disposal/Retirement Report</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Requisition Accordion -->
+            <div class="col-md-6">
+                <div class="accordion" id="accordionRight">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingRight1">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseRight1" aria-expanded="false"
+                                    aria-controls="collapseRight1">
+                                <i class="ri-file-list-3-line me-2" style="font-size:20px"></i> Requisition Module
+                            </button>
+                        </h2>
+                        <div id="collapseRight1" class="accordion-collapse collapse"
+                             aria-labelledby="headingRight1" data-bs-parent="#accordionRight">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Total Requisition Value</li>
+                                    <li>Requisition Status Breakdown</li>
+                                    <li><a href="/Reports/RequisitionReports/ByLocation" style="color:#324721;font-weight:bold;text-decoration:none;">Requisition By Location</a></li>
+                                    <li>Requisition Type Distribution</li>
+                                    <li>Active vs. Completed Requisitions</li>
+                                    <li>Requisitions Pending Approval/Dispatch/Receipt</li>
+                                    <li>Recent Requisitions</li>
+                                    <li>Overdue/Pending Requisitions</li>
+                                    <li>Top Requesters/Departments by Value/Count</li>
+                                    <li>Requisitions by Workflow Step</li>
+                                    <li>Requisitions by Location (Category, Station, Department)</li>
+                                    <li>Status Report</li>
+                                    <li>Workflow Progress Report</li>
+                                    <li>Aging Report</li>
+                                    <li>Type Distribution</li>
+                                    <li>Value Analysis</li>
+                                    <li>High-Value Requisitions</li>
+                                    <li>Requester Activity</li>
+                                    <li>Approval Turnaround Time</li>
+                                    <li>Pending Actions by User/Role</li>
+                                    <li>Requisition Audit Trail</li>
+                                    <li>Rejected/Cancelled Requisitions</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+             <!-- Left Accordion -->
+            <div class="col-md-6">
+                <div class="accordion" id="accordionLeft2">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header" id="headingLeft2">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
+                                    data-bs-target="#collapseLeft2" aria-expanded="false"
+                                    aria-controls="collapseLeft2">
+                                <i class="ri-check-double-line me-2" style="font-size:20px"></i> Approval Module
+                            </button>
+                        </h2>
+                        <div id="collapseLeft2" class="accordion-collapse collapse"
+                             aria-labelledby="headingLeft2" data-bs-parent="#accordionLeft2">
+                            <div class="accordion-body">
+                                <ol>
+                                    <li>Approval Status Breakdown</li>
+                                    <li>Pending Approvals by Step/Role</li>
+                                    <li>Average Approval Turnaround Time</li>
+                                    <li>Bottleneck Steps</li>
+                                    <li>Recent Approval Actions</li>
+                                    <li>Overdue Approvals</li>
+                                    <li>Approvals by Workflow/Config</li>
+                                    <li>Approvals by Location (Category, Station, Department)</li>
+                                    <li>Workflow Progress Report</li>
+                                    <li>Aging Report</li>
+                                    <li>Turnaround Time Report</li>
+                                    <li>Bottleneck Analysis</li>
+                                    <li>Approval SLA Compliance</li>
+                                    <li>Approver Activity</li>
+                                    <li>Pending Actions by User/Role</li>
+                                    <li>Escalation Report</li>
+                                    <li>Approval Audit Trail</li>
+                                    <li>Rejected/Cancelled Approvals</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+
+        </div> <!-- /.row -->
+    </div> <!-- /.card-body -->
+</div> <!-- /.card -->
+
+

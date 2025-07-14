@@ -1,0 +1,236 @@
+
+@model MRIV.ViewModels.Reports.Requisition.RequisitionsByLocationViewModel
+@using MRIV.ViewModels
+@using MRIV.ViewModels.Reports.Filters
+
+@{
+    var filterDefinitions = ViewBag.Filters as List<ReportFilterDefinition>;
+    var selectedFilters = ViewBag.SelectedFilters as RequisitionReportFilterViewModel;
+}
+
+
+
+<div class="card">
+    <div class="card-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Requisitions by Location Report</h5>
+            @await Html.PartialAsync("_FilterToggleButton")
+         </div>
+    </div>
+            <!-- Render Filters Partial -->
+    @await Html.PartialAsync("~/Views/Shared/_Filters.cshtml", new MRIV.ViewModels.FilterViewModel
+    {
+        Filters = ((List<ReportFilterDefinition>)ViewBag.Filters).Select(f => new FilterDefinition
+        {
+            PropertyName = f.PropertyName,
+            DisplayName = f.DisplayName,
+            Options = f.Options.Select(o => new SelectListItem
+            {
+                Value = o.Value,
+                Text = o.Text,
+                Selected = o.Selected
+            }).ToList()
+        }).ToList()
+        })
+    <div class="card-body">
+        <!-- Nav tabs -->
+        <ul class="nav nav-tabs" id="reportTabs" role="tablist">
+            <li class="nav-item">
+                <a class="nav-link active" id="table-tab" data-toggle="tab" href="#tableView" role="tab">Tabular Data</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" id="chart-tab" data-toggle="tab" href="#chartView" role="tab">Charts</a>
+            </li>
+        </ul>
+
+        <!-- Tab content -->
+        <div class="tab-content mt-3">
+            <!-- Table View Tab -->
+            <div class="tab-pane fade show active" id="tableView" role="tabpanel">
+                <div class="card mb-4">
+                    <div class="card-header">
+                    <h6>Requisitions by Department</h6></div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Department</th>
+                                    <th>Total</th>
+                                    <th>Status Breakdown</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var dept in Model.ByDepartment)
+                                {
+                                    <tr>
+                                        <td>@dept.DepartmentName</td>
+                                        <td>@dept.Count</td>
+                                        <td>
+                                            @foreach (var status in dept.StatusCounts)
+                                            {
+                                               
+                                                <span class="">@status.Key: @status.Value</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h6>Requisitions by Station</h6></div>
+                    <div class="card-body">
+                        <table class="table table-bordered table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Station</th>
+                                    <th>Total</th>
+                                    <th>Status Breakdown</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var station in Model.ByStation)
+                                {
+                                    <tr>
+                                        <td>@station.StationName</td>
+                                        <td>@station.Count</td>
+                                        <td>
+                                            @foreach (var status in station.StatusCounts)
+                                            {
+                                                
+                                                <span class="">@status.Key: @status.Value</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart View Tab -->
+            <div class="tab-pane fade" id="chartView" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header"><h6>Requisitions by Department</h6></div>
+                            <div class="card-body">
+                                <canvas id="departmentChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header"><h6>Requisitions by Station</h6></div>
+                            <div class="card-body">
+                                <canvas id="stationChart" height="300"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <!-- Load Chart.js library first -->
+    <script src="~/vendors/chart.js/Chart.min.js"></script>
+    <!-- Then load the chart implementation -->
+    <script src="~/js/chart.js"></script>
+    <script>
+    $(function() {
+        // Initialize tabs
+        $('#reportTabs a').on('click', function (e) {
+            e.preventDefault();
+            $(this).tab('show');
+        });
+        
+        // Department Chart Data
+        var departmentData = {
+            labels: [@Html.Raw(string.Join(",", Model.ByDepartment.Select(d => $"'{d.DepartmentName}'")))],
+            datasets: [{
+                label: 'Total Requisitions',
+                data: [@string.Join(",", Model.ByDepartment.Select(d => d.Count))],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(255, 206, 86, 0.5)',
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(153, 102, 255, 0.5)',
+                    'rgba(255, 159, 64, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        // Station Chart Data
+        var stationData = {
+            labels: [@Html.Raw(string.Join(",", Model.ByStation.Select(s => $"'{s.StationName}'")))],
+            datasets: [{
+                label: 'Total Requisitions',
+                data: [@string.Join(",", Model.ByStation.Select(s => s.Count))],
+                backgroundColor: [
+                    'rgba(255, 99, 132, 0.5)',
+                    'rgba(54, 162, 235, 0.5)',
+                    'rgba(255, 206, 86, 0.5)',
+                    'rgba(75, 192, 192, 0.5)',
+                    'rgba(153, 102, 255, 0.5)',
+                    'rgba(255, 159, 64, 0.5)'
+                ],
+                borderColor: [
+                    'rgba(255, 99, 132, 1)',
+                    'rgba(54, 162, 235, 1)',
+                    'rgba(255, 206, 86, 1)',
+                    'rgba(75, 192, 192, 1)',
+                    'rgba(153, 102, 255, 1)',
+                    'rgba(255, 159, 64, 1)'
+                ],
+                borderWidth: 1
+            }]
+        };
+        
+        var chartOptions = {
+            responsive: true,
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero: true
+                    }
+                }]
+            }
+        };
+
+        // Department Chart
+        if ($("#departmentChart").length) {
+            var deptChartCanvas = $("#departmentChart").get(0).getContext("2d");
+            var deptChart = new Chart(deptChartCanvas, {
+                type: 'bar',
+                data: departmentData,
+                options: chartOptions
+            });
+        }
+
+        // Station Chart
+        if ($("#stationChart").length) {
+            var stationChartCanvas = $("#stationChart").get(0).getContext("2d");
+            var stationChart = new Chart(stationChartCanvas, {
+                type: 'bar',
+                data: stationData,
+                options: chartOptions
+            });
+        }
+    });
+    </script>
+}

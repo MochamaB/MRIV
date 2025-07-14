@@ -71,7 +71,10 @@
             </li>
 
             <li class="nav-item">
-                <a class="nav-link menu-link" href="#">
+                @{
+                    bool isReportsActive = currentController == "Reports" || currentController.EndsWith("Reports") || ViewContext.HttpContext.Request.Path.Value.StartsWith("/Reports/");
+                }
+                <a class="nav-link menu-link @(isReportsActive ? "active" : "")" href="/Reports">
                     <i class="ri-bar-chart-line"></i> <span data-key="t-reports">Reports</span>
                 </a>
             </li>

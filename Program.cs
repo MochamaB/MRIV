@@ -1,9 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
-using MRIV.Models;
-using MRIV.Services;
 using MRIV.Data;
 using MRIV.Extensions;
+using MRIV.Models;
+using MRIV.Services;
+using MRIV.Services.Reports;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -56,6 +57,10 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<INotificationManager, NotificationManager>();
+
+// Report services
+builder.Services.AddScoped<IRequisitionReportService, RequisitionReportService>();
+builder.Services.AddScoped<IReportFilterService, ReportFilterService>();
 
 // Add settings service
 builder.Services.AddSettingsService();
@@ -114,7 +119,9 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-
+app.MapControllerRoute(
+    name: "reportsFolders",
+    pattern: "Reports/{controller}/{action=Index}/{id?}");
 
 
 app.MapControllerRoute(

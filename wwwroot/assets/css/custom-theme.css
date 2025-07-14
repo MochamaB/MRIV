@@ -206,3 +206,20 @@
     padding: 2rem !important;
     color: #ffffff;
 }
+
+    .nav-tabs .nav-item .nav-link.active {
+        background: transparent !important;
+        color: #326408 !important;
+        border-bottom: 3px solid #326408 !important;
+    }
+    .nav-tabs .nav-item .nav-link {
+        font-style: normal !important;
+        font-weight: 700 !important;
+        font-size: 17px !important;
+        line-height: 18px !important;
+        color: #212121 !important;
+        padding: 22px 14px 14px 20px !important;
+        border: none !important;
+        font-family: "Manrope", sans-serif !important;
+        background: transparent !important;
+    }

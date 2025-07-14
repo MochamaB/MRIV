@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc.Rendering;
+using MRIV.ViewModels.Reports.Filters;
 using System.Collections.Generic;
 
 namespace MRIV.ViewModels
@@ -6,6 +7,8 @@ namespace MRIV.ViewModels
     public class FilterViewModel
     {
         public List<FilterDefinition> Filters { get; set; } = new List<FilterDefinition>();
+        public List<ReportFilterDefinition> ReportFilters { get; set; } = new();
+        public Dictionary<string, string> SelectedValues { get; set; } = new();
     }
 
     public class FilterDefinition
