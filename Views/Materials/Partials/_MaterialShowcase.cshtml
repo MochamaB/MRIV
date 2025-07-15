@@ -37,33 +37,32 @@
                         </div>
                     }
                     
-                    <div class="mt-3">
-                        <div class="d-flex gap-2">
-                            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary flex-grow-1">
-                                <i class="ri-pencil-line align-bottom me-1"></i> Edit
-                            </a>
-                            <a href="#" class="btn btn-success flex-grow-1">
-                                <i class="ri-exchange-line align-bottom me-1"></i> Assign
-                            </a>
-                        </div>
-                    </div>
+                   
                 </div>
             </div>
         </div>
     </div>
     <div class="col-lg-8">
-        <div class="card border shadow-none">
-            <div class="card-header bg-soft-light">
-                <h5 class="card-title mb-0">Material Overview</h5>
-            </div>
-            <div class="card-body">
-                <div class="mt-4 mt-lg-0">
-                    <h4 class="mb-1">@Model.Name</h4>
-                    <div class="d-flex align-items-baseline">
-                        <h5 class="mb-3 me-2">Code: @Model.Code</h5>
+        <div class="card" style="background-color: #ffffa8;border: 1px solid #fcb900; padding-left:2.0rem">
+            <div class="card-header" style="background-color: #ffffa8;border-bottom: 1px solid #878a99">
+                <div class="d-flex align-items-center justify-content-between">
+                    <h6 class="card-title mb-0">Material Overview</h6>
+                    <div class="d-flex align-items-center gap-2">
                         <span class="badge @BadgeHelper.GetMaterialStatusBadgeClass(Model.Status)">
                             @EnumHelper.GetEnumDescription(Model.Status)
                         </span>
+                        <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-primary">
+                            <i class="ri-pencil-line align-bottom"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="mt-4 mt-lg-0">
+                    <h5 class="mb-1">@Model.Name</h5>
+                    <div class="d-flex align-items-baseline">
+                        <h6 class="mb-3 me-2">Code: @Model.Code</h6>
+                       
                     </div>
                     
                     <!-- Key information at a glance -->
@@ -77,7 +76,7 @@
                         <div class="col-md-6">
                             <p class="text-muted mb-2">Location: <strong>@(Model.StationName ?? "Not Assigned")</strong></p>
                             <p class="text-muted mb-2">Department: <strong>@(Model.DepartmentName ?? "Not Assigned")</strong></p>
-                            <p class="text-muted mb-2">Assigned To: <strong>@(Model.AssignedToPayrollNo ?? "Not Assigned")</strong></p>
+                            <p class="text-muted mb-2">Assigned To: <strong>@(Model.AssignedToName ?? "Not Assigned")</strong></p>
                             <p class="text-muted mb-2">Condition: <strong>@(Model.CurrentCondition?.ToString() ?? "Not Inspected")</strong></p>
                         </div>
                     </div>

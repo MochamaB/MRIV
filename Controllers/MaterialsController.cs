@@ -329,6 +329,39 @@ namespace MRIV.Controllers
                 viewModel.AssignmentType = activeAssignment.AssignmentType.ToString();
                 viewModel.AssignedByPayrollNo = activeAssignment.AssignedByPayrollNo;
                 viewModel.AssignmentNotes = activeAssignment.Notes;
+                
+                // Fetch employee names
+                if (!string.IsNullOrEmpty(activeAssignment.PayrollNo))
+                {
+                    try
+                    {
+                        var employee = await _employeeService.GetEmployeeByPayrollAsync(activeAssignment.PayrollNo);
+                        if (employee != null)
+                        {
+                            viewModel.AssignedToName = $"{employee.Fullname} ({employee.Designation})";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error loading assigned employee info: {ex.Message}");
+                    }
+                }
+                
+                if (!string.IsNullOrEmpty(activeAssignment.AssignedByPayrollNo))
+                {
+                    try
+                    {
+                        var employee = await _employeeService.GetEmployeeByPayrollAsync(activeAssignment.AssignedByPayrollNo);
+                        if (employee != null)
+                        {
+                            viewModel.AssignedByName = $"{employee.Fullname} ({employee.Designation})";
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"Error loading assigning employee info: {ex.Message}");
+                    }
+                }
 
                 // Location Information
                 viewModel.StationCategory = activeAssignment.StationCategory;
@@ -396,7 +429,7 @@ namespace MRIV.Controllers
             var mainImage = await _mediaService.GetFirstMediaForModelAsync("Material", material.Id);
             if (mainImage != null)
             {
-                viewModel.MainImagePath = mainImage.FilePath;
+                viewModel.MainImagePath = $"/{mainImage.FilePath}";
             }
             else if (material.MaterialCategory != null)
             {
@@ -404,7 +437,7 @@ namespace MRIV.Controllers
                 var categoryImage = await _mediaService.GetFirstMediaForModelAsync("MaterialCategory", material.MaterialCategoryId);
                 if (categoryImage != null)
                 {
-                    viewModel.MainImagePath = categoryImage.FilePath;
+                    viewModel.MainImagePath = $"/{categoryImage.FilePath}";
                 }
             }
 
@@ -412,14 +445,16 @@ namespace MRIV.Controllers
             var galleryImages = await _mediaService.GetMediaForModelAsync("Material", material.Id, "gallery");
             if (galleryImages != null)
             {
-                viewModel.GalleryImagePaths = galleryImages.Select(img => img.FilePath).ToList();
+                viewModel.GalleryImagePaths = galleryImages.Select(img => $"/{img.FilePath}").ToList();
             }
 
             // Convert assignment history
             if (material.MaterialAssignments != null)
             {
-                viewModel.AssignmentHistory = material.MaterialAssignments
-                    .OrderByDescending(ma => ma.AssignmentDate)
+                // Create the base assignment history objects first
+                var assignmentHistory = material.MaterialAssignments
+                    .OrderByDescending(ma => ma.IsActive) // Active assignments first
+                    .ThenByDescending(ma => ma.AssignmentDate) // Then by date
                     .Select(ma => new MaterialAssignmentViewModel
                     {
                         Id = ma.Id,
@@ -436,13 +471,96 @@ namespace MRIV.Controllers
                         AssignedByPayrollNo = ma.AssignedByPayrollNo,
                         Notes = ma.Notes,
                         IsActive = ma.IsActive
-                    }).ToList();
+                    })
+                    .ToList();
+                
+                // Now enrich with employee and location info
+                foreach (var assignment in assignmentHistory)
+                {
+                    // Get assigned employee name
+                    if (!string.IsNullOrEmpty(assignment.PayrollNo))
+                    {
+                        try
+                        {
+                            var employee = await _employeeService.GetEmployeeByPayrollAsync(assignment.PayrollNo);
+                            if (employee != null)
+                            {
+                                assignment.AssignedToName = $"{employee.Fullname} ({employee.Designation})";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error loading assigned employee info: {ex.Message}");
+                        }
+                    }
+                    
+                    // Get assigned by employee name
+                    if (!string.IsNullOrEmpty(assignment.AssignedByPayrollNo))
+                    {
+                        try
+                        {
+                            var employee = await _employeeService.GetEmployeeByPayrollAsync(assignment.AssignedByPayrollNo);
+                            if (employee != null)
+                            {
+                                assignment.AssignedByName = $"{employee.Fullname} ({employee.Designation})";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error loading assigning employee info: {ex.Message}");
+                        }
+                    }
+                    
+                    // Get station name
+                    if (assignment.StationId.HasValue)
+                    {
+                        if (assignment.StationId.Value == 0)
+                        {
+                            assignment.StationName = "Head Quarters (HQ)";
+                        }
+                        else
+                        {
+                            try
+                            {
+                                var station = await _locationService.GetStationByIdAsync(assignment.StationId.Value);
+                                if (station != null)
+                                {
+                                    assignment.StationName = station.StationName;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Console.WriteLine($"Error loading station name: {ex.Message}");
+                            }
+                        }
+                    }
+                    
+                    // Get department name
+                    if (assignment.DepartmentId.HasValue)
+                    {
+                        try
+                        {
+                            var departmentId = assignment.DepartmentId.Value.ToString();
+                            var department = await _locationService.GetDepartmentByIdAsync(departmentId);
+                            if (department != null)
+                            {
+                                assignment.DepartmentName = department.DepartmentName;
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error loading department name: {ex.Message}");
+                        }
+                    }
+                }
+                
+                viewModel.AssignmentHistory = assignmentHistory;
             }
 
             // Convert condition history
             if (material.MaterialConditions != null)
             {
-                viewModel.ConditionHistory = material.MaterialConditions
+                var conditionHistory = material.MaterialConditions
                     .OrderByDescending(mc => mc.InspectionDate)
                     .Select(mc => new MaterialConditionViewModel
                     {
@@ -463,6 +581,29 @@ namespace MRIV.Controllers
                         ActionRequired = mc.ActionRequired,
                         ActionDueDate = mc.ActionDueDate
                     }).ToList();
+                    
+                // Now enrich condition history with employee names
+                foreach (var condition in conditionHistory)
+                {
+                    // Get inspector employee name
+                    if (!string.IsNullOrEmpty(condition.InspectedBy))
+                    {
+                        try
+                        {
+                            var employee = await _employeeService.GetEmployeeByPayrollAsync(condition.InspectedBy);
+                            if (employee != null)
+                            {
+                                condition.InspectedByName = $"{employee.Fullname} ({employee.Designation})";
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Error loading inspector employee info: {ex.Message}");
+                        }
+                    }
+                }
+                
+                viewModel.ConditionHistory = conditionHistory;
             }
 
             return View(viewModel);

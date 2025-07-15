@@ -6,7 +6,7 @@
     <div class="col-md-6">
         <div class="card border shadow-none">
             <div class="card-header bg-soft-light">
-                <h5 class="card-title mb-0">Current Condition</h5>
+                <h6 class="card-title mb-0">Current Condition</h6>
             </div>
             <div class="card-body">
                 @if (Model.CurrentConditionId.HasValue)
@@ -22,50 +22,30 @@
                         
                         <dt class="col-sm-4">Functional Status</dt>
                         <dd class="col-sm-8">
-                            <div class="progress animated-progress custom-progress">
-                                @{
-                                    // Map enum values to percentages (0=0%, 1=50%, 2=100%)
-                                    var functionalPercentage = (int)Model.FunctionalStatus * 50;
-
-                                    // Color mapping based on your enum values
-                                    var functionalColor = Model.FunctionalStatus switch
-                                    {
-                                        FunctionalStatus.FullyFunctional => "bg-success",
-                                        FunctionalStatus.PartiallyFunctional => "bg-warning",
-                                        FunctionalStatus.NonFunctional => "bg-danger",
-                                        _ => "bg-secondary" // default case
-                                    };
-                                }
-                                <div class="progress-bar @functionalColor" role="progressbar"
-                                     style="width: @functionalPercentage%" aria-valuenow="@functionalPercentage"
-                                     aria-valuemin="0" aria-valuemax="100">
-                                    @EnumHelper.GetEnumDescription(Model.FunctionalStatus) <!-- Shows the description text -->
-                                </div>
-                            </div>
+                            @if (Model.FunctionalStatus.HasValue)
+                            {
+                                <span class="badge @BadgeHelper.GetFunctionalStatusBadgeClass(Model.FunctionalStatus.Value)">
+                                    @EnumHelper.GetEnumDescription(Model.FunctionalStatus)
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-secondary">Unknown</span>
+                            }
                         </dd>
                         
                         <dt class="col-sm-4">Cosmetic Status</dt>
                         <dd class="col-sm-8">
-                            <div class="progress animated-progress custom-progress">
-                                @{
-                                    var cosmeticValue = (int)Model.CosmeticStatus;
-                                    var cosmeticPercentage = (cosmeticValue + 1) * 20; // Adjust if enum starts at 0
-
-                                    var cosmeticColor = Model.CosmeticStatus switch
-                                    {
-                                        CosmeticStatus.Excellent => "bg-success",
-                                        CosmeticStatus.Good => "bg-success",
-                                        CosmeticStatus.Fair => "bg-warning",
-                                        CosmeticStatus.Poor => "bg-danger",
-                                        _ => "bg-secondary"
-                                    };
-                                }
-                                <div class="progress-bar @cosmeticColor" role="progressbar"
-                                     style="width: @cosmeticPercentage%" aria-valuenow="@cosmeticPercentage"
-                                     aria-valuemin="0" aria-valuemax="100">
+                            @if (Model.CosmeticStatus.HasValue)
+                            {
+                                <span class="badge @BadgeHelper.GetCosmeticStatusBadgeClass(Model.CosmeticStatus.Value)">
                                     @EnumHelper.GetEnumDescription(Model.CosmeticStatus)
-                                </div>
-                            </div>
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-secondary">Unknown</span>
+                            }
                         </dd>
                         
                         <dt class="col-sm-4">Inspection Date</dt>
@@ -91,11 +71,12 @@
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card border shadow-none">
-            <div class="card-header bg-soft-light d-flex align-items-center">
-                <h5 class="card-title mb-0 flex-grow-1">Condition History</h5>
-                <div class="flex-shrink-0">
+    <div class="col-md-6 pr-3">
+        <div class="card border shadow-none" style="background-color: #ffffa8;border: 1px solid #fcb900;">
+            <div class="card-header" style="background-color: #ffffa8;border-bottom: 1px solid #878a99; padding:0.2rem 1rem">
+                <div class="d-flex align-items-center justify-content-between">
+                <h6 class="card-title mb-0 mt-0">Condition History</h6>
+               
                     <button type="button" class="btn btn-sm btn-soft-primary" data-bs-toggle="modal" data-bs-target="#conditionHistoryModal">
                         <i class="ri-eye-line align-bottom"></i> View All
                     </button>
@@ -104,35 +85,110 @@
             <div class="card-body">
                 @if (Model.ConditionHistory != null && Model.ConditionHistory.Any())
                 {
-                    <div class="vertical-timeline">
+                    <ul class="bullet-line-list">
                         @foreach (var condition in Model.ConditionHistory.Take(3))
                         {
-                            <div class="timeline-item">
-
-                                <div class="timeline-status @(condition.Condition == Condition.GoodCondition? "bg-success" : 
-                                                            condition.Condition == Condition.MinorDamage ? "bg-warning" : 
-                                                            condition.Condition == Condition.MajorDamage? "bg-danger" : "bg-secondary")"></div>
-                                <div class="timeline-content">
-                                    <h5 class="fs-14 mb-1">
-                                        @(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not Inspected")
-                                   
-                                        @if (condition.Id == Model.CurrentConditionId)
+                            <li>
+                                <div class="col-md-12 d-flex justify-content-between">
+                                    <div class ="col-md-12">
+                                        
+                                        <h6 class="text-information">
+                                            @if (!string.IsNullOrEmpty(condition.InspectedByName))
+                                            {
+                                                
+                                                <b>INSPECTED BY:</b>@condition.InspectedByName
+                                               
+                                            }
+                                            else
+                                            {
+                                               
+                                                <b>INSPECTED BY:</b> @condition.InspectedBy
+                                                
+                                            }
+                                            @if (condition.Id == Model.CurrentConditionId)
+                                            {
+                                                <span class="badge bg-success ms-1">Current</span>
+                                            }
+                                        </h6>
+                                        <hr />
+                                        <p class="text-muted mb-2">
+                                            <b>INSPECTION DATE: </b><i class="ri-calendar-event-line align-bottom"></i> @condition.InspectionDate?.ToString("dd MMM yyyy")
+                                        </p>
+                                        
+                                        @if (condition.RequisitionId.HasValue)
                                         {
-                                            <span class="badge bg-info ms-1">Latest</span>
+                                            <p class="text-muted">
+                                                <b>REQUISITION:</b> <a href="@Url.Action("Details", "Requisitions", new { id = condition.RequisitionId })" class="text-info">REQ-@condition.RequisitionId</a>
+                                            </p>
                                         }
-                                    </h5>
-                                    <p class="text-muted mb-0">
-                                        Condition: <span class="fw-medium">@condition.Condition</span>
-                                    </p>
-                                    <p class="text-muted mb-0">
-                                        Functional: @condition.FunctionalStatus/5, 
-                                        Cosmetic: @condition.CosmeticStatus/5
-                                    </p>
-                                    <p class="text-muted mb-0">Inspected by: @condition.InspectedBy</p>
+                                        
+                                        @if (condition.Stage != null)
+                                        {
+                                            <p class="text-muted">
+                                                <b>STAGE:</b> @condition.Stage
+                                            </p>
+                                        }
+                                        
+                                        @if (condition.ConditionCheckType != null)
+                                        {
+                                            <p class="text-muted">
+                                                <b>CHECK TYPE:</b> @condition.ConditionCheckType
+                                            </p>
+                                        }
+                                        
+                                        <p class="text-muted">
+                                            <b>CONDITION:</b> 
+                                            @if (condition.Condition.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetMaterialConditionBadgeClass(condition.Condition.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.Condition)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </p>
+                                        
+                                        <p class="text-muted">
+                                            <b>FUNCTIONAL:</b> 
+                                            @if (condition.FunctionalStatus.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetFunctionalStatusBadgeClass(condition.FunctionalStatus.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.FunctionalStatus)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </p>
+                                        
+                                        <p class="text-muted">
+                                            <b>COSMETIC:</b> 
+                                            @if (condition.CosmeticStatus.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetCosmeticStatusBadgeClass(condition.CosmeticStatus.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.CosmeticStatus)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </p>
+                                        
+                                        @if (!string.IsNullOrEmpty(condition.Notes))
+                                        {
+                                            <p class="text-muted">
+                                                <b>NOTES:</b> @condition.Notes
+                                            </p>
+                                        }
+                                    </div>
                                 </div>
-                            </div>
+                            </li>
                         }
-                    </div>
+                    </ul>
                     
                     @if (Model.ConditionHistory.Count() > 3)
                     {
@@ -156,7 +212,7 @@
 
 <!-- Condition History Modal -->
 <div class="modal fade" id="conditionHistoryModal" tabindex="-1" aria-labelledby="conditionHistoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="conditionHistoryModalLabel">Condition History</h5>
@@ -169,32 +225,87 @@
                         <table class="table table-bordered table-striped mb-0">
                             <thead>
                                 <tr>
-                                    <th>Date</th>
-                                    <th>Condition</th>
-                                    <th>Functional</th>
-                                    <th>Cosmetic</th>
-                                    <th>Check Type</th>
+                                    <th>Inspection Date</th>
                                     <th>Inspected By</th>
+                                    <th>Requisition</th>
+                                    <th>Stage</th>
+                                    <th>Check Type</th>
+                                    <th>Condition</th>
+                                    <th>Functional Status</th>
+                                    <th>Cosmetic Status</th>
                                     <th>Notes</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach (var condition in Model.ConditionHistory)
                                 {
-                                    <tr>
-                                        <td>@(condition.InspectionDate?.ToString("yyyy-MM-dd") ?? "Not Inspected")</td>
+                                    <tr @(condition.Id == Model.CurrentConditionId ? "class=\"table-warning\"" : "")>
                                         <td>
-                                            <span class="badge @(condition.Condition == Condition.GoodCondition ? "bg-success" : 
-                                                               condition.Condition == Condition.MinorDamage? "bg-warning" : 
-                                                               condition.Condition == Condition.MajorDamage ? "bg-danger" : "bg-secondary")">
-                                                @condition.Condition
-                                            </span>
+                                            @condition.InspectionDate?.ToString("dd MMM yyyy")
+                                            @if (condition.Id == Model.CurrentConditionId)
+                                            {
+                                                <span class="badge badge-label bg-info ms-1">Current</span>
+                                            }
                                         </td>
-                                        <td>@condition.FunctionalStatus/5</td>
-                                        <td>@condition.CosmeticStatus/5</td>
-                                        <td>@condition.ConditionCheckType</td>
-                                        <td>@condition.InspectedBy</td>
-                                        <td>@(condition.Notes ?? "N/A")</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(condition.InspectedByName))
+                                            {
+                                                @condition.InspectedByName
+                                            }
+                                            else
+                                            {
+                                                @condition.InspectedBy
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (condition.RequisitionId.HasValue)
+                                            {
+                                                <a href="@Url.Action("Details", "Requisitions", new { id = condition.RequisitionId })" class="text-reset">REQ-@condition.RequisitionId</a>
+                                            }
+                                            else
+                                            {
+                                                <span>-</span>
+                                            }
+                                        </td>
+                                        <td>@(condition.Stage ?? "-")</td>
+                                        <td>@(condition.ConditionCheckType?.ToString() ?? "-")</td>
+                                        <td>
+                                            @if (condition.Condition.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetMaterialConditionBadgeClass(condition.Condition.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.Condition)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (condition.FunctionalStatus.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetFunctionalStatusBadgeClass(condition.FunctionalStatus.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.FunctionalStatus)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (condition.CosmeticStatus.HasValue)
+                                            {
+                                                <span class="badge @BadgeHelper.GetCosmeticStatusBadgeClass(condition.CosmeticStatus.Value)">
+                                                    @EnumHelper.GetEnumDescription(condition.CosmeticStatus)
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge badge-secondary">Unknown</span>
+                                            }
+                                        </td>
+                                        <td>@(condition.Notes ?? "-")</td>
                                     </tr>
                                 }
                             </tbody>

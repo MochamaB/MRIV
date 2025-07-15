@@ -991,6 +991,18 @@ namespace MRIV.Services
                                 _context.Update(item.Material);
 
 
+                                // First, deactivate any existing active assignments for this material
+                                var existingAssignments = await _context.MaterialAssignments
+                                    .Where(ma => ma.MaterialId == item.MaterialId.Value && ma.IsActive)
+                                    .ToListAsync();
+                                
+                                foreach (var existing in existingAssignments)
+                                {
+                                    existing.IsActive = false;
+                                    existing.ReturnDate = DateTime.UtcNow;
+                                    _context.MaterialAssignments.Update(existing);
+                                }
+
                                 // Create a new material assignment to track the location
                                 var materialAssignment = new MaterialAssignment
                                 {

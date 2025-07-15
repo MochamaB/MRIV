@@ -120,12 +120,13 @@ app.UseRouting();
 app.UseAuthorization();
 
 app.MapControllerRoute(
-    name: "reportsFolders",
-    pattern: "Reports/{controller}/{action=Index}/{id?}");
-
-
-app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Login}/{action=Index}/{id?}");
+
+app.MapControllerRoute(
+    name: "reportsFolders",
+    pattern: "Reports/{controller}/{action=Index}/{id?}",
+    defaults: null,
+    constraints: new { controller = "Reports|RequisitionReports" });
 
 app.Run();

@@ -4,7 +4,7 @@
     <div class="col-md-6">
         <div class="card border shadow-none">
             <div class="card-header bg-soft-light">
-                <h5 class="card-title mb-0">Current Assignment</h5>
+                <h6 class="card-title mb-0">Current Assignment</h6>
             </div>
             <div class="card-body">
                 @if (!string.IsNullOrEmpty(Model.AssignedToPayrollNo))
@@ -26,7 +26,17 @@
                         }
                         
                         <dt class="col-sm-4">Assigned To</dt>
-                        <dd class="col-sm-8">@Model.AssignedToPayrollNo</dd>
+                        <dd class="col-sm-8">
+                            @if (!string.IsNullOrEmpty(Model.AssignedToName))
+                            {
+                                @Model.AssignedToName
+                                <span class="text-muted small d-block">(@Model.AssignedToPayrollNo)</span>
+                            }
+                            else
+                            {
+                                @Model.AssignedToPayrollNo
+                            }
+                        </dd>
                         
                         <dt class="col-sm-4">Assignment Type</dt>
                         <dd class="col-sm-8">@Model.AssignmentType</dd>
@@ -35,7 +45,17 @@
                         <dd class="col-sm-8">@(Model.AssignmentDate?.ToString("yyyy-MM-dd") ?? "Not assigned")</dd>
                         
                         <dt class="col-sm-4">Assigned By</dt>
-                        <dd class="col-sm-8">@Model.AssignedByPayrollNo</dd>
+                        <dd class="col-sm-8">
+                            @if (!string.IsNullOrEmpty(Model.AssignedByName))
+                            {
+                                @Model.AssignedByName
+                                <span class="text-muted small d-block">(@Model.AssignedByPayrollNo)</span>
+                            }
+                            else
+                            {
+                                @Model.AssignedByPayrollNo
+                            }
+                        </dd>
                         
                         @if (!string.IsNullOrEmpty(Model.AssignmentNotes))
                         {
@@ -53,11 +73,12 @@
             </div>
         </div>
     </div>
-    <div class="col-md-6">
-        <div class="card border shadow-none">
-            <div class="card-header bg-soft-light d-flex align-items-center">
-                <h5 class="card-title mb-0 flex-grow-1">Assignment Timeline</h5>
-                <div class="flex-shrink-0">
+    <div class="col-md-6 pr-2">
+        <div class="card border shadow-none" style="background-color: #ffffa8;border: 1px solid #fcb900;">
+            <div class="card-header" style="background-color: #ffffa8;border-bottom: 1px solid #878a99; padding:0.2rem 1rem">
+                <div class="d-flex align-items-center justify-content-between">
+                <h6 class="card-title mb-0 mt-0">Assignment Timeline</h6>
+               
                     <button type="button" class="btn btn-sm btn-soft-primary" data-bs-toggle="modal" data-bs-target="#assignmentHistoryModal">
                         <i class="ri-eye-line align-bottom"></i> View All
                     </button>
@@ -66,36 +87,73 @@
             <div class="card-body">
                 @if (Model.AssignmentHistory != null && Model.AssignmentHistory.Any())
                 {
-                    <div class="vertical-timeline">
+                    <ul class="bullet-line-list">
                         @foreach (var assignment in Model.AssignmentHistory.Take(3))
                         {
-                            <div class="timeline-item">
-                                <div class="timeline-status @(assignment.IsActive ? "bg-success" : "bg-secondary")"></div>
-                                <div class="timeline-content">
-                                    <h5 class="fs-14 mb-1">
-                                        @assignment.AssignmentDate.ToString("yyyy-MM-dd")
-                                        @if (assignment.IsActive)
+                            <li>
+                                <div class="col-md-12 d-flex justify-content-between">
+                                    <div class="col-md-12">
+                                        <h6 class="text-information">
+                                            <b>@(!string.IsNullOrEmpty(assignment.AssignedToName) ? assignment.AssignedToName : assignment.PayrollNo)</b>
+                                            @if (assignment.IsActive)
+                                            {
+                                                <span class="badge bg-success ms-1">Current</span>
+                                            }
+                                        </h6>
+                                        <hr />
+                                        <p class="text-muted mb-2 fw-bold">
+                                            <b>ASSIGNMENT DATE:</b> @assignment.AssignmentDate.ToString("dd MMM yyyy HH:mm")
+                                        </p>
+                                        
+                                        @if (assignment.RequisitionId.HasValue)
                                         {
-                                            <span class="badge bg-success ms-1">Current</span>
+                                            <p class="text-muted">
+                                                <b>REQUISITION:</b> <a href="@Url.Action("Details", "Requisitions", new { id = assignment.RequisitionId })" class="text-info">REQ-@assignment.RequisitionId</a>
+                                            </p>
                                         }
-                                    </h5>
-                                    <p class="text-muted mb-0">
-                                        @assignment.StationCategory - 
-                                        @(assignment.StationId.HasValue ? $"Station {assignment.StationId}" : "N/A")
-                                        @if (assignment.DepartmentId.HasValue)
+                                        
+                                        <p class="text-muted">
+                                            <b>STATION:</b> @(assignment.StationName ?? $"Station {assignment.StationId}")
+                                        </p>
+                                        <p class="text-muted">
+                                            <b>DEPARTMENT:</b> @(assignment.DepartmentName ?? $"Department {assignment.DepartmentId}")
+                                        </p>
+                                        
+                                        <p class="text-muted" style="text-transform:uppercase">
+                                            <b>TYPE:</b> @assignment.AssignmentTypeDisplayName
+                                        </p>
+                                        
+                                        @if (!string.IsNullOrEmpty(assignment.AssignedByName))
                                         {
-                                            <span>, Dept. @assignment.DepartmentId</span>
+                                            <p class="text-muted">
+                                                <b>ASSIGNED BY:</b> @assignment.AssignedByName
+                                            </p>
                                         }
-                                    </p>
-                                    <p class="text-muted mb-0">Assigned to: @assignment.PayrollNo</p>
-                                    @if (assignment.ReturnDate.HasValue)
-                                    {
-                                        <p class="text-muted mb-0">Returned: @assignment.ReturnDate.Value.ToString("yyyy-MM-dd")</p>
-                                    }
+                                        else if (!string.IsNullOrEmpty(assignment.AssignedByPayrollNo))
+                                        {
+                                            <p class="text-muted">
+                                                <b>ASSIGNED BY:</b> @assignment.AssignedByPayrollNo
+                                            </p>
+                                        }
+                                        
+                                        @if (assignment.ReturnDate.HasValue)
+                                        {
+                                            <p class="text-muted">
+                                                <b>RETURNED:</b> @assignment.ReturnDate.Value.ToString("dd MMM yyyy")
+                                            </p>
+                                        }
+                                        
+                                        @if (!string.IsNullOrEmpty(assignment.Notes))
+                                        {
+                                            <p class="text-muted">
+                                                <b>NOTES:</b> @assignment.Notes
+                                            </p>
+                                        }
+                                    </div>
                                 </div>
-                            </div>
+                            </li>
                         }
-                    </div>
+                    </ul>
                     
                     @if (Model.AssignmentHistory.Count() > 3)
                     {
@@ -119,7 +177,7 @@
 
 <!-- Assignment History Modal -->
 <div class="modal fade" id="assignmentHistoryModal" tabindex="-1" aria-labelledby="assignmentHistoryModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="assignmentHistoryModalLabel">Assignment History</h5>
@@ -133,10 +191,12 @@
                             <thead>
                                 <tr>
                                     <th>Date</th>
-                                    <th>Location</th>
-                                    <th>Department</th>
                                     <th>Assigned To</th>
+                                    <th>Station</th>
+                                    <th>Department</th>
+                                    <th>Requisition</th>
                                     <th>Type</th>
+                                    <th>Assigned By</th>
                                     <th>Return Date</th>
                                     <th>Status</th>
                                 </tr>
@@ -145,30 +205,77 @@
                                 @foreach (var assignment in Model.AssignmentHistory)
                                 {
                                     <tr>
-                                        <td>@assignment.AssignmentDate.ToString("yyyy-MM-dd")</td>
+                                        <td>@assignment.AssignmentDate.ToString("dd MMM yyyy")</td>
                                         <td>
-                                            @assignment.StationCategory
-                                            @if (assignment.StationId.HasValue)
+                                            @if (!string.IsNullOrEmpty(assignment.AssignedToName))
                                             {
-                                                <span> - @assignment.StationId</span>
+                                                @assignment.AssignedToName
+                                                <small class="d-block text-muted">@assignment.PayrollNo</small>
+                                            }
+                                            else
+                                            {
+                                                @assignment.PayrollNo
                                             }
                                         </td>
                                         <td>
-                                            @if (assignment.DepartmentId.HasValue)
+                                            @if (!string.IsNullOrEmpty(assignment.StationName))
                                             {
-                                                @assignment.DepartmentId
+                                                @assignment.StationName
+                                                <small class="d-block text-muted">@assignment.StationCategory</small>
+                                            }
+                                            else
+                                            {
+                                                @assignment.StationCategory
+                                                @if (assignment.StationId.HasValue)
+                                                {
+                                                    <small class="d-block text-muted">ID: @assignment.StationId</small>
+                                                }
+                                            }
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(assignment.DepartmentName))
+                                            {
+                                                @assignment.DepartmentName
+                                            }
+                                            else if (assignment.DepartmentId.HasValue)
+                                            {
+                                                <span>Dept. ID: @assignment.DepartmentId</span>
                                             }
                                             else
                                             {
                                                 <span>N/A</span>
                                             }
                                         </td>
-                                        <td>@assignment.PayrollNo</td>
-                                        <td>@assignment.AssignmentType</td>
+                                        <td>
+                                            @if (assignment.RequisitionId.HasValue)
+                                            {
+                                                <a href="@Url.Action("Details", "Requisitions", new { id = assignment.RequisitionId })" class="text-reset">REQ-@assignment.RequisitionId</a>
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
+                                        <td>@assignment.AssignmentTypeDisplayName</td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(assignment.AssignedByName))
+                                            {
+                                                @assignment.AssignedByName
+                                                <small class="d-block text-muted">@assignment.AssignedByPayrollNo</small>
+                                            }
+                                            else if (!string.IsNullOrEmpty(assignment.AssignedByPayrollNo))
+                                            {
+                                                @assignment.AssignedByPayrollNo
+                                            }
+                                            else
+                                            {
+                                                <span>N/A</span>
+                                            }
+                                        </td>
                                         <td>
                                             @if (assignment.ReturnDate.HasValue)
                                             {
-                                                @assignment.ReturnDate.Value.ToString("yyyy-MM-dd")
+                                                @assignment.ReturnDate.Value.ToString("dd MMM yyyy")
                                             }
                                             else
                                             {
@@ -178,11 +285,11 @@
                                         <td>
                                             @if (assignment.IsActive)
                                             {
-                                                <span class="badge bg-success">Active</span>
+                                                <span class="badge bg-success">Current</span>
                                             }
                                             else
                                             {
-                                                <span class="badge bg-secondary">Inactive</span>
+                                                <span class="badge bg-secondary">Past</span>
                                             }
                                         </td>
                                     </tr>
