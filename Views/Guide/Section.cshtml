@@ -1,0 +1,196 @@
+@model MRIV.Models.GuideSection
+
+@{
+    ViewData["Title"] = Model?.Title ?? "Guide Section";
+    var sectionId = ViewBag.Section as string;
+}
+
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">
+                        <i class="@(Model?.Icon ?? "ri-book-line") me-2"></i>@Model?.Title
+                    </h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search in section..." id="sectionSearch">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+                            <button type="button" class="btn btn-soft-info btn-sm" onclick="printSection()">
+                                <i class="ri-printer-line me-1"></i>Print
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                @if (!string.IsNullOrEmpty(Model?.Description))
+                {
+                    <p class="text-muted mb-0 mt-2">@Model.Description</p>
+                }
+            </div>
+
+            <div class="card-body">
+                @if (Model?.Pages?.Any() == true)
+                {
+                    <div class="row g-4">
+                        @foreach (var guidepage in Model.Pages.OrderBy(p => p.SortOrder))
+                        {
+                            <div class="col-lg-6 col-xl-4 guide-page-card">
+                                <div class="card border h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-3">
+                                            <div class="flex-shrink-0">
+                                                <div class="avatar-xs">
+                                                    <div class="avatar-title bg-primary-subtle text-primary rounded">
+                                                        <i class="ri-file-text-line"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h6 class="mb-2">
+                                                    <a href="@Url.Action("Page", "Guide", new { section = sectionId, page = guidepage.Id })" 
+                                                       class="text-decoration-none guide-page-title">
+                                                        @guidepage.Title
+                                                    </a>
+                                                </h6>
+                                                @if (!string.IsNullOrEmpty(guidepage.Description))
+                                                {
+                                                    <p class="text-muted mb-3 fs-13 guide-page-description">@guidepage.Description</p>
+                                                }
+
+                                                @if (guidepage.Tags?.Any() == true)
+                                                {
+                                                    <div class="d-flex flex-wrap gap-1 mb-3">
+                                                        @foreach (var tag in guidepage.Tags.Take(3))
+                                                        {
+                                                            <span class="badge bg-light text-muted fs-11">@tag</span>
+                                                        }
+                                                    </div>
+                                                }
+                                                
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <div class="text-muted fs-11">
+                                                        @if (guidepage.LastModified != default(DateTime))
+                                                        {
+                                                            <i class="ri-time-line me-1"></i>
+                                                        }
+                                                    </div>
+                                                    <a href="@Url.Action("Page", "Guide", new { section = sectionId, page = guidepage.Id })"
+                                                       class="btn btn-soft-primary btn-sm">
+                                                        <i class="ri-arrow-right-line"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-file-list-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-3">No Pages Available</h5>
+                        <p class="text-muted mb-4">This section doesn't have any pages yet, or you don't have permission to view them.</p>
+                        <a href="@Url.Action("Index", "Guide")" class="btn btn-soft-primary">
+                            <i class="ri-arrow-left-line me-1"></i>Back to Guide Home
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Help Panel (Offcanvas) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="quickHelpOffcanvas" aria-labelledby="quickHelpOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="quickHelpOffcanvasLabel">Quick Help</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body" id="quickHelpContent">
+        <!-- Quick help content will be loaded here -->
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Section search functionality
+            $('#sectionSearch').on('input', function() {
+                var searchTerm = $(this).val().toLowerCase();
+                
+                $('.guide-page-card').each(function() {
+                    var $card = $(this);
+                    var title = $card.find('.guide-page-title').text().toLowerCase();
+                    var description = $card.find('.guide-page-description').text().toLowerCase();
+                    
+                    if (searchTerm === '' || title.includes(searchTerm) || description.includes(searchTerm)) {
+                        $card.removeClass('d-none');
+                    } else {
+                        $card.addClass('d-none');
+                    }
+                });
+                
+                // Show "no results" message if needed
+                var visibleCards = $('.guide-page-card:not(.d-none)').length;
+                if (visibleCards === 0 && searchTerm !== '') {
+                    if ($('#noResultsMessage').length === 0) {
+                        $('.row.g-4').after(`
+                            <div id="noResultsMessage" class="text-center py-4">
+                                <div class="avatar-sm mx-auto mb-3">
+                                    <div class="avatar-title bg-light text-muted rounded-circle">
+                                        <i class="ri-search-line"></i>
+                                    </div>
+                                </div>
+                                <h6 class="mb-2">No matching pages found</h6>
+                                <p class="text-muted mb-0">Try adjusting your search terms</p>
+                            </div>
+                        `);
+                    }
+                } else {
+                    $('#noResultsMessage').remove();
+                }
+            });
+            
+            // Handle search on Enter key
+            $('#sectionSearch').on('keypress', function(e) {
+                if (e.which === 13) {
+                    var searchTerm = $(this).val();
+                    if (searchTerm) {
+                        window.location.href = '@Url.Action("Search", "Guide")?query=' + encodeURIComponent(searchTerm + ' section:@sectionId');
+                    }
+                }
+            });
+        });
+        
+        function printSection() {
+            window.print();
+        }
+        
+        function showQuickHelp(context) {
+            $('#quickHelpContent').html('<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>');
+            
+            fetch('/Guide/QuickHelp/' + context)
+                .then(response => response.text())
+                .then(html => {
+                    $('#quickHelpContent').html(html);
+                    var offcanvas = new bootstrap.Offcanvas(document.getElementById('quickHelpOffcanvas'));
+                    offcanvas.show();
+                })
+                .catch(error => {
+                    $('#quickHelpContent').html('<div class="alert alert-danger">Error loading help content</div>');
+                });
+        }
+    </script>
+}

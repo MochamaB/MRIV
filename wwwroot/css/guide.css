@@ -1,0 +1,220 @@
+/* ===================================================
+   MRIV Guide System Styles
+   ================================================== */
+
+/* Index Page Styles */
+.guide-section-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.guide-section-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.guide-pages-preview {
+    background: rgba(13, 110, 253, 0.05);
+    border-radius: 6px;
+    padding: 12px;
+}
+
+.guide-pages-preview ul li a:hover {
+    color: #0d6efd !important;
+}
+
+/* Section Page Styles */
+.guide-page-card {
+    transition: transform 0.2s ease;
+}
+
+.guide-page-card:hover {
+    transform: translateY(-2px);
+}
+
+.guide-page-card:hover .card {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.guide-page-title:hover {
+    color: #0d6efd !important;
+}
+
+/* Page Content Styles */
+.guide-content {
+    font-size: 15px;
+    line-height: 1.7;
+}
+
+.guide-page-content h1,
+.guide-page-content h2,
+.guide-page-content h3,
+.guide-page-content h4,
+.guide-page-content h5,
+.guide-page-content h6 {
+    margin-top: 2rem;
+    margin-bottom: 1rem;
+    color: var(--vz-body-color);
+}
+
+.guide-page-content h1:first-child,
+.guide-page-content h2:first-child,
+.guide-page-content h3:first-child {
+    margin-top: 0;
+}
+
+.guide-page-content pre {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 1rem;
+    overflow-x: auto;
+}
+
+.guide-page-content blockquote {
+    border-left: 4px solid var(--vz-primary);
+    padding-left: 1rem;
+    margin: 1.5rem 0;
+    background: rgba(var(--vz-primary-rgb), 0.05);
+    padding: 1rem 1rem 1rem 2rem;
+    border-radius: 0 6px 6px 0;
+}
+
+.guide-page-content table {
+    width: 100%;
+    margin: 1.5rem 0;
+    border-collapse: collapse;
+}
+
+.guide-page-content table th,
+.guide-page-content table td {
+    padding: 0.75rem;
+    border: 1px solid #dee2e6;
+    text-align: left;
+}
+
+.guide-page-content table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+}
+
+/* Table of Contents Styles */
+.toc-item {
+    padding: 0.25rem 0;
+    border-left: 2px solid transparent;
+    padding-left: 0.75rem;
+}
+
+.toc-item:hover {
+    border-left-color: var(--vz-primary);
+}
+
+.toc-item.active {
+    border-left-color: var(--vz-primary);
+    background-color: rgba(var(--vz-primary-rgb), 0.1);
+}
+
+.toc-item.level-2 { 
+    padding-left: 1.5rem; 
+}
+
+.toc-item.level-3 { 
+    padding-left: 2.25rem; 
+}
+
+.toc-item.level-4 { 
+    padding-left: 3rem; 
+}
+
+/* Rating and Feedback Styles */
+.rating-btn.active {
+    background-color: var(--vz-warning);
+    border-color: var(--vz-warning);
+    color: white;
+}
+
+/* Search Results Styles */
+.search-result-item {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-result-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.highlight {
+    background-color: #fff3cd;
+    padding: 0.125rem 0.25rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+}
+
+/* Print Styles */
+@media print {
+    .col-xl-3, 
+    .card-header .flex-shrink-0, 
+    .card-footer, 
+    .btn {
+        display: none !important;
+    }
+    
+    .col-xl-9 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    
+    .card-header .flex-shrink-0,
+    .btn {
+        display: none !important;
+    }
+    
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .guide-content {
+        font-size: 14px;
+    }
+    
+    .guide-page-content h1,
+    .guide-page-content h2,
+    .guide-page-content h3 {
+        margin-top: 1.5rem;
+    }
+    
+    .toc-item.level-2,
+    .toc-item.level-3,
+    .toc-item.level-4 {
+        padding-left: 1rem;
+    }
+}
+
+/* Dark Mode Compatibility (if theme supports it) */
+@media (prefers-color-scheme: dark) {
+    .guide-pages-preview {
+        background: rgba(13, 110, 253, 0.15);
+    }
+    
+    .guide-page-content pre {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .guide-page-content blockquote {
+        background: rgba(var(--vz-primary-rgb), 0.1);
+    }
+    
+    .highlight {
+        background-color: rgba(255, 243, 205, 0.3);
+        color: inherit;
+    }
+}

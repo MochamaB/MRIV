@@ -1,0 +1,276 @@
+@model MRIV.Models.GuideNavigation
+
+@{
+    ViewData["Title"] = "User Guide";
+}
+
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">
+                        <i class="ri-book-open-line me-2"></i>User Guide
+                    </h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" placeholder="Search guides..." id="guideSearch">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="text-center mb-4">
+                            <h4 class="mb-3">Welcome to the MRIV User Guide</h4>
+                            <p class="text-muted">Comprehensive documentation to help you navigate and use the Material Requisition and Inventory Verification system effectively.</p>
+                        </div>
+                    </div>
+                </div>
+
+                @if (Model?.Sections?.Any() == true)
+                {
+                    <div class="row g-4">
+                        @foreach (var sect  in Model.Sections)
+                        {
+                            <div class="col-xl-4 col-lg-6">
+                                <div class="card guide-section-card border h-100">
+                                    <div class="card-body">
+                                        <div class="d-flex align-items-start mb-3">
+                                            <div class="flex-shrink-0 avatar-sm">
+                                                <div class="avatar-title bg-primary-subtle text-primary rounded fs-4">
+                                                  <i class="@(sect.Icon ?? "ri-default-icon")"></i>
+                                                </div>
+                                            </div>
+                                            <div class="flex-grow-1 ms-3">
+                                                <h5 class="card-title mb-1">
+                                                    @if (sect.Pages?.Any() == true)
+                                                    {
+                                                        <a href="@Url.Action("Section", "Guide", new { section = sect.Id })" class="text-decoration-none">
+                                                            @(sect.Title)
+                                                        </a>
+                                                    }
+                                                    else
+                                                    {
+                                                        @(sect.Title)
+                                                    }
+                                                </h5>
+                                                <p class="text-muted mb-0">@sect.Description</p>
+                                            </div>
+                                        </div>
+
+                                        @if (sect.Pages?.Any() == true)
+                                        {
+                                            <div class="guide-pages-preview">
+                                                <h6 class="fs-14 mb-2">Quick Access:</h6>
+                                                <ul class="list-unstyled mb-3">
+                                                    @foreach (var page in sect.Pages.Take(3))
+                                                    {
+                                                        <li class="py-1">
+                                                            <a href="@Url.Action("Page", "Guide", new { section = sect.Id, page = page.Id })" 
+                                                               class="text-muted text-decoration-none">
+                                                                <i class="ri-arrow-right-s-line me-1"></i>@(page.Title)
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                    @if (sect.Pages.Count > 3)
+                                                    {
+                                                        <li class="py-1">
+                                                            <a href="@Url.Action("Section", "Guide", new { section = sect.Id })" 
+                                                               class="text-primary text-decoration-none">
+                                                                <i class="ri-more-line me-1"></i>View all @sect.Pages.Count pages
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                </ul>
+                                            </div>
+
+                                            <div class="d-flex justify-content-end">
+                                                <a href="@Url.Action("Section", "Guide", new { section = sect.Id })" 
+                                                   class="btn btn-soft-primary btn-sm">
+                                                    <i class="ri-arrow-right-line me-1"></i>View Section
+                                                </a>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div class="text-center text-muted">
+                                                <i class="ri-file-list-line fs-1 mb-2"></i>
+                                                <p class="mb-0">Content coming soon</p>
+                                            </div>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-book-open-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-3">No Guide Content Available</h5>
+                        <p class="text-muted mb-0">Guide sections are being prepared. Please check back later.</p>
+                    </div>
+                }
+
+                <!-- Popular Content Section -->
+                <div class="row mt-5">
+                    <div class="col-lg-12">
+                        <div class="d-flex align-items-center mb-3">
+                            <h5 class="flex-grow-1 mb-0">
+                                <i class="ri-fire-line text-danger me-2"></i>Popular Content
+                            </h5>
+                        </div>
+                        <div class="row" id="popularContent">
+                            <!-- Popular content will be loaded here -->
+                            <div class="col-12 text-center">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            // Initialize search
+            $('#guideSearch').on('input', function() {
+                var searchTerm = $(this).val().toLowerCase();
+                if (searchTerm.length > 2) {
+                    performSearch(searchTerm);
+                }
+            });
+            
+            $('#guideSearch').on('keypress', function(e) {
+                if (e.which === 13) {
+                    var searchTerm = $(this).val();
+                    if (searchTerm) {
+                        window.location.href = '@Url.Action("Search", "Guide")?query=' + encodeURIComponent(searchTerm);
+                    }
+                }
+            });
+            
+            // Load popular content
+            loadPopularContent();
+        });
+        
+        function performSearch(term) {
+            // Highlight matching sections
+            $('.guide-section-card').each(function() {
+                var $card = $(this);
+                var title = $card.find('.card-title').text().toLowerCase();
+                var description = $card.find('.text-muted').first().text().toLowerCase();
+                
+                if (title.includes(term) || description.includes(term)) {
+                    $card.removeClass('d-none').addClass('border-primary');
+                } else {
+                    $card.addClass('d-none').removeClass('border-primary');
+                }
+            });
+        }
+        
+        function loadPopularContent() {
+            // Simulate loading popular content
+            setTimeout(function() {
+                $('#popularContent').html(`
+                    <div class="col-lg-4">
+                        <div class="card border">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar-xs">
+                                            <div class="avatar-title bg-warning-subtle text-warning rounded">
+                                                <i class="ri-shield-line"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">
+                                            <a href="/Guide/Page/authorization/quick-reference" class="text-decoration-none">Authorization Quick Reference</a>
+                                        </h6>
+                                        <p class="text-muted mb-2 fs-12">Understanding role groups and permissions</p>
+                                        <div class="d-flex align-items-center text-muted fs-11">
+                                            <i class="ri-eye-line me-1"></i> 150 views
+                                            <span class="mx-2">•</span>
+                                            <i class="ri-star-fill text-warning me-1"></i> 4.8
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card border">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar-xs">
+                                            <div class="avatar-title bg-success-subtle text-success rounded">
+                                                <i class="ri-file-list-line"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">
+                                            <a href="/Guide/Page/userguides/requisitions" class="text-decoration-none">Creating Requisitions</a>
+                                        </h6>
+                                        <p class="text-muted mb-2 fs-12">Step-by-step guide to requisition creation</p>
+                                        <div class="d-flex align-items-center text-muted fs-11">
+                                            <i class="ri-eye-line me-1"></i> 120 views
+                                            <span class="mx-2">•</span>
+                                            <i class="ri-star-fill text-warning me-1"></i> 4.5
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-4">
+                        <div class="card border">
+                            <div class="card-body">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <div class="avatar-xs">
+                                            <div class="avatar-title bg-info-subtle text-info rounded">
+                                                <i class="ri-tools-line"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1">
+                                            <a href="/Guide/Page/userguides/materials" class="text-decoration-none">Material Management</a>
+                                        </h6>
+                                        <p class="text-muted mb-2 fs-12">Managing materials and assignments</p>
+                                        <div class="d-flex align-items-center text-muted fs-11">
+                                            <i class="ri-eye-line me-1"></i> 95 views
+                                            <span class="mx-2">•</span>
+                                            <i class="ri-star-fill text-warning me-1"></i> 4.2
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `);
+            }, 1000);
+        }
+    </script>
+}

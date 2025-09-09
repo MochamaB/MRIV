@@ -1,0 +1,316 @@
+@model MRIV.Models.GuideSearchResult
+
+@{
+    ViewData["Title"] = $"Search Results - {Model.Query}";
+}
+
+
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">
+                        <i class="ri-search-line me-2"></i>Search Results
+                    </h5>
+                    <div class="flex-shrink-0">
+                        <form class="d-flex gap-2" method="get" action="@Url.Action("Search", "Guide")">
+                            <div class="search-box">
+                                <input type="text" class="form-control search" name="query" 
+                                       placeholder="Search guides..." value="@Model.Query">
+                                <i class="ri-search-line search-icon"></i>
+                            </div>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="ri-search-2-line"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(Model.Query))
+                {
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <div>
+                            <h6 class="mb-1">Search results for: <span class="text-primary">"@Model.Query"</span></h6>
+                            <p class="text-muted mb-0">
+                                Found @Model.TotalResults result@(Model.TotalResults != 1 ? "s" : "")
+                                @if (Model.TotalResults > Model.PageSize)
+                                {
+                                    <span> • Page @Model.CurrentPage of @Model.TotalPages</span>
+                                }
+                            </p>
+                        </div>
+                        <div class="dropdown">
+                            <button class="btn btn-soft-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="ri-filter-line me-1"></i>Sort by
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item" href="#" onclick="sortResults('relevance')">Relevance</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="sortResults('title')">Title</a></li>
+                                <li><a class="dropdown-item" href="#" onclick="sortResults('section')">Section</a></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    @if (Model.Results?.Any() == true)
+                    {
+                        <div class="search-results">
+                            @foreach (var result in Model.Results)
+                            {
+                                <div class="search-result-item border rounded p-3 mb-3">
+                                    <div class="d-flex align-items-start">
+                                        <div class="flex-shrink-0">
+                                            <div class="avatar-xs">
+                                                <div class="avatar-title bg-primary-subtle text-primary rounded">
+                                                    <i class="ri-file-text-line"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="flex-grow-1 ms-3">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <h6 class="mb-0 me-2">
+                                                    <a href="@result.Url" class="text-decoration-none">@result.PageTitle</a>
+                                                </h6>
+                                                <span class="badge bg-secondary-subtle text-secondary fs-11">@result.SectionTitle</span>
+                                            </div>
+                                            <p class="text-muted mb-2">@Html.Raw(HighlightSearchTerms(result.Excerpt, result.MatchedTerms))</p>
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <div class="d-flex align-items-center text-muted fs-12">
+                                                    <i class="ri-bookmark-line me-1"></i>
+                                                    <span class="me-3">@result.SectionTitle</span>
+                                                    
+                                                    @if (result.Relevance > 0)
+                                                    {
+                                                        <i class="ri-focus-line me-1"></i>
+                                                        <span class="me-3">@((int)result.Relevance)% match</span>
+                                                    }
+                                                    
+                                                    @if (result.MatchedTerms?.Any() == true)
+                                                    {
+                                                        <i class="ri-hashtag me-1"></i>
+                                                        <span>@result.MatchedTerms.Count term@(result.MatchedTerms.Count != 1 ? "s" : "") matched</span>
+                                                    }
+                                                </div>
+                                                <a href="@result.Url" class="btn btn-soft-primary btn-sm">
+                                                    <i class="ri-arrow-right-line"></i>
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+
+                        <!-- Pagination -->
+                        @if (Model.TotalPages > 1)
+                        {
+                            <nav aria-label="Search results pagination">
+                                <ul class="pagination justify-content-center mb-0">
+                                    @if (Model.HasPreviousPage)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Url.Action("Search", "Guide", new { query = Model.Query, page = Model.CurrentPage - 1 })">
+                                                <i class="ri-arrow-left-line"></i> Previous
+                                            </a>
+                                        </li>
+                                    }
+                                    
+                                    @for (int i = Math.Max(1, Model.CurrentPage - 2); i <= Math.Min(Model.TotalPages, Model.CurrentPage + 2); i++)
+                                    {
+                                        <li class="page-item @(i == Model.CurrentPage ? "active" : "")">
+                                            <a class="page-link" href="@Url.Action("Search", "Guide", new { query = Model.Query, page = i })">@i</a>
+                                        </li>
+                                    }
+                                    
+                                    @if (Model.HasNextPage)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="@Url.Action("Search", "Guide", new { query = Model.Query, page = Model.CurrentPage + 1 })">
+                                                Next <i class="ri-arrow-right-line"></i>
+                                            </a>
+                                        </li>
+                                    }
+                                </ul>
+                            </nav>
+                        }
+                    }
+                    else
+                    {
+                        <!-- No Results -->
+                        <div class="text-center py-5">
+                            <div class="avatar-lg mx-auto mb-4">
+                                <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                    <i class="ri-search-line"></i>
+                                </div>
+                            </div>
+                            <h5 class="mb-3">No results found for "@Model.Query"</h5>
+                            <div class="text-muted mb-4">
+                                <p class="mb-2">Try these suggestions:</p>
+                                <ul class="list-unstyled">
+                                    <li>• Check your spelling</li>
+                                    <li>• Try different or more general keywords</li>
+                                    <li>• Use fewer keywords</li>
+                                </ul>
+                            </div>
+                            <div class="d-flex justify-content-center gap-2">
+                                <a href="@Url.Action("Index", "Guide")" class="btn btn-soft-primary">
+                                    <i class="ri-home-line me-1"></i>Browse All Guides
+                                </a>
+                                <button type="button" class="btn btn-soft-info" onclick="showSearchTips()">
+                                    <i class="ri-question-line me-1"></i>Search Tips
+                                </button>
+                            </div>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <!-- Empty Search -->
+                    <div class="text-center py-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-search-2-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-3">Enter a search term to get started</h5>
+                        <p class="text-muted mb-4">Search through all guide content to find what you're looking for</p>
+                    </div>
+                }
+
+                <!-- Quick Access Section -->
+                <div class="mt-5">
+                    <h6 class="mb-3">
+                        <i class="ri-flashlight-line text-warning me-2"></i>Quick Access
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6 col-lg-3">
+                            <a href="@Url.Action("Page", "Guide", new { section = "authorization", page = "quick-reference" })" 
+                               class="card border text-decoration-none h-100">
+                                <div class="card-body text-center">
+                                    <i class="ri-shield-line fs-2 text-primary mb-2"></i>
+                                    <h6 class="mb-1">Authorization</h6>
+                                    <p class="text-muted mb-0 fs-12">Role groups & permissions</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <a href="@Url.Action("Page", "Guide", new { section = "userguides", page = "requisitions" })" 
+                               class="card border text-decoration-none h-100">
+                                <div class="card-body text-center">
+                                    <i class="ri-file-list-line fs-2 text-success mb-2"></i>
+                                    <h6 class="mb-1">Requisitions</h6>
+                                    <p class="text-muted mb-0 fs-12">Creating & managing</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <a href="@Url.Action("Page", "Guide", new { section = "userguides", page = "materials" })" 
+                               class="card border text-decoration-none h-100">
+                                <div class="card-body text-center">
+                                    <i class="ri-stack-line fs-2 text-info mb-2"></i>
+                                    <h6 class="mb-1">Materials</h6>
+                                    <p class="text-muted mb-0 fs-12">Material management</p>
+                                </div>
+                            </a>
+                        </div>
+                        <div class="col-md-6 col-lg-3">
+                            <a href="@Url.Action("Page", "Guide", new { section = "userguides", page = "approvals" })" 
+                               class="card border text-decoration-none h-100">
+                                <div class="card-body text-center">
+                                    <i class="ri-check-double-line fs-2 text-warning mb-2"></i>
+                                    <h6 class="mb-1">Approvals</h6>
+                                    <p class="text-muted mb-0 fs-12">Approval workflows</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search Tips Modal -->
+<div class="modal fade" id="searchTipsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Search Tips</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6>Basic Search</h6>
+                    <ul class="list-unstyled ps-3">
+                        <li>• Type any keyword to search through all content</li>
+                        <li>• Search is case-insensitive</li>
+                        <li>• Partial matches are supported</li>
+                    </ul>
+                </div>
+                <div class="mb-3">
+                    <h6>Advanced Search</h6>
+                    <ul class="list-unstyled ps-3">
+                        <li>• Use <code>section:authorization</code> to search within a section</li>
+                        <li>• Use quotes for exact phrases: <code>"role groups"</code></li>
+                        <li>• Combine terms with AND/OR</li>
+                    </ul>
+                </div>
+                <div class="mb-0">
+                    <h6>Examples</h6>
+                    <ul class="list-unstyled ps-3">
+                        <li>• <code>permission matrix</code></li>
+                        <li>• <code>section:authorization role</code></li>
+                        <li>• <code>"create requisition"</code></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        function sortResults(sortBy) {
+            var url = new URL(window.location);
+            url.searchParams.set('sort', sortBy);
+            window.location.href = url.toString();
+        }
+        
+        function showSearchTips() {
+            $('#searchTipsModal').modal('show');
+        }
+        
+        // Auto-focus search input
+        $(document).ready(function() {
+            $('input[name="query"]').focus();
+        });
+    </script>
+}
+
+@{
+    string HighlightSearchTerms(string text, List<string> terms)
+    {
+        if (string.IsNullOrEmpty(text) || terms == null || !terms.Any())
+            return text;
+
+        var result = text;
+        foreach (var term in terms)
+        {
+            if (!string.IsNullOrEmpty(term))
+            {
+                var pattern = System.Text.RegularExpressions.Regex.Escape(term);
+                result = System.Text.RegularExpressions.Regex.Replace(result, pattern, 
+                    $"<span class=\"highlight\">{term}</span>", 
+                    System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+            }
+        }
+        return result;
+    }
+}

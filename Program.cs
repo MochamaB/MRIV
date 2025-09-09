@@ -57,6 +57,7 @@ builder.Services.AddScoped<IDashboardService, DashboardService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<INotificationManager, NotificationManager>();
+builder.Services.AddScoped<IGuideService, GuideService>();
 
 // Report services
 builder.Services.AddScoped<IRequisitionReportService, RequisitionReportService>();

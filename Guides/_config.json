@@ -1,0 +1,174 @@
+{
+  "title": "MRIV User Guide",
+  "description": "Comprehensive guide for the Material Requisition and Inventory Verification system",
+  "version": "1.0",
+  "sections": [
+    {
+      "id": "authorization",
+      "title": "Authorization System",
+      "description": "Understanding role groups, permissions, and access control in MRIV",
+      "icon": "ri-shield-user-line",
+      "sortOrder": 1,
+      "isVisible": true,
+      "requiredRoles": [],
+      "requiredRoleGroups": [],
+      "pages": [
+        {
+          "id": "quick-reference",
+          "title": "Quick Reference",
+          "description": "Essential permission concepts and quick lookup table",
+          "fileName": "authorization/quick-reference.md",
+          "tags": ["permissions", "roles", "reference"],
+          "sortOrder": 1,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "role-groups",
+          "title": "Role Groups Explained",
+          "description": "Detailed explanation of how role groups work and their permissions",
+          "fileName": "authorization/role-groups.md",
+          "tags": ["role-groups", "permissions", "access-control"],
+          "sortOrder": 2,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "troubleshooting",
+          "title": "Troubleshooting Access Issues",
+          "description": "Common access problems and their solutions",
+          "fileName": "authorization/troubleshooting.md",
+          "tags": ["troubleshooting", "access", "support"],
+          "sortOrder": 3,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        }
+      ]
+    },
+    {
+      "id": "userguides",
+      "title": "User Guides",
+      "description": "Step-by-step guides for using MRIV features",
+      "icon": "ri-user-line",
+      "sortOrder": 2,
+      "isVisible": true,
+      "requiredRoles": [],
+      "requiredRoleGroups": [],
+      "pages": [
+        {
+          "id": "requisitions",
+          "title": "Creating Requisitions",
+          "description": "Complete guide to creating and managing requisitions",
+          "fileName": "userguides/requisitions.md",
+          "tags": ["requisitions", "workflow", "guide"],
+          "sortOrder": 1,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "materials",
+          "title": "Material Management",
+          "description": "Managing materials, categories, and assignments",
+          "fileName": "userguides/materials.md",
+          "tags": ["materials", "management", "assignments"],
+          "sortOrder": 2,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "approvals",
+          "title": "Approval Workflows",
+          "description": "Understanding and processing approvals",
+          "fileName": "userguides/approvals.md",
+          "tags": ["approvals", "workflow", "processing"],
+          "sortOrder": 3,
+          "isVisible": true,
+          "requiredRoles": [],
+          "requiredRoleGroups": []
+        }
+      ]
+    },
+    {
+      "id": "testing",
+      "title": "Testing Guidelines",
+      "description": "Testing procedures and guidelines for MRIV features",
+      "icon": "ri-test-tube-line",
+      "sortOrder": 3,
+      "isVisible": true,
+      "requiredRoles": ["Admin"],
+      "requiredRoleGroups": [],
+      "pages": [
+        {
+          "id": "authorization-tests",
+          "title": "Authorization Testing",
+          "description": "How to test role groups and permissions",
+          "fileName": "testing/authorization-tests.md",
+          "tags": ["testing", "authorization", "verification"],
+          "sortOrder": 1,
+          "isVisible": true,
+          "requiredRoles": ["Admin"],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "workflow-tests",
+          "title": "Workflow Testing",
+          "description": "Testing requisition and approval workflows",
+          "fileName": "testing/workflow-tests.md",
+          "tags": ["testing", "workflows", "verification"],
+          "sortOrder": 2,
+          "isVisible": true,
+          "requiredRoles": ["Admin"],
+          "requiredRoleGroups": []
+        }
+      ]
+    },
+    {
+      "id": "admin",
+      "title": "Administration",
+      "description": "Administrative procedures and system management",
+      "icon": "ri-settings-4-line",
+      "sortOrder": 4,
+      "isVisible": true,
+      "requiredRoles": ["Admin"],
+      "requiredRoleGroups": [],
+      "pages": [
+        {
+          "id": "role-management",
+          "title": "Managing Role Groups",
+          "description": "Creating and managing role groups and permissions",
+          "fileName": "admin/role-management.md",
+          "tags": ["administration", "role-groups", "management"],
+          "sortOrder": 1,
+          "isVisible": true,
+          "requiredRoles": ["Admin"],
+          "requiredRoleGroups": []
+        },
+        {
+          "id": "system-config",
+          "title": "System Configuration",
+          "description": "Configuring workflows, notifications, and system settings",
+          "fileName": "admin/system-config.md",
+          "tags": ["administration", "configuration", "settings"],
+          "sortOrder": 2,
+          "isVisible": true,
+          "requiredRoles": ["Admin"],
+          "requiredRoleGroups": []
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "enableSearch": true,
+    "enableFeedback": true,
+    "enableContextHelp": true,
+    "enablePrintVersion": true,
+    "searchResultsPerPage": 10,
+    "adminRoles": ["Admin"],
+    "supportRoles": ["Support", "Admin"]
+  }
+}

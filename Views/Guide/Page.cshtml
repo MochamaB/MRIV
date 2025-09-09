@@ -1,0 +1,398 @@
+@model MRIV.Models.GuidePage
+
+@{
+    ViewData["Title"] = Model?.Title ?? "Guide Page";
+    var sectionId = ViewBag.Section as string;
+    var pageId = ViewBag.Page as string;
+    var navigation = ViewBag.Navigation as MRIV.Models.GuideNavigation;
+    var currentSection = navigation.Sections.FirstOrDefault(s => s.Id == sectionId);
+}
+
+
+
+<div class="row">
+    <!-- Table of Contents Sidebar -->
+    <div class="col-xl-9 col-lg-8">
+        <div class="card">
+            <div class="card-header border-bottom-dashed">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title mb-0 flex-grow-1">@Model?.Title</h5>
+                    <div class="flex-shrink-0">
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn btn-soft-info btn-sm" onclick="printPage()">
+                                <i class="ri-printer-line me-1"></i>Print
+                            </button>
+                            <button type="button" class="btn btn-soft-success btn-sm" onclick="provideFeedback()">
+                                <i class="ri-message-line me-1"></i>Feedback
+                            </button>
+                            <div class="dropdown">
+                                <button class="btn btn-soft-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                    <i class="ri-more-line"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="@Url.Action("PrintVersion", "Guide", new { section = sectionId, page = pageId })" target="_blank">
+                                        <i class="ri-printer-line me-2"></i>Print Version
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="#" onclick="showQuickHelp('@(sectionId)-@(pageId)')">
+                                        <i class="ri-question-line me-2"></i>Get Help
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body guide-content">
+                @if (!string.IsNullOrEmpty(Model?.HtmlContent))
+                {
+                    <div class="guide-page-content">
+                        @Html.Raw(Model.HtmlContent)
+                    </div>
+                    
+                    @if (Model.Tags?.Any() == true)
+                    {
+                        <div class="mt-4 pt-4 border-top">
+                            <h6 class="mb-3">Tags:</h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var tag in Model.Tags)
+                                {
+                                    <span class="badge bg-primary-subtle text-primary">@tag</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    <div class="mt-4 pt-4 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="text-muted fs-12">
+                                @if (Model.LastModified != default(DateTime))
+                                {
+                                <i class="ri-time-line me-1"></i>
+                                LastUpdated: @Model.LastModified.ToString("MMM dd, yyyy");
+                                }
+                                @if (!string.IsNullOrEmpty(Model.LastModifiedBy))
+                                {
+                                    <span class="mx-2">•</span>
+                                    <i class="ri-user-line me-1"></i>@Model.LastModifiedBy
+                                }
+                            </div>
+                            <div class="guide-rating" data-section="@sectionId" data-page="@pageId">
+                                <span class="text-muted fs-12 me-2">Was this helpful?</span>
+                                <button type="button" class="btn btn-soft-success btn-sm me-1" onclick="rateContent(5)">
+                                    <i class="ri-thumb-up-line"></i>
+                                </button>
+                                <button type="button" class="btn btn-soft-danger btn-sm" onclick="rateContent(1)">
+                                    <i class="ri-thumb-down-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-5">
+                        <div class="avatar-lg mx-auto mb-4">
+                            <div class="avatar-title bg-light text-muted rounded-circle fs-1">
+                                <i class="ri-file-damage-line"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-3">Content Not Available</h5>
+                        <p class="text-muted mb-4">This page content is not available or you don't have permission to view it.</p>
+                        <a href="@Url.Action("Section", "Guide", new { section = sectionId })" class="btn btn-soft-primary">
+                            <i class="ri-arrow-left-line me-1"></i>Back to Section
+                        </a>
+                    </div>
+                }
+            </div>
+
+            <!-- Page Navigation -->
+            @if (navigation?.Sections?.Any() == true)
+            {
+               
+                if (currentSection?.Pages?.Any() == true)
+                {
+                    var currentIndex = currentSection.Pages.ToList().FindIndex(p => p.Id == pageId);
+                    var prevPage = currentIndex > 0 ? currentSection.Pages.ElementAtOrDefault(currentIndex - 1) : null;
+                    var nextPage = currentIndex < currentSection.Pages.Count - 1 ? currentSection.Pages.ElementAtOrDefault(currentIndex + 1) : null;
+
+                    <div class="card-footer border-top-dashed">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-shrink-0">
+                                @if (prevPage != null)
+                                {
+                                    <a href="@Url.Action("Page", "Guide", new { section = sectionId, page = prevPage.Id })" 
+                                       class="btn btn-soft-primary">
+                                        <i class="ri-arrow-left-line me-1"></i>@prevPage.Title
+                                    </a>
+                                }
+                            </div>
+                            <div class="text-center">
+                                <a href="@Url.Action("Section", "Guide", new { section = sectionId })" 
+                                   class="btn btn-link text-muted">
+                                    <i class="ri-list-check-2 me-1"></i>Section Contents
+                                </a>
+                            </div>
+                            <div class="flex-shrink-0">
+                                @if (nextPage != null)
+                                {
+                                    <a href="@Url.Action("Page", "Guide", new { section = sectionId, page = nextPage.Id })" 
+                                       class="btn btn-soft-primary">
+                                        @nextPage.Title<i class="ri-arrow-right-line ms-1"></i>
+                                    </a>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <!-- Table of Contents Sidebar -->
+    <div class="col-xl-3 col-lg-4">
+        <div class="card sticky-top" style="top: 100px;">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-list-check me-2"></i>On This Page
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="tableOfContents">
+                    <!-- TOC will be generated by JavaScript -->
+                    <div class="text-center text-muted">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Related Content -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h6 class="card-title mb-0">
+                    <i class="ri-links-line me-2"></i>Related Content
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="relatedContent">
+                    @if (currentSection?.Pages?.Any() == true)
+                    {
+                        <ul class="list-unstyled mb-0">
+                            @foreach (var relatedPage in currentSection.Pages.Where(p => p.Id != pageId).Take(5))
+                            {
+                                <li class="py-2 border-bottom">
+                                    <a href="@Url.Action("Page", "Guide", new { section = sectionId, page = relatedPage.Id })" 
+                                       class="text-decoration-none">
+                                        <h6 class="mb-1 fs-14">@relatedPage.Title</h6>
+                                        @if (!string.IsNullOrEmpty(relatedPage.Description))
+                                        {
+                                            <p class="text-muted mb-0 fs-12">@relatedPage.Description</p>
+                                        }
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <p class="text-muted mb-0 fs-12">No related content available</p>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Feedback Modal -->
+<div class="modal fade" id="feedbackModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Page Feedback</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="feedbackForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">How would you rate this page?</label>
+                        <div class="d-flex gap-2">
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                <button type="button" class="btn btn-outline-warning btn-sm rating-btn" data-rating="@i">
+                                    <i class="ri-star-line"></i>
+                                </button>
+                            }
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="feedbackType" class="form-label">Feedback Type</label>
+                        <select class="form-select" id="feedbackType" name="feedbackType" required>
+                            <option value="">Select type...</option>
+                            <option value="helpful">This was helpful</option>
+                            <option value="not-helpful">This was not helpful</option>
+                            <option value="suggestion">Suggestion for improvement</option>
+                            <option value="error">Found an error</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="feedbackComment" class="form-label">Comments</label>
+                        <textarea class="form-control" id="feedbackComment" name="comment" rows="3" 
+                                  placeholder="Please share your feedback..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-soft-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="submitFeedback()">Submit Feedback</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        $(document).ready(function() {
+            generateTableOfContents();
+            setupRatingButtons();
+        });
+        
+        function generateTableOfContents() {
+            var headings = $('.guide-page-content').find('h1, h2, h3, h4, h5, h6');
+            var toc = $('#tableOfContents');
+            
+            if (headings.length === 0) {
+                toc.html('<p class="text-muted fs-12 mb-0">No headings found</p>');
+                return;
+            }
+            
+            var tocHtml = '<nav class="toc-nav">';
+            headings.each(function(index) {
+                var heading = $(this);
+                var level = parseInt(heading.prop('tagName').substring(1));
+                var text = heading.text();
+                var id = 'heading-' + index;
+                
+                heading.attr('id', id);
+                
+                tocHtml += `<div class="toc-item level-${level}">
+                    <a href="#${id}" class="text-decoration-none text-muted">${text}</a>
+                </div>`;
+            });
+            tocHtml += '</nav>';
+            
+            toc.html(tocHtml);
+            
+            // Smooth scroll for TOC links
+            $('.toc-nav a').on('click', function(e) {
+                e.preventDefault();
+                var target = $($(this).attr('href'));
+                if (target.length) {
+                    $('html, body').animate({
+                        scrollTop: target.offset().top - 100
+                    }, 500);
+                }
+            });
+        }
+        
+        function setupRatingButtons() {
+            $('.rating-btn').on('click', function() {
+                var rating = $(this).data('rating');
+                $('.rating-btn').removeClass('active');
+                
+                for (var i = 1; i <= rating; i++) {
+                    $('[data-rating="' + i + '"]').addClass('active');
+                }
+                
+                $('#feedbackForm').data('rating', rating);
+            });
+        }
+        
+        function printPage() {
+            window.print();
+        }
+        
+        function provideFeedback() {
+            $('#feedbackModal').modal('show');
+        }
+        
+        function submitFeedback() {
+            var form = $('#feedbackForm');
+            var rating = form.data('rating');
+            var feedbackType = $('#feedbackType').val();
+            var comment = $('#feedbackComment').val();
+            
+            if (!feedbackType || !comment.trim()) {
+                toastr.error('Please fill in all required fields');
+                return;
+            }
+            
+            var feedback = {
+                sectionId: '@sectionId',
+                pageId: '@pageId',
+                feedbackType: feedbackType,
+                rating: rating,
+                comment: comment
+            };
+            
+            fetch('@Url.Action("SubmitFeedback", "Guide")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(feedback)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    $('#feedbackModal').modal('hide');
+                    toastr.success('Thank you for your feedback!');
+                    form[0].reset();
+                    $('.rating-btn').removeClass('active');
+                    form.removeData('rating');
+                } else {
+                    toastr.error('Failed to submit feedback. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                toastr.error('An error occurred while submitting feedback.');
+            });
+        }
+        
+        function rateContent(rating) {
+            fetch('@Url.Action("SubmitFeedback", "Guide")', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    sectionId: '@sectionId',
+                    pageId: '@pageId',
+                    feedbackType: rating >= 4 ? 'helpful' : 'not-helpful',
+                    rating: rating,
+                    comment: rating >= 4 ? 'Found this page helpful' : 'Could be improved'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    toastr.success('Thanks for your feedback!');
+                    $('.guide-rating').html('<span class="text-muted fs-12">Thank you for your feedback!</span>');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+        
+        function showQuickHelp(context) {
+            // Implementation for context help
+            toastr.info('Context help feature coming soon!');
+        }
+    </script>
+}
