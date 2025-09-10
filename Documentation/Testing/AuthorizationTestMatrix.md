@@ -13,40 +13,69 @@ This document provides comprehensive test scenarios for all authorization combin
 3. **Test Data**: Sample organizational structure and role groups
 4. **Test Tools**: Unit test framework and integration test setup
 
+### Model Integration Notes
+
+The MRIV system has a unique architecture where employee data comes from `KtdaleaveContext` while authorization data resides in `RequisitionContext`. This creates specific testing challenges:
+
+#### Key Model Relationships
+- **EmployeeBkp** (from KtdaleaveContext): Uses string-based `Department` and `Station` names
+- **Departments/Stations** (from RequisitionContext): Uses integer IDs (`DepartmentId`, `StationId`)
+- **RoleGroups/RoleGroupMembers** (from RequisitionContext): Authorization data linked by `PayrollNo`
+
+#### Testing Integration Points
+```csharp
+// Employee data comes from HR system (string-based)
+var employee = await _ktdaContext.EmployeeBkps
+    .FirstOrDefaultAsync(e => e.PayrollNo == "TST00001");
+// employee.Department = "Information Technology" (string)
+// employee.Station = "Head Office" (string)
+
+// Authorization requires ID-based mapping
+var department = await _appContext.Departments
+    .FirstOrDefaultAsync(d => d.DepartmentName == employee.Department);
+// department.DepartmentId = 1 (integer for authorization logic)
+```
+
+#### Test Data Consistency Requirements
+1. **Name-ID Mapping**: Department/Station names in EmployeeBkp must match master data
+2. **PayrollNo Format**: 8-character format (e.g., "TST00001") 
+3. **RollNo Requirement**: 5-character secondary key required for EmployeeBkp
+4. **Active Status**: Use `EmpisCurrActive = 1` for active employees
+
 ### Standard Test Data Structure
 
 #### Test Stations
 ```sql
--- Standard test stations
-INSERT INTO Station (StationId, Station_Name) VALUES
-(0, 'Head Office'),
-(001, 'Factory A'),
-(002, 'Factory B'),
-(003, 'Region Central');
+-- Standard test stations (using actual Stations table)
+INSERT INTO Stations (StationId, StationName) VALUES
+(1, 'Head Office'),
+(2, 'Factory A'),
+(3, 'Factory B'),
+(4, 'Region Central');
 ```
 
 #### Test Departments
 ```sql
--- Standard test departments
-INSERT INTO Department (DepartmentCode, DepartmentID, DepartmentName) VALUES
-(1, 'IT', 'Information Technology'),
-(2, 'HR', 'Human Resources'),
-(3, 'FIN', 'Finance'),
-(4, 'OPS', 'Operations'),
-(5, 'MNT', 'Maintenance');
+-- Standard test departments (using actual Departments table)
+INSERT INTO Departments (DepartmentId, DepartmentName, StationId, DepartmentHd) VALUES
+(1, 'Information Technology', 1, 'HOD0001'),
+(2, 'Human Resources', 1, 'HOD0002'),
+(3, 'Finance', 1, 'HOD0003'),
+(4, 'Operations', 2, 'HOD0004'),
+(5, 'Maintenance', 2, 'HOD0005');
 ```
 
 #### Test Employees
 ```sql
--- Test users for each authorization scenario
-INSERT INTO EmployeeBkp (PayrollNo, Surname, Othernames, Department, Station, Role) VALUES
-('TST001', 'Default', 'User', '1', '001', 'User'),           -- Default User
-('TST002', 'Dept', 'Manager', '1', '001', 'Manager'),        -- Department Manager
-('TST003', 'Station', 'Support', '1', '001', 'Support'),     -- Station Support
-('TST004', 'Group', 'Manager', '1', '001', 'Manager'),       -- Group Manager
-('TST005', 'System', 'Admin', '1', '001', 'Admin'),          -- Administrator
-('TST006', 'Cross', 'Dept', '2', '001', 'User'),             -- Different Department
-('TST007', 'Cross', 'Station', '1', '002', 'User');          -- Different Station
+-- Test users for each authorization scenario (using actual EmployeeBkp table)
+INSERT INTO Employee_bkp (PayrollNo, RollNo, SurName, OtherNames, Department, Station, Role, EmpisCurrActive) VALUES
+('TST00001', 'R0001', 'Default', 'User', 'Information Technology', 'Head Office', 'User', 1),           -- Default User
+('TST00002', 'R0002', 'Dept', 'Manager', 'Information Technology', 'Head Office', 'Manager', 1),        -- Department Manager
+('TST00003', 'R0003', 'Station', 'Support', 'Information Technology', 'Head Office', 'Support', 1),     -- Station Support
+('TST00004', 'R0004', 'Group', 'Manager', 'Information Technology', 'Head Office', 'Manager', 1),       -- Group Manager
+('TST00005', 'R0005', 'System', 'Admin', 'Information Technology', 'Head Office', 'Admin', 1),          -- Administrator
+('TST00006', 'R0006', 'Cross', 'Dept', 'Human Resources', 'Head Office', 'User', 1),                    -- Different Department
+('TST00007', 'R0007', 'Cross', 'Station', 'Information Technology', 'Factory A', 'User', 1);           -- Different Station
 ```
 
 ## Test Role Groups
@@ -60,29 +89,29 @@ INSERT INTO RoleGroups (Name, Description, CanAccessAcrossStations, CanAccessAcr
 ('Test_Group_Manager', 'Cross-station department access', 1, 0, 1),
 ('Test_Administrator', 'Full system access', 1, 1, 1);
 
--- Role group memberships
-INSERT INTO RoleGroupMembers (RoleGroupId, PayrollNo, IsActive) VALUES
-(1, 'TST002', 1), -- Department Manager
-(2, 'TST003', 1), -- Station Support
-(3, 'TST004', 1), -- Group Manager
-(4, 'TST005', 1); -- Administrator
--- TST001 has no role group (Default User)
+-- Role group memberships (using actual PayrollNo format)
+INSERT INTO RoleGroupMembers (RoleGroupId, PayrollNo, IsActive, CreatedAt) VALUES
+(1, 'TST00002', 1, GETDATE()), -- Department Manager
+(2, 'TST00003', 1, GETDATE()), -- Station Support
+(3, 'TST00004', 1, GETDATE()), -- Group Manager
+(4, 'TST00005', 1, GETDATE()); -- Administrator
+-- TST00001 has no role group (Default User)
 ```
 
 ### Test Sample Data
 ```sql
--- Sample requisitions for testing visibility
-INSERT INTO Requisitions (PayrollNo, DepartmentId, IssueStationId, DeliveryStationId, Status, Description) VALUES
-('TST001', 1, 1, 1, 'NotStarted', 'Default user requisition'),
-('TST006', 2, 1, 1, 'NotStarted', 'Different department requisition'),
-('TST007', 1, 2, 2, 'NotStarted', 'Different station requisition'),
-('TST002', 1, 1, 1, 'NotStarted', 'Department manager requisition');
+-- Sample requisitions for testing visibility (using actual Requisitions table columns)
+INSERT INTO Requisitions (TicketId, DepartmentId, PayrollNo, RequisitionType, IssueStationCategory, IssueStationId, DeliveryStationCategory, DeliveryStationId, Remarks, Status, CreatedAt) VALUES
+(1001, 1, 'TST00001', 0, 'Internal', 1, 'Internal', 1, 'Default user requisition', 0, GETDATE()),
+(1002, 2, 'TST00006', 0, 'Internal', 1, 'Internal', 1, 'Different department requisition', 0, GETDATE()),
+(1003, 1, 'TST00007', 0, 'Internal', 2, 'Internal', 2, 'Different station requisition', 0, GETDATE()),
+(1004, 1, 'TST00002', 0, 'Internal', 1, 'Internal', 1, 'Department manager requisition', 0, GETDATE());
 
--- Sample approvals for testing
-INSERT INTO Approvals (PayrollNo, DepartmentId, StationId, Status, RequisitionId) VALUES
-('TST001', 1, 1, 'Pending', 1),
-('TST006', 2, 1, 'Pending', 2),
-('TST007', 1, 2, 'Pending', 3);
+-- Sample approvals for testing (using actual Approvals table columns)
+INSERT INTO Approvals (RequisitionId, ApprovalStep, PayrollNo, Status, CreatedAt) VALUES
+(1, 1, 'TST00001', 'Pending', GETDATE()),
+(2, 1, 'TST00006', 'Pending', GETDATE()),
+(3, 1, 'TST00007', 'Pending', GETDATE());
 ```
 
 ## Comprehensive Test Matrix
@@ -100,8 +129,9 @@ INSERT INTO Approvals (PayrollNo, DepartmentId, StationId, Status, RequisitionId
 
 ### Test Case TC-AUTH-001: Default User (No Role Group)
 **Setup:**
-- User: TST001 (no role group assignment)
-- Department: IT (1), Station: Factory A (001)
+- User: TST00001 (no role group assignment)
+- Department: Information Technology, Station: Head Office
+- Employee: PayrollNo='TST00001', Department='Information Technology', Station='Head Office'
 
 **Test Scenarios:**
 ```csharp
@@ -109,7 +139,7 @@ INSERT INTO Approvals (PayrollNo, DepartmentId, StationId, Status, RequisitionId
 public async Task DefaultUser_CanOnlyAccessOwnData()
 {
     // Arrange
-    var userPayrollNo = "TST001";
+    var userPayrollNo = "TST00001";
     
     // Act
     var visibleRequisitions = await _visibilityService
@@ -130,7 +160,9 @@ public async Task DefaultUser_CanOnlyAccessOwnData()
 
 ### Test Case TC-AUTH-002: Department Manager
 **Setup:**
-- User: TST002 (Department Manager role group)
+- User: TST00002 (Department Manager role group)
+- Employee: PayrollNo='TST00002', Department='Information Technology', Station='Head Office'
+- Role Group: 'Test_Department_Manager'
 - Permissions: CanAccessAcrossStations=false, CanAccessAcrossDepartments=false
 
 **Test Scenarios:**
@@ -139,7 +171,7 @@ public async Task DefaultUser_CanOnlyAccessOwnData()
 public async Task DepartmentManager_CanAccessDepartmentAtStation()
 {
     // Arrange
-    var userPayrollNo = "TST002";
+    var userPayrollNo = "TST00002";
     
     // Act
     var visibleRequisitions = await _visibilityService
@@ -147,19 +179,21 @@ public async Task DepartmentManager_CanAccessDepartmentAtStation()
     var results = await visibleRequisitions.ToListAsync();
     
     // Assert
-    Assert.All(results, r => r.DepartmentId == 1); // IT Department only
-    Assert.All(results, r => r.IssueStationId == 1 || r.DeliveryStationId == 1); // Factory A only
+    Assert.All(results, r => r.DepartmentId == 1); // Information Technology Department only
+    Assert.All(results, r => r.IssueStationId == 1 || r.DeliveryStationId == 1); // Head Office only
 }
 ```
 
 **Expected Results:**
-- ✅ Can see all IT department data at Factory A
-- ❌ Cannot see HR department data at Factory A
-- ❌ Cannot see IT department data at other stations
+- ✅ Can see all Information Technology department data at Head Office
+- ❌ Cannot see Human Resources department data at Head Office
+- ❌ Cannot see Information Technology department data at other stations
 
 ### Test Case TC-AUTH-003: Station Support
 **Setup:**
-- User: TST003 (Station Support role group)
+- User: TST00003 (Station Support role group)
+- Employee: PayrollNo='TST00003', Department='Information Technology', Station='Head Office'
+- Role Group: 'Test_Station_Support'
 - Permissions: CanAccessAcrossStations=false, CanAccessAcrossDepartments=true
 
 **Test Scenarios:**
@@ -168,7 +202,7 @@ public async Task DepartmentManager_CanAccessDepartmentAtStation()
 public async Task StationSupport_CanAccessAllDepartmentsAtStation()
 {
     // Arrange
-    var userPayrollNo = "TST003";
+    var userPayrollNo = "TST00003";
     
     // Act
     var visibleDepartments = await _visibilityService
@@ -177,21 +211,23 @@ public async Task StationSupport_CanAccessAllDepartmentsAtStation()
         .ApplyVisibilityScopeAsync(_context.Requisitions, userPayrollNo);
     
     // Assert
-    Assert.Contains(visibleDepartments, d => d.DepartmentCode == 1); // IT
-    Assert.Contains(visibleDepartments, d => d.DepartmentCode == 2); // HR
+    Assert.Contains(visibleDepartments, d => d.DepartmentId == 1); // Information Technology
+    Assert.Contains(visibleDepartments, d => d.DepartmentId == 2); // Human Resources
     
     var results = await visibleRequisitions.ToListAsync();
-    Assert.All(results, r => r.IssueStationId == 1 || r.DeliveryStationId == 1); // Factory A only
+    Assert.All(results, r => r.IssueStationId == 1 || r.DeliveryStationId == 1); // Head Office only
 }
 ```
 
 **Expected Results:**
-- ✅ Can see all departments at Factory A
+- ✅ Can see all departments at Head Office
 - ❌ Cannot see any departments at other stations
 
 ### Test Case TC-AUTH-004: Group Manager
 **Setup:**
-- User: TST004 (Group Manager role group)
+- User: TST00004 (Group Manager role group)
+- Employee: PayrollNo='TST00004', Department='Information Technology', Station='Head Office'
+- Role Group: 'Test_Group_Manager'
 - Permissions: CanAccessAcrossStations=true, CanAccessAcrossDepartments=false
 
 **Test Scenarios:**
@@ -200,7 +236,7 @@ public async Task StationSupport_CanAccessAllDepartmentsAtStation()
 public async Task GroupManager_CanAccessDepartmentAtAllStations()
 {
     // Arrange
-    var userPayrollNo = "TST004";
+    var userPayrollNo = "TST00004";
     
     // Act
     var visibleStations = await _visibilityService
@@ -212,17 +248,19 @@ public async Task GroupManager_CanAccessDepartmentAtAllStations()
     Assert.True(visibleStations.Count > 1); // Multiple stations
     
     var results = await visibleRequisitions.ToListAsync();
-    Assert.All(results, r => r.DepartmentId == 1); // IT Department only
+    Assert.All(results, r => r.DepartmentId == 1); // Information Technology Department only
 }
 ```
 
 **Expected Results:**
-- ✅ Can see IT department data at all stations
+- ✅ Can see Information Technology department data at all stations
 - ❌ Cannot see other departments at any station
 
 ### Test Case TC-AUTH-005: Administrator
 **Setup:**
-- User: TST005 (Administrator role group)
+- User: TST00005 (Administrator role group)
+- Employee: PayrollNo='TST00005', Department='Information Technology', Station='Head Office'
+- Role Group: 'Test_Administrator'
 - Permissions: CanAccessAcrossStations=true, CanAccessAcrossDepartments=true
 
 **Test Scenarios:**
@@ -231,7 +269,7 @@ public async Task GroupManager_CanAccessDepartmentAtAllStations()
 public async Task Administrator_CanAccessAllData()
 {
     // Arrange
-    var userPayrollNo = "TST005";
+    var userPayrollNo = "TST00005";
     
     // Act
     var visibleDepartments = await _visibilityService

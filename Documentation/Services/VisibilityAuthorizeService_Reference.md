@@ -2,7 +2,30 @@
 
 ## Overview
 
-The `VisibilityAuthorizeService` is the core component responsible for implementing role-based data access control in the MRIV system. This service provides query filtering and entity access validation based on user role groups and organizational hierarchy.
+The `VisibilityAuthorizeService` is the core component responsible for implementing **cross-context** role-based data access control in the MRIV system. This service integrates data from both `KtdaleaveContext` (HR system) and `RequisitionContext` (application database) to provide query filtering and entity access validation.
+
+### Cross-Context Architecture
+
+```mermaid
+flowchart LR
+    A[User Request] --> B[VisibilityAuthorizeService]
+    B --> C[KtdaleaveContext]
+    B --> D[RequisitionContext]
+    C --> E[EmployeeBkp<br/>Department<br/>Station]
+    D --> F[RoleGroups<br/>Requisitions<br/>Materials]
+    E --> G[String-based<br/>References]
+    F --> H[Integer-based<br/>References]
+    G --> I[Mapping Layer]
+    H --> I
+    I --> J[Authorization Decision]
+```
+
+### Key Integration Challenges
+
+1. **Data Context Separation**: Employee data (KtdaleaveContext) separate from authorization data (RequisitionContext)
+2. **String-to-ID Mapping**: Employee references use strings ("HQ", "101") while business entities use integers
+3. **No Foreign Key Integrity**: Relationships maintained through string matching with potential orphaned references
+4. **Defensive Programming**: Must handle missing mappings and data inconsistencies gracefully
 
 ## Service Interface
 
@@ -36,17 +59,37 @@ Task<IQueryable<T>> ApplyVisibilityScopeAsync<T>(IQueryable<T> query, string use
 - Filtered queryable respecting user's access scope
 - Empty queryable if user has no access
 
-#### Supported Entity Types
-Currently supports:
-- `Requisition` - Filtered by department and station visibility
-- `Approval` - Filtered by department and station scope
+#### Supported Entity Types (Cross-Context)
+
+**RequisitionContext Entities**:
+- `Requisition` - Filtered by `DepartmentId` and station IDs (`IssueStationId`, `DeliveryStationId`)
+- `Approval` - Filtered by requisition department and approval station
+- `MaterialAssignment` - Filtered by assignment `StationId`/`DepartmentId`
+
+**KtdaleaveContext Entities**:
+- `EmployeeBkp` - Filtered by string-based `Station` and `Department` fields
+
+**Cross-Context Mapping Requirements**:
+```csharp
+// HR System (strings) → App System (integers)
+Employee.Station = "HQ"           → StationId = ?
+Employee.Department = "101"        → DepartmentId = 396
+Requisition.DepartmentId = 396    → "CHIEF EXECUTIVE" department
+```
 
 #### Usage Examples
 
 ```csharp
-// Controller usage - filter requisitions
+// Controller usage - filter requisitions (cross-context)
+var userPayrollNo = User.FindFirst(ClaimTypes.Name)?.Value;
 var userRequisitions = await _visibilityService
-    .ApplyVisibilityScopeAsync(_context.Requisitions, User.Identity.Name);
+    .ApplyVisibilityScopeAsync(_context.Requisitions, userPayrollNo);
+
+// Service handles:
+// 1. Get EmployeeBkp from KtdaleaveContext
+// 2. Get RoleGroup from RequisitionContext  
+// 3. Map string department/station to integers
+// 4. Apply visibility filters
 
 var results = await userRequisitions.ToListAsync();
 
@@ -58,29 +101,75 @@ var authorizedApprovals = await _visibilityService
     .ApplyVisibilityScopeAsync(filteredQuery, currentUser);
 ```
 
-#### Implementation Logic by Entity Type
+#### Cross-Context Implementation Logic 
 
-**Requisitions**:
+**Critical Implementation Requirements**:
 ```csharp
-// Default User (no role group)
-requisitions.Where(r => r.PayrollNo == userPayrollNo)
+public async Task<IQueryable<T>> ApplyVisibilityScopeAsync<T>(IQueryable<T> query, string userPayrollNo)
+{
+    // Step 1: Get employee from HR context
+    var employee = await _employeeService.GetEmployeeByPayrollAsync(userPayrollNo);
+    if (employee == null) return query.Where(x => false); // No access
+    
+    // Step 2: Get role group from app context  
+    var roleGroupMember = await _context.RoleGroupMembers
+        .Include(m => m.RoleGroup)
+        .FirstOrDefaultAsync(m => m.PayrollNo == userPayrollNo && m.IsActive);
+    
+    if (roleGroupMember == null)
+    {
+        // Default user - only own records
+        return ApplyDefaultUserFilter(query, userPayrollNo);
+    }
+    
+    // Step 3: Map HR strings to App integers
+    var userStationId = await MapStationNameToId(employee.Station);
+    var userDepartmentId = await MapDepartmentCodeToId(employee.Department);
+    
+    // Step 4: Apply role-based filtering
+    return ApplyRoleBasedFilter(query, roleGroupMember.RoleGroup, userStationId, userDepartmentId);
+}
 
-// Department at Station
-requisitions.Where(r => 
-    r.DepartmentId.ToString() == userDept &&
-    (r.IssueStationId.ToString() == userStation || 
-     r.DeliveryStationId.ToString() == userStation))
+private async Task<int> MapStationNameToId(string stationName)
+{
+    // Handle inconsistent station references
+    var mapping = await _cache.GetOrSetAsync($"station_{stationName}", async () =>
+    {
+        var station = await _ktdaContext.Stations
+            .FirstOrDefaultAsync(s => 
+                s.Station_Name.Contains(stationName) || 
+                stationName.Contains(s.Station_Name) ||
+                // Handle code-based mappings
+                (stationName == "HQ" && s.Station_Name.Contains("HEAD")) ||
+                (stationName.All(char.IsDigit) && s.StationID.ToString() == stationName));
+        
+        return station?.StationID ?? 0; // 0 = no mapping found
+    });
+    
+    return mapping;
+}
+```
 
-// All Departments at Station
-requisitions.Where(r => 
-    r.IssueStationId.ToString() == userStation || 
-    r.DeliveryStationId.ToString() == userStation)
+**Entity-Specific Filtering**:
 
-// Department at All Stations
-requisitions.Where(r => r.DepartmentId.ToString() == userDept)
-
-// Admin - No filtering applied
-return query;
+**Requisitions** (Cross-Context):
+```csharp
+// Requisitions use integer IDs that must be mapped from HR strings
+public IQueryable<Requisition> ApplyRequisitionFilter(IQueryable<Requisition> query, 
+    RoleGroup roleGroup, int userStationId, int userDepartmentId)
+{
+    if (roleGroup.CanAccessAcrossStations && roleGroup.CanAccessAcrossDepartments)
+        return query; // Admin access
+    
+    return query.Where(r =>
+        // Own requisitions always visible  
+        r.PayrollNo == userPayrollNo ||
+        // Role-based visibility
+        ((!roleGroup.CanAccessAcrossDepartments || r.DepartmentId == userDepartmentId) &&
+         (!roleGroup.CanAccessAcrossStations || 
+          r.IssueStationId == userStationId || r.DeliveryStationId == userStationId))
+    );
+}
 ```
 
 **Approvals**:

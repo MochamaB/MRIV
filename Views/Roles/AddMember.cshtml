@@ -14,160 +14,24 @@
                     <h5 class="card-title mb-0 flex-grow-1">Add Member to Role Group: @roleGroup.Name</h5>
                     <div class="flex-shrink-0">
                         <div class="d-flex gap-2 flex-wrap">
-                            <button type="button" id="toggleFilters" class="btn btn-outline-primary ms-2"><i class="ri-filter-3-line align-middle me-1"></i> Filters</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <!-- Filters Dropdowns (hidden by default) -->
-            <div class="card mb-4" id="filterContainer" style="display:none;">
-                <div class="card-body">
-                    <form id="employeeFilterForm">
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="stationId">Station</label>
-                                    <select class="form-select" id="stationId" name="stationId">
-                                        <option value="">-- All Stations --</option>
-                                        @if (Model.Stations != null)
-                                        {
-                                            foreach (var station in Model.Stations)
-                                            {
-                                                <option value="@station.Value">@station.Text</option>
-                                            }
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="departmentId">Department</label>
-                                    <select class="form-select" id="departmentId" name="departmentId">
-                                        <option value="">-- All Departments --</option>
-                                        @if (Model.Departments != null)
-                                        {
-                                            foreach (var dept in Model.Departments)
-                                            {
-                                                <option value="@dept.Value">@dept.Text</option>
-                                            }
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="form-group">
-                                    <label for="role">Role</label>
-                                    <select class="form-select" id="role" name="role">
-                                        <option value="">-- All Roles --</option>
-                                        @if (Model.Roles != null)
-                                        {
-                                            foreach (var role in Model.Roles)
-                                            {
-                                                <option value="@role.Value">@role.Text</option>
-                                            }
-                                        }
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-            </div>
-
-            <div class="card-body">
-                <!-- Search Filters -->
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h5 class="card-title mb-0">Search Filters</h5>
-                    </div>
-                    <div class="card-body">
-                        <form id="employeeSearchForm">
-                            <input type="hidden" asp-for="RoleGroupId" id="RoleGroupId" />
-                            <div class="row mb-3">
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="stationId">Station</label>
-                                        <select class="form-select" id="stationId" name="stationId">
-                                            <option value="">-- All Stations --</option>
-                                            @if (Model.Stations != null)
-                                            {
-                                                @foreach (var station in Model.Stations)
-                                                {
-                                                    <option value="@station.Value">@station.Text</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="departmentId">Department</label>
-                                        <select class="form-select" id="departmentId" name="departmentId">
-                                            <option value="">-- All Departments --</option>
-                                            @if (Model.Departments != null)
-                                            {
-                                                @foreach (var dept in Model.Departments)
-                                                {
-                                                    <option value="@dept.Value">@dept.Text</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-4">
-                                    <div class="form-group">
-                                        <label for="role">Role</label>
-                                        <select class="form-select" id="role" name="role">
-                                            <option value="">-- All Roles --</option>
-                                            @if (Model.Roles != null)
-                                            {
-                                                @foreach (var role in Model.Roles)
-                                                {
-                                                    <option value="@role.Value">@role.Text</option>
-                                                }
-                                            }
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="row">
-                                <div class="col-md-9">
-                                    <div class="form-group">
-                                        <label for="searchTerm">Search</label>
-                                        <input type="text" class="form-control" id="searchTerm" name="searchTerm" placeholder="Search by name, payroll number, designation" />
-                                    </div>
-                                </div>
-                                <div class="col-md-3 d-flex align-items-end">
-                                    <button type="button" id="searchButton" class="btn btn-primary w-100">Search</button>
-                                </div>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <!-- Selected Members List -->
-                    <div class="col-md-4">
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">Selected Employees</h5>
-                            </div>
-                            <div class="card-body">
-                                <form asp-action="AddMember" asp-controller="RoleGroups" method="post" id="addMemberForm">
-                                    <input type="hidden" asp-for="RoleGroupId" />
-                                    <input type="hidden" asp-for="RoleGroupName" />
-                                    <div id="selectedEmployeesList">
-                                        <!-- Selected employees will be rendered here by JS -->
-                                    </div>
-                                    <input type="hidden" name="PayrollNos" id="PayrollNosInput" />
-                                    <div class="form-group mt-3">
-                                        <button type="submit" class="btn btn-primary w-100" id="addMembersBtn" disabled>Add Member(s)</button>
-                                    </div>
+                            <div class="search-box">
+                                <form id="searchForm" method="get" action="@Url.Action("AddMember", "RoleGroups", new { id = roleGroup.Id })">
+                                    <input type="text" name="searchTerm" class="form-control search" placeholder="Search employees..." value="@ViewBag.SearchTerm">
+                                    <i class="ri-search-line search-icon"></i>
                                 </form>
                             </div>
+                            @await Html.PartialAsync("_FilterToggleButton", (object)null)
                         </div>
                     </div>
+                </div>
+            </div>
+
+            @await Html.PartialAsync("_Filters", (object)ViewBag.Filters)
+
+            <div class="card-body">
+
+                <div class="row">
+                    
                     <!-- Search Results -->
                     <div class="col-md-8">
                         <div class="card">
@@ -219,22 +83,38 @@
                                             </tbody>
                                         </table>
                                     </div>
-                                    <div id="paginationContainer" class="mt-3 d-none">
-                                        <!-- Pagination will be inserted here by JavaScript -->
-                                    </div>
-                                    <div id="noResultsMessage" class="alert alert-warning d-none">
-                                        No employees found. Try adjusting your search filters.
-                                    </div>
-                                    <div id="loadingMessage" class="text-center d-none">
-                                        <div class="spinner-border text-primary" role="status">
-                                            <span class="visually-hidden">Loading...</span>
-                                        </div>
-                                        <p class="mt-2">Searching for employees...</p>
-                                    </div>
+                                    
+                                    @if (ViewBag.Pagination != null)
+                                    {
+                                        @await Html.PartialAsync("_Pagination", (object)ViewBag.Pagination)
+                                    }
                                 </div>
                             </div>
                         </div>
                     </div>
+
+                    <!-- Selected Members List -->
+                    <div class="col-md-4">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Selected Employees</h5>
+                            </div>
+                            <div class="card-body">
+                                <form asp-action="AddMember" asp-controller="RoleGroups" method="post" id="addMemberForm">
+                                    <input type="hidden" asp-for="RoleGroupId" />
+                                    <input type="hidden" asp-for="RoleGroupName" />
+                                    <div id="selectedEmployeesList">
+                                        <!-- Selected employees will be rendered here by JS -->
+                                    </div>
+                                    <input type="hidden" name="PayrollNos" id="PayrollNosInput" />
+                                    <div class="form-group mt-3">
+                                        <button type="submit" class="btn btn-primary w-100" id="addMembersBtn" disabled>Add Member(s)</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    
                 </div>
             </div>
         </div>
@@ -246,79 +126,34 @@
     <script>
         $(document).ready(function() {
             var selectedPayrolls = [];
-            // Toggle filters
-            $('#toggleFilters').on('click', function() {
-                $('#filterContainer').toggle();
+            
+            // Handle search form submission
+            $('#searchForm').on('submit', function(e) {
+                e.preventDefault();
+                var searchTerm = $(this).find('input[name="searchTerm"]').val();
+                var currentUrl = new URL(window.location.href);
+                
+                // Preserve all current filter parameters
+                var params = new URLSearchParams(currentUrl.search);
+                params.set('searchTerm', searchTerm);
+                params.set('page', 1); // Reset to first page when searching
+                
+                // Navigate to the search URL
+                window.location.href = currentUrl.pathname + '?' + params.toString();
             });
-            // Reset filters and search
-            $('#resetButton').on('click', function() {
-                $('#stationId').val('');
-                $('#departmentId').val('');
-                $('#role').val('');
-                $('#searchTerm').val('');
-                searchEmployees();
-            });
-            // Search button
-            $('#searchButton').on('click', function() {
-                searchEmployees();
-            });
-            // Enter key in search
-            $('#searchTerm').on('keypress', function(e) {
+            
+            // Submit search when pressing Enter
+            $('input[name="searchTerm"]').on('keypress', function(e) {
                 if (e.which === 13) {
-                    searchEmployees();
-                    return false;
+                    $('#searchForm').submit();
                 }
             });
-            // Filter change
-            $('#stationId, #departmentId, #role').on('change', function() {
-                searchEmployees();
+            
+            // Submit search when clicking the search icon
+            $('.search-icon').on('click', function() {
+                $('#searchForm').submit();
             });
-            // AJAX search function
-            function searchEmployees() {
-                var stationId = $('#stationId').val();
-                var departmentId = $('#departmentId').val();
-                var role = $('#role').val();
-                var searchTerm = $('#searchTerm').val();
-                $('#loadingMessage').removeClass('d-none');
-                $('#noResultsMessage').addClass('d-none');
-                $('#resultsBody').empty();
-                $.ajax({
-                    url: '/RoleGroups/SearchEmployees',
-                    type: 'GET',
-                    data: {
-                        stationId: stationId,
-                        departmentId: departmentId,
-                        role: role,
-                        searchTerm: searchTerm
-                    },
-                    success: function(response) {
-                        $('#loadingMessage').addClass('d-none');
-                        var results = response.results;
-                        if (results && results.length > 0) {
-                            var html = '';
-                            $.each(results, function(i, employee) {
-                                html += '<tr>' +
-                                    '<td><input type="checkbox" class="select-employee-checkbox" data-payroll="' + employee.payrollNo + '" /></td>' +
-                                    '<td>' + employee.payrollNo + '</td>' +
-                                    '<td>' + employee.name + '</td>' +
-                                    '<td>' + employee.designation + '</td>' +
-                                    '<td>' + employee.department + '</td>' +
-                                    '<td>' + employee.role + '</td>' +
-                                    '<td><button type="button" class="btn btn-sm btn-success add-employee" data-payroll="' + employee.payrollNo + '" data-name="' + employee.name + '">Add</button></td>' +
-                                    '</tr>';
-                            });
-                            $('#resultsBody').html(html);
-                        } else {
-                            $('#resultsBody').html('<tr><td colspan="7" class="text-center">No employees found</td></tr>');
-                        }
-                        afterSearchResults();
-                    },
-                    error: function() {
-                        $('#loadingMessage').addClass('d-none');
-                        $('#resultsBody').html('<tr><td colspan="7" class="text-center text-danger">Error searching employees</td></tr>');
-                    }
-                });
-            }
+
             function updateSelectedList() {
                 var listHtml = '';
                 selectedPayrolls.forEach(function(payrollNo) {
@@ -332,6 +167,7 @@
                 $('#PayrollNosInput').val(selectedPayrolls.join(','));
                 $('#addMembersBtn').prop('disabled', selectedPayrolls.length === 0);
             }
+            
             $(document).on('click', '.add-employee', function() {
                 var payrollNo = $(this).data('payroll');
                 if (selectedPayrolls.indexOf(payrollNo) === -1) {
@@ -340,6 +176,7 @@
                 }
                 updateSelectedList();
             });
+            
             $(document).on('change', '.select-employee-checkbox', function() {
                 var payrollNo = $(this).data('payroll');
                 if ($(this).is(':checked')) {
@@ -351,12 +188,14 @@
                 }
                 updateSelectedList();
             });
+            
             $(document).on('click', '.remove-selected', function() {
                 var payrollNo = $(this).data('payroll');
                 selectedPayrolls = selectedPayrolls.filter(function(p) { return p !== payrollNo; });
                 $(".select-employee-checkbox[data-payroll='" + payrollNo + "']").prop('checked', false);
                 updateSelectedList();
             });
+            
             $('#addMemberForm').on('submit', function(e) {
                 if (selectedPayrolls.length === 0) {
                     alert('Please select at least one employee to add.');
@@ -365,12 +204,6 @@
                     $('#PayrollNosInput').val(selectedPayrolls.join(','));
                 }
             });
-            function afterSearchResults() {
-                $('.select-employee-checkbox').each(function() {
-                    var payrollNo = $(this).data('payroll');
-                    $(this).prop('checked', selectedPayrolls.indexOf(payrollNo) !== -1);
-                });
-            }
         });
     </script>
 }

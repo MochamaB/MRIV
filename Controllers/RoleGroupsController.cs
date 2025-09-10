@@ -5,9 +5,11 @@ using MRIV.Attributes;
 using MRIV.Models;
 using MRIV.Services;
 using MRIV.ViewModels;
+using MRIV.Extensions;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading.Tasks;
 
 namespace MRIV.Controllers
@@ -19,6 +21,7 @@ namespace MRIV.Controllers
         private readonly KtdaleaveContext _ktdaContext;
         private readonly Services.IEmployeeService _employeeService;
         private readonly Services.IDepartmentService _departmentService;
+        private readonly IVisibilityAuthorizeService _visibilityService;
         private readonly ILogger<RoleGroupsController> _logger;
 
         public RoleGroupsController(
@@ -26,12 +29,14 @@ namespace MRIV.Controllers
             KtdaleaveContext ktdaContext,
             Services.IEmployeeService employeeService,
             Services.IDepartmentService departmentService,
+            IVisibilityAuthorizeService visibilityService,
             ILogger<RoleGroupsController> logger)
         {
             _context = context;
             _ktdaContext = ktdaContext;
             _employeeService = employeeService;
             _departmentService = departmentService;
+            _visibilityService = visibilityService;
             _logger = logger;
         }
 
@@ -225,7 +230,7 @@ namespace MRIV.Controllers
         }
 
         // GET: RoleGroups/AddMember/{roleGroupId}
-        public async Task<IActionResult> AddMember(int id)
+        public async Task<IActionResult> AddMember(int id, int page = 1, int pageSize = 100, string searchTerm = "")
         {
             var roleGroup = await _context.RoleGroups.FindAsync(id);
             if (roleGroup == null)
@@ -233,97 +238,170 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // Get current user's payroll number from session
+            var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (string.IsNullOrEmpty(userPayrollNo))
+                return RedirectToAction("Index", "Login");
+
             ViewBag.RoleGroup = roleGroup;
 
+            // Get filter values from request query string
+            var stationFilter = Request.Query["Station"].ToString();
+            var departmentFilter = Request.Query["Department"].ToString();
+            var roleFilter = Request.Query["Role"].ToString();
+
+            // Get visible departments and stations for current user
+            var visibleDepartments = await _visibilityService.GetVisibleDepartmentsAsync(userPayrollNo);
+            var visibleStations = await _visibilityService.GetVisibleStationsAsync(userPayrollNo);
+
+            // Get all active employees first
+            var allEmployees = await _ktdaContext.EmployeeBkps
+                .Where(e => e.EmpisCurrActive == 0)
+                .ToListAsync();
+
+            // Apply visibility filtering in memory
+            var filteredEmployees = allEmployees.AsEnumerable();
+
+            if (visibleDepartments.Any())
+            {
+                var visibleDeptIds = visibleDepartments.Select(d => d.DepartmentId.ToString()).ToList();
+                filteredEmployees = filteredEmployees.Where(e => visibleDeptIds.Contains(e.Department));
+            }
+
+            if (visibleStations.Any())
+            {
+                var visibleStationIds = visibleStations.Select(s => s.StationId.ToString()).ToList();
+                visibleStationIds.Add("HQ");
+                visibleStationIds.Add("0");
+                filteredEmployees = filteredEmployees.Where(e => visibleStationIds.Contains(e.Station));
+            }
+
+            // Apply search filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                searchTerm = searchTerm.Trim().ToLower();
+                filteredEmployees = filteredEmployees.Where(e => 
+                    (e.Fullname != null && e.Fullname.ToLower().Contains(searchTerm)) || 
+                    (e.PayrollNo != null && e.PayrollNo.ToLower().Contains(searchTerm)) ||
+                    (e.Designation != null && e.Designation.ToLower().Contains(searchTerm)));
+            }
+
+            // Apply additional filters
+            if (!string.IsNullOrEmpty(stationFilter))
+            {
+                filteredEmployees = filteredEmployees.Where(e => e.Station == stationFilter);
+            }
+            
+            if (!string.IsNullOrEmpty(departmentFilter))
+            {
+                filteredEmployees = filteredEmployees.Where(e => e.Department == departmentFilter);
+            }
+            
+            if (!string.IsNullOrEmpty(roleFilter))
+            {
+                filteredEmployees = filteredEmployees.Where(e => e.Role == roleFilter);
+            }
+
+            // Create display name mappings
+            var departmentNames = visibleDepartments
+                .GroupBy(d => d.DepartmentId.ToString())
+                .ToDictionary(g => g.Key, g => g.First().DepartmentName);
+            var stationNames = visibleStations
+                .GroupBy(s => s.StationId.ToString())
+                .ToDictionary(g => g.Key, g => g.First().StationName);
+            stationNames["HQ"] = "Head Office (HQ)";
+            stationNames["0"] = "Head Office (HQ)";
+
+            // Create filter view model
+            var filterViewModel = new FilterViewModel();
+            
+            var stationFilterDef = new FilterDefinition
+            {
+                PropertyName = "Station",
+                DisplayName = "Station",
+                Options = stationNames.Select(s => new SelectListItem 
+                { 
+                    Value = s.Key, 
+                    Text = s.Value,
+                    Selected = stationFilter == s.Key
+                }).ToList()
+            };
+            filterViewModel.Filters.Add(stationFilterDef);
+            
+            var departmentFilterDef = new FilterDefinition
+            {
+                PropertyName = "Department", 
+                DisplayName = "Department",
+                Options = departmentNames.Select(d => new SelectListItem 
+                { 
+                    Value = d.Key, 
+                    Text = d.Value,
+                    Selected = departmentFilter == d.Key
+                }).ToList()
+            };
+            filterViewModel.Filters.Add(departmentFilterDef);
+            
+            var distinctRoles = filteredEmployees.Where(e => !string.IsNullOrEmpty(e.Role))
+                .Select(e => e.Role).Distinct().Take(50).ToList();
+            
+            var roleFilterDef = new FilterDefinition
+            {
+                PropertyName = "Role",
+                DisplayName = "Role", 
+                Options = distinctRoles.Select(r => new SelectListItem 
+                { 
+                    Value = r, 
+                    Text = r,
+                    Selected = roleFilter == r
+                }).ToList()
+            };
+            filterViewModel.Filters.Add(roleFilterDef);
+            
+            ViewBag.Filters = filterViewModel;
+
+            // Get total count and apply pagination
+            var totalEmployees = filteredEmployees.Count();
+            var employees = filteredEmployees
+                .OrderBy(e => e.Fullname)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+            
+            // Map employees to view model
+            var employeeViewModels = employees.Select(e => new EmployeeSearchResultViewModel
+            {
+                PayrollNo = e.PayrollNo,
+                Name = e.Fullname ?? "Unknown",
+                Designation = e.Designation ?? "N/A",
+                Department = departmentNames.ContainsKey(e.Department ?? "") ? departmentNames[e.Department] : e.Department ?? "N/A",
+                Role = e.Role ?? "N/A"
+            }).ToList();
+
+            // Create view model for the page
             var viewModel = new AddRoleGroupMemberViewModel
             {
                 RoleGroupId = roleGroup.Id,
                 RoleGroupName = roleGroup.Name
             };
 
-            // Add empty first items to dropdowns
-            viewModel.Stations.Add(new SelectListItem { Value = "", Text = "-- Select Station --" });
-            viewModel.Departments.Add(new SelectListItem { Value = "", Text = "-- Select Department --" });
-            viewModel.Roles.Add(new SelectListItem { Value = "", Text = "-- Select Role --" });
+            // Create pagination view model
+            var filters = new Dictionary<string, string>();
+            if (!string.IsNullOrEmpty(stationFilter)) filters["Station"] = stationFilter;
+            if (!string.IsNullOrEmpty(departmentFilter)) filters["Department"] = departmentFilter;
+            if (!string.IsNullOrEmpty(roleFilter)) filters["Role"] = roleFilter;
             
-            // Populate stations
-            var stationsList = await _ktdaContext.Stations
-                .AsNoTracking()
-                .Select(s => new { Value = s.StationId.ToString(), Text = s.StationName })
-                .OrderBy(s => s.Text)
-                .ToListAsync();
-            foreach (var station in stationsList)
+            ViewBag.Pagination = new PaginationViewModel
             {
-                viewModel.Stations.Add(new SelectListItem { Value = station.Value, Text = station.Text });
-            }
-
-            // Populate departments
-            var departmentsList = await _ktdaContext.Departments
-                .AsNoTracking()
-                .Select(d => new { Value = d.DepartmentId.ToString(), Text = d.DepartmentName })
-                .OrderBy(d => d.Text)
-                .ToListAsync();
-            foreach (var dept in departmentsList)
-            {
-                viewModel.Departments.Add(new SelectListItem { Value = dept.Value, Text = dept.Text });
-            }
-            
-            // Get roles for dropdown
-            var roleOptions = await _ktdaContext.EmployeeBkps
-                .Where(e => !string.IsNullOrEmpty(e.Role))
-                .Select(e => e.Role)
-                .Distinct()
-                .OrderBy(r => r)
-                .ToListAsync();
-                
-            foreach (var role in roleOptions)
-            {
-                viewModel.Roles.Add(new SelectListItem { Value = role, Text = role });
-            }
-            
-            // Load initial employees (10 active employees)
-            var initialEmployees = await _ktdaContext.EmployeeBkps
-                .Where(e => e.EmpisCurrActive == 0)
-                .OrderBy(e => e.PayrollNo)
-                .Take(10)
-                .ToListAsync();
-                
-            // Get department IDs for display
-            var departmentIds = initialEmployees.Where(e => !string.IsNullOrEmpty(e.Department))
-                .Select(e => e.Department)
-                .Distinct()
-                .ToList();
-                
-            // Create department name lookup dictionary
-            var departmentNames = new Dictionary<string, string>();
-            foreach (var deptId in departmentIds)
-            {
-                if (!string.IsNullOrEmpty(deptId) && !departmentNames.ContainsKey(deptId))
-                {
-                    try
-                    {
-                        var department = await _departmentService.GetDepartmentByNameAsync(deptId);
-                        departmentNames[deptId] = department?.DepartmentName ?? deptId;
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error getting department name for ID: {DepartmentId}", deptId);
-                        departmentNames[deptId] = deptId;
-                    }
-                }
-            }
-            
-            // Map employees to view model
-            var employeeViewModels = initialEmployees.Select(e => new EmployeeSearchResultViewModel
-            {
-                PayrollNo = e.PayrollNo,
-                Name = e.Fullname ?? "Unknown",
-                Designation = e.Designation ?? "N/A",
-                Department = departmentNames.ContainsKey(e.Department) ? departmentNames[e.Department] : e.Department,
-                Role = e.Role ?? "N/A"
-            }).ToList();
+                TotalItems = totalEmployees,
+                ItemsPerPage = pageSize,
+                CurrentPage = page,
+                Action = "AddMember",
+                Controller = "RoleGroups",
+                RouteData = filters
+            };
 
             ViewBag.InitialEmployees = employeeViewModels;
+            ViewBag.SearchTerm = searchTerm;
 
             return View("~/Views/Roles/AddMember.cshtml", viewModel);
         }
@@ -386,156 +464,57 @@ namespace MRIV.Controllers
             return RedirectToAction(nameof(Details), new { id = member.RoleGroupId });
         }
 
-        // GET: RoleGroups/SearchEmployees
+        // GET: RoleGroups/SearchEmployees (Legacy - now handled by AddMember action)
         [HttpGet]
         public async Task<IActionResult> SearchEmployees(string stationCategory, string stationId, string departmentId, string role, string searchTerm)
         {
-            var employeesQuery = _ktdaContext.EmployeeBkps.AsQueryable();
+            // Get current user's payroll number from session
+            var userPayrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+            if (string.IsNullOrEmpty(userPayrollNo))
+                return Json(new { results = new List<object>() });
 
-            // Apply active employees filter
-            employeesQuery = employeesQuery.Where(e => e.EmpisCurrActive == 0);
+            // Get visible departments and stations for current user
+            var visibleDepartments = await _visibilityService.GetVisibleDepartmentsAsync(userPayrollNo);
+            var visibleStations = await _visibilityService.GetVisibleStationsAsync(userPayrollNo);
 
-            // Get department names for filters - use AsNoTracking for better performance
-            var departmentsList = await _ktdaContext.Departments
-                .AsNoTracking()
-                .Select(d => new { Id = d.DepartmentId.ToString(), Name = d.DepartmentName })
-                .ToListAsync();
-            var allDepartments = departmentsList
-                .GroupBy(d => d.Id)
-                .ToDictionary(g => g.Key, g => g.First().Name);
+            // Create base employee query with visibility filtering
+            var employeesQuery = _ktdaContext.EmployeeBkps
+                .Where(e => e.EmpisCurrActive == 0) // Active employees only
+                .AsQueryable();
 
-            // Get station names for filters - use AsNoTracking for better performance
-            var stationsList = await _ktdaContext.Stations
-                .AsNoTracking()
-                .Select(s => new { Id = s.StationId.ToString(), Name = s.StationName })
-                .ToListAsync();
-
-            // Normalize station names - remove any existing "Head Office" entries to avoid duplicates
-            var headOfficeEntries = stationsList
-                .Where(s => s.Name.Contains("Head Office", StringComparison.OrdinalIgnoreCase) ||
-                            s.Name.Contains("Headoffice", StringComparison.OrdinalIgnoreCase) ||
-                            s.Name.Contains("HQ", StringComparison.OrdinalIgnoreCase) ||
-                            s.Id == "0" ||
-                            s.Id == "HQ")
-                .ToList();
-
-            foreach (var entry in headOfficeEntries)
+            // Apply visibility filtering
+            if (visibleDepartments.Any())
             {
-                stationsList.Remove(entry);
+                var visibleDeptIds = visibleDepartments.Select(d => d.DepartmentId.ToString()).ToList();
+                employeesQuery = employeesQuery.Where(e => visibleDeptIds.Contains(e.Department));
             }
 
-            var allStations = stationsList
-                .GroupBy(s => s.Id)
-                .ToDictionary(g => g.Key, g => g.First().Name);
-
-            // Add single standardized HQ entry
-            allStations["HQ"] = "Head Office (HQ)";
-            allStations["0"] = "Head Office (HQ)";
-
-            // Get distinct station values from employees table to ensure we have the exact format used in the data
-            var distinctStations = await _ktdaContext.EmployeeBkps
-                .Where(e => !string.IsNullOrEmpty(e.Station))
-                .Select(e => e.Station)
-                .Distinct()
-                .Take(100) // Limit to 100 distinct stations for performance
-                .ToListAsync();
-
-            var completeStationDict = new Dictionary<string, string>();
-
-            // Add all stations from the stations table
-            foreach (var station in allStations)
+            if (visibleStations.Any())
             {
-                completeStationDict[station.Key] = station.Value;
-
-                // For numeric IDs, also add versions with/without leading zeros
-                if (int.TryParse(station.Key, out int stationIdInt))
-                {
-                    string paddedId = stationIdInt.ToString().PadLeft(3, '0');
-                    if (!completeStationDict.ContainsKey(paddedId))
-                    {
-                        completeStationDict[paddedId] = station.Value;
-                    }
-                }
+                var visibleStationIds = visibleStations.Select(s => s.StationId.ToString()).ToList();
+                // Also include HQ representation
+                visibleStationIds.Add("HQ");
+                visibleStationIds.Add("0");
+                employeesQuery = employeesQuery.Where(e => visibleStationIds.Contains(e.Station));
             }
 
-            // Add HQ option
-            if (!completeStationDict.ContainsKey("HQ"))
-            {
-                completeStationDict["HQ"] = "Head Office (HQ)";
-            }
+            // Create display name mappings
+            var departmentNames = visibleDepartments.ToDictionary(d => d.DepartmentId.ToString(), d => d.DepartmentName);
+            var stationNames = visibleStations.ToDictionary(s => s.StationId.ToString(), s => s.StationName);
+            stationNames["HQ"] = "Head Office (HQ)";
+            stationNames["0"] = "Head Office (HQ)";
 
-            // Add any stations from the employee table that might not be in the stations table
-            foreach (var stationIdValue in distinctStations)
-            {
-                if (!completeStationDict.ContainsKey(stationIdValue))
-                {
-                    completeStationDict[stationIdValue] = $"Station {stationIdValue}";
-                }
-            }
-
-            // Get distinct roles for filter dropdown
-            var distinctRoles = await _ktdaContext.EmployeeBkps
-                .Where(e => !string.IsNullOrEmpty(e.Role))
-                .Select(e => e.Role)
-                .Distinct()
-                .Take(100) // Limit to 100 distinct roles for performance
-                .ToListAsync();
-
-            // Apply station category filter
-            if (!string.IsNullOrEmpty(stationCategory))
-            {
-                switch (stationCategory.ToLower())
-                {
-                    case "hq":
-                        employeesQuery = employeesQuery.Where(e => e.Station == "HQ" || e.Station == "0");
-                        break;
-                    case "factory":
-                        employeesQuery = employeesQuery.Where(e =>
-                            !string.IsNullOrEmpty(e.Station) &&
-                            e.Station != "HQ" && e.Station != "0" &&
-                            e.Station.All(char.IsDigit) &&
-                            Convert.ToInt32(e.Station) > 0 && 
-                            Convert.ToInt32(e.Station) < 100);
-                        break;
-                    case "region":
-                        employeesQuery = employeesQuery.Where(e =>
-                            !string.IsNullOrEmpty(e.Station) &&
-                            e.Station != "HQ" && e.Station != "0" &&
-                            e.Station.All(char.IsDigit) &&
-                            Convert.ToInt32(e.Station) >= 100);
-                        break;
-                }
-            }
-
-            // Apply station filter
+            // Apply legacy filters for backward compatibility
             if (!string.IsNullOrEmpty(stationId))
             {
-                var stationName = completeStationDict.ContainsKey(stationId) ? completeStationDict[stationId] : null;
-                string paddedStationId = stationId.PadLeft(3, '0');
-                if (!string.IsNullOrEmpty(stationName))
-                    employeesQuery = employeesQuery.Where(e =>
-                        e.Station == stationName ||
-                        e.Station == stationId ||
-                        e.Station == paddedStationId
-                    );
-                else
-                    employeesQuery = employeesQuery.Where(e =>
-                        e.Station == stationId ||
-                        e.Station == paddedStationId
-                    );
+                employeesQuery = employeesQuery.Where(e => e.Station == stationId);
             }
 
-            // Apply department filter
             if (!string.IsNullOrEmpty(departmentId))
             {
-                var departmentName = allDepartments.ContainsKey(departmentId) ? allDepartments[departmentId] : null;
-                if (!string.IsNullOrEmpty(departmentName))
-                    employeesQuery = employeesQuery.Where(e => e.Department == departmentName || e.Department == departmentId);
-                else
-                    employeesQuery = employeesQuery.Where(e => e.Department == departmentId);
+                employeesQuery = employeesQuery.Where(e => e.Department == departmentId);
             }
 
-            // Apply role filter
             if (!string.IsNullOrEmpty(role))
             {
                 employeesQuery = employeesQuery.Where(e => e.Role == role);
@@ -544,59 +523,32 @@ namespace MRIV.Controllers
             // Apply search term filter
             if (!string.IsNullOrEmpty(searchTerm))
             {
+                searchTerm = searchTerm.Trim().ToLower();
                 employeesQuery = employeesQuery.Where(e =>
-                    e.PayrollNo.Contains(searchTerm) ||
-                    e.Fullname.Contains(searchTerm) ||
-                    (e.Role != null && e.Role.Contains(searchTerm)) ||
-                    (e.Designation != null && e.Designation.Contains(searchTerm))
+                    (e.PayrollNo != null && e.PayrollNo.ToLower().Contains(searchTerm)) ||
+                    (e.Fullname != null && e.Fullname.ToLower().Contains(searchTerm)) ||
+                    (e.Role != null && e.Role.ToLower().Contains(searchTerm)) ||
+                    (e.Designation != null && e.Designation.ToLower().Contains(searchTerm))
                 );
             }
 
-            // Add filter data to ViewBag
-            ViewBag.DepartmentNames = allDepartments;
-            ViewBag.StationNames = completeStationDict;
-            ViewBag.Roles = distinctRoles;
-            ViewBag.StationCategories = new List<string> { "HQ", "Factory", "Region" };
-
-            // Store current filter values in ViewBag
-            ViewBag.StationCategoryFilter = stationCategory;
-            ViewBag.StationFilter = stationId;
-            ViewBag.DepartmentFilter = departmentId;
-            ViewBag.RoleFilter = role;
-            ViewBag.SearchTerm = searchTerm;
-
             // Get employees with limit for performance
             var employees = await employeesQuery
-                .OrderBy(e => e.PayrollNo)
-                .Take(100)
+                .OrderBy(e => e.Fullname)
+                .Take(50)
                 .ToListAsync();
                 
-            // Map employees to view model - using the department dictionary we already built above
-            var results = employees.Select(e => new EmployeeSearchResultViewModel
+            // Map employees to view model
+            var results = employees.Select(e => new
             {
-                PayrollNo = e.PayrollNo,
-                Name = e.Fullname ?? "Unknown",
-                Designation = e.Designation ?? "N/A",
-                Department = !string.IsNullOrEmpty(e.Department) && allDepartments.ContainsKey(e.Department)
-                    ? allDepartments[e.Department] 
-                    : e.Department ?? "N/A",
-                Role = e.Role ?? "N/A"
+                payrollNo = e.PayrollNo,
+                name = e.Fullname ?? "Unknown",
+                designation = e.Designation ?? "N/A",
+                department = departmentNames.ContainsKey(e.Department ?? "") ? departmentNames[e.Department] : e.Department ?? "N/A",
+                role = e.Role ?? "N/A"
             }).ToList();
 
-            return Json(new { 
-                results,
-                departmentNames = allDepartments,
-                stationNames = completeStationDict,
-                roles = distinctRoles,
-                stationCategories = new List<string> { "HQ", "Factory", "Region" },
-                filters = new {
-                    stationCategory,
-                    stationId,
-                    departmentId,
-                    role,
-                    searchTerm
-                }
-            });
+            return Json(new { results });
         }
 
         private bool RoleGroupExists(int id)

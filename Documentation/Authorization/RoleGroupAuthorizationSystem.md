@@ -6,22 +6,44 @@ The MRIV (Material Requisition and Inventory Verification) system implements a s
 
 ## System Architecture
 
+### Database Context Integration
+
+The MRIV authorization system operates across **two separate database contexts**:
+
+1. **KtdaleaveContext** (HR System)
+   - `Employee_bkp`: Employee master data with string-based org references
+   - `Department`: Department master with `departmentCode` (PK) and `DepartmentID` (business code)
+   - `Station`: Station master with `StationID` and `Station_Name`
+   - **No foreign key constraints** between tables
+
+2. **RequisitionContext** (MRIV Application)
+   - `RoleGroups`: Authorization permission definitions
+   - `RoleGroupMembers`: User-to-role assignments by PayrollNo
+   - `Requisitions`: Business entities with integer-based IDs
+   - `MaterialAssignments`: Location tracking with StationId/DepartmentId
+
 ### Core Components
 
-1. **Organizational Hierarchy**
-   - Stations (top-level locations)
-   - Departments (within stations)
-   - Employees (within departments)
+1. **Organizational Hierarchy** (Cross-Context)
+   ```csharp
+   // HR Context (string-based)
+   Employee_bkp.Station = "HQ"          // Station name/code
+   Employee_bkp.Department = "101"       // Department code
+   
+   // App Context (ID-based) 
+   Requisition.IssueStationId = 1        // Integer FK
+   MaterialAssignment.DepartmentId = 395 // Integer FK
+   ```
 
-2. **Role Group System**
-   - RoleGroup entities with permission flags
-   - RoleGroupMember assignments
-   - Dynamic permission evaluation
+2. **Role Group System** (RequisitionContext)
+   - `RoleGroup` entities with boolean permission flags
+   - `RoleGroupMember` assignments linking PayrollNo to roles
+   - Dynamic permission evaluation across contexts
 
-3. **Authorization Service**
-   - VisibilityAuthorizeService (core implementation)
-   - Query filtering and entity access control
-   - Integration with workflow system
+3. **Authorization Service** (Integration Layer)
+   - `VisibilityAuthorizeService`: Core implementation with cross-context logic
+   - Query filtering handling string-to-ID mapping
+   - Entity access control with defensive null checks
 
 ## Authorization Decision Matrix
 
@@ -38,13 +60,102 @@ The system uses two critical boolean flags to determine access scope:
 
 | User Type | CanAccessAcrossStations | CanAccessAcrossDepartments | Access Scope | Use Cases |
 |-----------|:-----------------------:|:--------------------------:|--------------|-----------|
-| **Default User** (no role group) | ❌ NO | ❌ NO | Own department at own station | Regular employees, contractors |
+| **Default User** (no role group) | ❌ NO | ❌ NO | Own department at own station | Regular employees, contractors, no RoleGroupMember record |
 | **Department Manager** | ❌ NO | ❌ NO | Own department at own station | Department heads, supervisors |
 | **Station Support/Manager** | ❌ NO | ✅ YES | All departments at own station | Factory managers, station IT support |
 | **Group/General Manager** | ✅ YES | ❌ NO | Own department at all stations | Regional managers, departmental GMs |
 | **Administrator** | ✅ YES | ✅ YES | All data everywhere | System admins, super users |
 
 ## Decision Flow Logic
+
+### Cross-Context Authorization Flow
+
+```mermaid
+flowchart TD
+    A[User Request] --> B[Get Employee from KtdaleaveContext]
+    B --> C{Employee Found?}
+    C -->|No| D[Access Denied]
+    C -->|Yes| E[Get RoleGroup from RequisitionContext]
+    E --> F{Role Group Exists?}
+    F -->|No| G[Default Permissions Only]
+    F -->|Yes| H[Get Permission Flags]
+    G --> I[Check Entity Access]
+    H --> I
+    I --> J[Map HR Strings to App IDs]
+    J --> K[Apply Visibility Filters]
+    K --> L[Return Filtered Results]
+```
+
+### Critical Integration Challenges
+
+#### **1. Data Mapping Requirements**
+```csharp
+// Employee data comes from HR system (string-based)
+var employee = await _ktdaContext.EmployeeBkps
+    .FirstOrDefaultAsync(e => e.PayrollNo == "HGD00032");
+// employee.Station = "HQ", employee.Department = "101"
+
+// Authorization requires ID-based matching
+var stationId = await MapStationNameToId(employee.Station);   // "HQ" → ?
+var departmentId = await MapDepartmentCodeToId(employee.Department); // "101" → 396
+
+// Apply to business entity filtering
+var visibleRequisitions = _context.Requisitions
+    .Where(r => r.IssueStationId == stationId || r.DeliveryStationId == stationId);
+```
+
+#### **2. Missing Referential Integrity**
+- No foreign keys between Employee_bkp and Department/Station tables
+- String-based relationships require defensive programming
+- Potential for orphaned references and data inconsistencies
+
+#### **3. Naming Convention Inconsistencies**
+| Context | Station Reference | Department Reference |
+|---------|------------------|---------------------|
+| KtdaleaveContext | `Station_Name` (varchar) | `DepartmentID` (varchar) |
+| RequisitionContext | `StationId` (int) | `DepartmentId` (int) |
+| Employee_bkp | `Station` (varchar) | `Department` (varchar) |
+
+### Real-World Data Patterns (Based on Database Analysis)
+
+#### **Employee Data Patterns**
+```sql
+-- Sample Employee_bkp records showing actual data patterns
+PayrollNo    Station    Department    Role           Hod         supervisor
+'HGD00032'   'HQ'       'HGD'        'user'         NULL        NULL
+'HAM00000'   'HQ'       '101'        'user'         NULL        NULL  
+'HHE00052'   '005'      'HHE'        'FieldUser'    NULL        NULL
+'FAL02890'   '367'      '367'        'FieldUser'    'HGD03549'  NULL
+```
+
+#### **Department Master Data**
+```sql
+-- Department table showing ID mapping complexity
+departmentCode  DepartmentID  DepartmentName                    DepartmentHD
+395            '100'         'HEAD OFFICE'                     ''
+396            '101'         'CHIEF EXECUTIVE'                 'SAP01892'
+397            '102'         'CORPORATE SERVICES'              'SAP02152'
+398            '103'         'INTERNAL AUDIT'                  'HGD04319'
+```
+
+#### **Station Master Data**
+```sql
+-- Station table showing naming patterns
+StationID  Station_Name
+1          'KAPSARA'
+2          'NDUTI'  
+3          'GACHEGE'
+4          'GIANCHORE'
+```
+
+#### **Data Inconsistency Examples**
+```sql
+-- Employee references that don't map to master data
+Employee.Station = 'HQ'     -- No matching Station.Station_Name
+Employee.Station = '005'    -- Code-based, unclear mapping
+Employee.Department = 'HGD' -- No matching Department.DepartmentID
+Employee.Department = '367' -- May be both station and department
+```
 
 ### Authorization Evaluation Process
 

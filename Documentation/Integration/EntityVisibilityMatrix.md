@@ -7,32 +7,51 @@ Comprehensive reference for how role group permissions affect visibility and acc
 
 ## Core Entities
 
-### Employee Entity
-**Base Query Filter**: User can see employees based on their station and department access permissions.
+### EmployeeBkp Entity (HR System)
+**Base Query Filter**: Employee data comes from KtdaleaveContext with string-based department/station references.
 
-| User Permission | Visible Employees |
-|----------------|-------------------|
-| Single Station, Single Department | Own department only |
-| Single Station, Cross Department | All departments in own station |
-| Cross Station, Single Department | Same department across all stations |
-| Cross Station, Cross Department | All employees system-wide |
-
+**Actual Model Structure**:
 ```csharp
-// Employee visibility implementation
-public IQueryable<Employee> ApplyEmployeeVisibilityFilter(
-    IQueryable<Employee> query, 
-    Employee currentUser)
+public class EmployeeBkp
 {
-    // Station filtering
-    if (!currentUser.RoleGroup.CanAccessAcrossStations)
+    public string PayrollNo { get; set; }        // Primary identifier
+    public string RollNo { get; set; }           // Secondary key
+    public string Station { get; set; }          // String reference ("HQ", "005", "367")
+    public string Department { get; set; }       // String reference ("101", "HGD", "367")
+    public string Hod { get; set; }             // Head of Department PayrollNo
+    public string supervisor { get; set; }       // Supervisor PayrollNo  
+    public int? EmpisCurrActive { get; set; }   // 1 = active, null/0 = inactive
+    // ... other fields
+}
+```
+
+**Cross-Context Visibility Implementation**:
+```csharp
+public async Task<IQueryable<EmployeeBkp>> ApplyEmployeeVisibilityFilter(
+    string currentUserPayrollNo)
+{
+    // 1. Get current user's HR data with role group
+    var currentUser = await GetIntegratedEmployee(currentUserPayrollNo);
+    if (currentUser?.RoleGroup == null)
     {
-        query = query.Where(e => e.StationId == currentUser.StationId);
+        // Default user - only see own record
+        return _ktdaContext.EmployeeBkps
+            .Where(e => e.PayrollNo == currentUserPayrollNo && e.EmpisCurrActive == 1);
     }
     
-    // Department filtering
+    var query = _ktdaContext.EmployeeBkps
+        .Where(e => e.EmpisCurrActive == 1);
+    
+    // Station filtering (string-based)
+    if (!currentUser.RoleGroup.CanAccessAcrossStations)
+    {
+        query = query.Where(e => e.Station == currentUser.Station);
+    }
+    
+    // Department filtering (string-based)
     if (!currentUser.RoleGroup.CanAccessAcrossDepartments)
     {
-        query = query.Where(e => e.DepartmentId == currentUser.DepartmentId);
+        query = query.Where(e => e.Department == currentUser.Department);
     }
     
     return query;
@@ -46,67 +65,132 @@ public IQueryable<Employee> ApplyEmployeeVisibilityFilter(
 
 ---
 
-### Material Entity
-**Base Query Filter**: Materials are visible based on their current assigned location and user's access permissions.
+### Material Entity (RequisitionContext)
+**Base Query Filter**: Materials don't have built-in location fields. Location is determined through MaterialAssignment relationships.
 
-| Material Location | User Can See If... |
-|-------------------|-------------------|
-| Same Department | Always visible |
-| Other Department, Same Station | Has `CanAccessAcrossDepartments = true` |
-| Different Station | Has `CanAccessAcrossStations = true` |
-| Unassigned/Pool | Based on pool's station/department assignment |
-
+**Actual Model Structure**:
 ```csharp
-public IQueryable<Material> ApplyMaterialVisibilityFilter(
-    IQueryable<Material> query, 
-    Employee currentUser)
+public class Material
 {
-    return query.Where(m => 
-        // Station check
-        (currentUser.RoleGroup.CanAccessAcrossStations || 
-         m.CurrentStationId == currentUser.StationId) &&
-        // Department check
-        (currentUser.RoleGroup.CanAccessAcrossDepartments || 
-         m.CurrentDepartmentId == currentUser.DepartmentId)
-    );
+    public int Id { get; set; }                  // Primary key
+    public int MaterialCategoryId { get; set; }   // Category FK
+    public int? MaterialSubcategoryId { get; set; } // Subcategory FK
+    public string Name { get; set; }             // Material name
+    public MaterialStatus? Status { get; set; }  // In Use, Broken, Dispatched, etc.
+    // No built-in StationId or DepartmentId fields
+    public virtual ICollection<MaterialAssignment> MaterialAssignments { get; set; }
+}
+
+public class MaterialAssignment  
+{
+    public int Id { get; set; }
+    public int MaterialId { get; set; }
+    public string PayrollNo { get; set; }        // Assigned to (string reference)
+    public int? StationId { get; set; }          // Assignment location (integer FK)
+    public int? DepartmentId { get; set; }       // Assignment location (integer FK) 
+    public string AssignedByPayrollNo { get; set; } // Who assigned
+    public bool IsActive { get; set; }           // Current assignment
 }
 ```
 
-**Special Cases:**
-- **Material History**: Users can view history for materials they currently have access to
-- **Assignment History**: Full assignment trail visible if user had access at time of assignment
-- **Maintenance Records**: Visible based on current material location, not historical locations
+**Material Visibility Through Assignments**:
+```csharp
+public async Task<IQueryable<Material>> ApplyMaterialVisibilityFilter(
+    string currentUserPayrollNo)
+{
+    var currentUser = await GetIntegratedEmployee(currentUserPayrollNo);
+    
+    return _context.Materials
+        .Where(m => 
+            // Material is visible if user can see current assignment location
+            m.MaterialAssignments.Any(ma => ma.IsActive && 
+                // Station check
+                (currentUser.RoleGroup.CanAccessAcrossStations || 
+                 ma.StationId == currentUser.StationId) &&
+                // Department check  
+                (currentUser.RoleGroup.CanAccessAcrossDepartments ||
+                 ma.DepartmentId == currentUser.DepartmentId)) ||
+            // Or material is assigned to user directly
+            m.MaterialAssignments.Any(ma => ma.IsActive && 
+                ma.PayrollNo == currentUserPayrollNo)
+        );
+}
+```
+
+**Material Visibility Special Cases:**
+- **Personal Assignments**: Users can always see materials assigned to them (`MaterialAssignment.PayrollNo == currentUserPayrollNo`)
+- **Assignment History**: Full assignment trail visible for accessible materials
+- **Unassigned Materials**: Materials without active assignments follow default visibility (may require admin access)
+- **Cross-Context Integration**: Material assignments reference employees by PayrollNo (string), requiring HR system lookup
 
 ---
 
-### Requisition Entity
-**Base Query Filter**: Requisitions are visible based on requesting department and user's permissions.
+### Requisition Entity (RequisitionContext)
+**Base Query Filter**: Requisitions are visible based on requesting department and station-based permissions.
 
-| Requisition Type | Visibility Rule |
-|------------------|----------------|
-| Own Department Request | Always visible |
-| Other Department, Same Station | Visible if `CanAccessAcrossDepartments = true` |
-| Different Station Request | Visible if `CanAccessAcrossStations = true` |
-| Pending Own Approval | Always visible (approval queue) |
-
+**Actual Model Structure**:
 ```csharp
-public IQueryable<Requisition> ApplyRequisitionVisibilityFilter(
-    IQueryable<Requisition> query, 
-    Employee currentUser)
+public class Requisition
 {
-    return query.Where(r => 
-        // Created by user
-        r.CreatedBy == currentUser.PayrollNo ||
+    public int Id { get; set; }
+    public int TicketId { get; set; }            // Business identifier
+    public int DepartmentId { get; set; }        // Requesting department (integer FK)
+    public string PayrollNo { get; set; }        // Requestor (string reference to HR)
+    public RequisitionType RequisitionType { get; set; }
+    public string IssueStationCategory { get; set; }   // "Internal", "External", etc.
+    public int IssueStationId { get; set; }      // Issue location (integer FK)
+    public string DeliveryStationCategory { get; set; }
+    public int DeliveryStationId { get; set; }   // Delivery location (integer FK) 
+    public RequisitionStatus Status { get; set; }
+    // Ignored in context: public Department Department { get; set; }
+}
+
+**Requisition Visibility Rules**:
+| Scenario | Visibility Condition |
+|----------|---------------------|
+| **Own Requisitions** | `PayrollNo == currentUserPayrollNo` (always visible) |
+| **Same Department** | `DepartmentId` matches user's resolved department ID |
+| **Cross-Department, Same Station** | Requires `CanAccessAcrossDepartments = true` |
+| **Cross-Station** | Requires `CanAccessAcrossStations = true` |
+| **Pending Approval** | User in approval chain (via Approval entity) |
+
+**Cross-Context Requisition Visibility**:
+```csharp
+public async Task<IQueryable<Requisition>> ApplyRequisitionVisibilityFilter(
+    string currentUserPayrollNo)
+{
+    // Get user with integrated HR and role data
+    var currentUser = await GetIntegratedEmployee(currentUserPayrollNo);
+    
+    var query = _context.Requisitions.AsQueryable();
+    
+    // Always show own requisitions
+    var ownRequisitions = query.Where(r => r.PayrollNo == currentUserPayrollNo);
+    
+    if (currentUser?.RoleGroup == null)
+    {
+        return ownRequisitions; // Default users see only their own
+    }
+    
+    // Role-based visibility
+    var roleBasedQuery = query.Where(r => 
+        // Department access (requires mapping)
+        (currentUser.RoleGroup.CanAccessAcrossDepartments || 
+         r.DepartmentId == currentUser.DepartmentId) &&
         
-        // Pending user's approval
-        r.PendingApprovers.Contains(currentUser.PayrollNo) ||
-        
-        // Within user's access scope
-        ((currentUser.RoleGroup.CanAccessAcrossStations || 
-          r.RequestingStationId == currentUser.StationId) &&
-         (currentUser.RoleGroup.CanAccessAcrossDepartments || 
-          r.RequestingDepartmentId == currentUser.DepartmentId))
+        // Station access (check both issue and delivery stations)
+        (currentUser.RoleGroup.CanAccessAcrossStations ||
+         (IsUserStationAccessible(r.IssueStationId, currentUser) ||
+          IsUserStationAccessible(r.DeliveryStationId, currentUser)))
     );
+    
+    return ownRequisitions.Union(roleBasedQuery);
+}
+
+private bool IsUserStationAccessible(int stationId, IntegratedEmployee user)
+{
+    // Map user's HR station string to station ID and compare
+    return GetStationIdByName(user.Station) == stationId;
 }
 ```
 
