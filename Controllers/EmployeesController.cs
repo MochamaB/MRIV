@@ -1042,5 +1042,39 @@ namespace MRIV.Controllers
             
             return query;
         }
+
+        // GET: Profile - Show logged-in user's profile
+        public async Task<IActionResult> Profile()
+        {
+            try
+            {
+                // Get the logged-in user's payroll number from session
+                var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+                
+                if (string.IsNullOrEmpty(payrollNo))
+                {
+                    _logger.LogWarning("No payroll number found in session for profile request");
+                    return RedirectToAction("Login", "Account");
+                }
+
+                // Get the employee to find the roll number
+                var employee = await _ktdaContext.EmployeeBkps
+                    .FirstOrDefaultAsync(m => m.PayrollNo == payrollNo);
+                    
+                if (employee == null)
+                {
+                    _logger.LogWarning("Employee not found for payroll number: {PayrollNo}", payrollNo);
+                    return NotFound("Employee profile not found.");
+                }
+
+                // Redirect to the existing Details action with the user's payroll and roll number
+                return RedirectToAction("Details", new { id = employee.PayrollNo, rollNo = employee.RollNo });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading user profile");
+                return View("Error");
+            }
+        }
     }
 }

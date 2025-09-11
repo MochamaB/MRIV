@@ -1,0 +1,92 @@
+@{
+    ViewData["Title"] = "Import Material Categories";
+}
+
+<div class="row">
+    <div class="col-lg-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Material Categories</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <h6><i class="ri-information-line me-2"></i>Import Instructions</h6>
+                    <ul class="mb-0">
+                        <li>Upload a CSV file with material category data</li>
+                        <li>Required columns: <strong>Name</strong></li>
+                        <li>Optional columns: <strong>Description</strong>, <strong>UnitOfMeasure</strong></li>
+                        <li>First row should contain column headers</li>
+                        <li>Maximum file size: 5MB</li>
+                    </ul>
+                </div>
+
+                <div class="mb-3">
+                    <h6>CSV Format Example:</h6>
+                    <div class="bg-light p-3 rounded">
+                        <code>
+                            <div class="bg-light p-3 rounded">
+                                <table class="table table-bordered table-striped mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Description</th>
+                                            <th>Unit of Measure</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td>IT Equipment</td>
+                                            <td>Computer hardware and accessories</td>
+                                            <td>Each</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Office Supplies</td>
+                                            <td>General office consumables</td>
+                                            <td>Pack</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Furniture</td>
+                                            <td>Office furniture and fixtures</td>
+                                            <td>Each</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </code>
+                    </div>
+                </div>
+
+                <form asp-action="Import" method="post" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label for="file" class="form-label">Select CSV File</label>
+                        <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                        <div class="form-text">Only CSV files are supported</div>
+                    </div>
+
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger">
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <div>@error.ErrorMessage</div>
+                            }
+                        </div>
+                    }
+                    <hr />
+                    <div class="d-flex gap-2">
+                        <a href="@Url.Action("DownloadSample")" class="btn btn-outline-primary">
+                            <i class="ri-download-line me-1"></i> Download Sample CSV
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ri-upload-line me-1"></i> Import Categories
+                        </button>
+                        <a href="@Url.Action("Index")" class="btn btn-secondary">
+                            <i class="ri-arrow-left-line me-1"></i> Back to Categories
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

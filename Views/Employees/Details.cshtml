@@ -1,199 +1,485 @@
 @model MRIV.Models.EmployeeBkp
 
 @{
-    ViewData["Title"] = "Employee Details";
+    ViewData["Title"] = "Employee Profile";
     var departmentName = ViewBag.DepartmentName;
     var stationName = ViewBag.StationName;
     var supervisorName = ViewBag.SupervisorName;
     var hodName = ViewBag.HodName;
 }
 
+<style>
+    .profile-wid-bg {
+        background: linear-gradient(115deg, #fcb900 0%, #326408 100%);
+        height: 220px;
+        position: relative;
+    }
+
+    .profile-wid-bg::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32' width='32' height='32' fill='none' stroke='rgb(255 255 255 / 0.05)'%3e%3cpath d='m0 .5 32 32M15.5 0 32 16.5M16.5 0 32 15.5M0 15.5L16.5 32M0 16.5L15.5 32'/%3e%3c/svg%3e") repeat;
+    }
+    
+    .profile-user {
+        position: relative;
+        display: inline-block;
+    }
+    
+    .profile-photo-edit {
+        position: absolute;
+        bottom: 0;
+        right: 15px;
+    }
+    
+    .profile-img-file-input {
+        display: none;
+    }
+    
+    .user-profile-image {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+    }
+
+    .nav-tabs-custom .nav-link {
+        color: #495057;
+        border: none;
+        padding: 12px 20px;
+        font-weight: 500;
+    }
+
+    .nav-tabs-custom .nav-link.active {
+        color: #405189;
+        background-color: transparent;
+        border-bottom: 2px solid #405189;
+    }
+
+    .nav-tabs-custom .nav-link:hover {
+        color: #405189;
+        border-color: transparent;
+    }
+</style>
+
+<div class="profile-foreground position-relative mx-n4 mt-n4">
+    <div class="profile-wid-bg">
+        <div class="overlay-content">
+            <div class="text-end p-3">
+                <div class="p-0 ms-auto rounded-circle profile-photo-edit">
+                    <!-- Avatar placeholder -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="row">
-    <div class="col-lg-12">
-        <div class="card">
-            <div class="card-header border-bottom-dashed">
-                <div class="d-flex align-items-center">
-                    <h5 class="card-title mb-0 flex-grow-1">Employee Details</h5>
-                    <div class="flex-shrink-0">
-                        <div class="d-flex gap-2 flex-wrap">
-                            <a href="@Url.Action("Edit", "Employees", new { id = Model.PayrollNo, rollNo = Model.RollNo })" class="btn btn-primary btn-sm d-flex align-items-center py-2">
-                                <i class="ri-pencil-line align-bottom me-1"></i> Edit
-                            </a>
-                            <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2">
-                                <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
-                            </a>
+    <div class="col-xxl-3">
+        <div class="card mt-n5">
+            <div class="card-body p-4">
+                <div class="text-center">
+                    <div class="profile-user position-relative d-inline-block mx-auto mb-4">
+                        <img src="~/assets/images/users/avatar-1.jpg" class="rounded-circle avatar-xl img-thumbnail user-profile-image" alt="user-profile-image">
+                        <div class="avatar-xs p-0 rounded-circle profile-photo-edit">
+                            <input id="profile-img-file-input" type="file" class="profile-img-file-input" style="display:none;">
+                            <label for="profile-img-file-input" class="profile-photo-edit avatar-xs">
+                                <span class="avatar-title rounded-circle bg-light text-body">
+                                    <i class="ri-camera-fill"></i>
+                                </span>
+                            </label>
                         </div>
+                    </div>
+                    <h5 class="fs-16 mb-1">@Model.Fullname</h5>
+                    <p class="text-muted mb-0">@(string.IsNullOrEmpty(Model.Designation) ? "Employee" : Model.Designation)</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Quick Info -->
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-4">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-0">Quick Info</h5>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex">
+                    <div class="avatar-xs d-block flex-shrink-0 me-3">
+                        <span class="avatar-title rounded-circle fs-16 bg-primary">
+                            <i class="ri-building-line"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Department</label>
+                        <p class="text-muted mb-0">@departmentName</p>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex">
+                    <div class="avatar-xs d-block flex-shrink-0 me-3">
+                        <span class="avatar-title rounded-circle fs-16 bg-warning">
+                            <i class="ri-map-pin-line"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Station</label>
+                        <p class="text-muted mb-0">@stationName</p>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex">
+                    <div class="avatar-xs d-block flex-shrink-0 me-3">
+                        <span class="avatar-title rounded-circle fs-16 bg-info">
+                            <i class="ri-user-star-line"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Role</label>
+                        <p class="text-muted mb-0">@(string.IsNullOrEmpty(Model.Role) ? "-" : Model.Role)</p>
+                    </div>
+                </div>
+                <div class="mb-3 d-flex">
+                    <div class="avatar-xs d-block flex-shrink-0 me-3">
+                        <span class="avatar-title rounded-circle fs-16 bg-success">
+                            <i class="ri-shield-check-line"></i>
+                        </span>
+                    </div>
+                    <div class="flex-grow-1">
+                        <label class="form-label">Status</label>
+                        <p class="mb-0">
+                            @if (Model.EmpisCurrActive == 0)
+                            {
+                                <span class="badge bg-success-subtle text-success">Active</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-danger-subtle text-danger">Inactive</span>
+                            }
+                        </p>
                     </div>
                 </div>
             </div>
+        </div>
 
+        <!-- Action Buttons -->
+        <div class="card">
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-12 mb-4">
-                        <div class="card border">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Basic Information</h5>
+                <div class="d-flex align-items-center mb-4">
+                    <div class="flex-grow-1">
+                        <h5 class="card-title mb-0">Actions</h5>
+                    </div>
+                </div>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="@Url.Action("Edit", "Employees", new { id = Model.PayrollNo, rollNo = Model.RollNo })" class="btn btn-primary btn-sm">
+                        <i class="ri-pencil-line align-bottom me-1"></i> Edit Profile
+                    </a>
+                    <a href="@Url.Action("Index", "Employees")" class="btn btn-outline-primary btn-sm">
+                        <i class="ri-arrow-left-line align-bottom me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xxl-9">
+        <div class="card mt-xxl-n5">
+            <div class="card-header">
+                <ul class="nav nav-tabs-custom rounded card-header-tabs border-bottom-0" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link active" data-bs-toggle="tab" href="#personalDetails" role="tab" aria-selected="true">
+                            <i class="fas fa-user"></i> Personal Details
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#materials" role="tab" aria-selected="false" tabindex="-1">
+                            <i class="fas fa-boxes"></i> Materials
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#requisitions" role="tab" aria-selected="false" tabindex="-1">
+                            <i class="fas fa-file-alt"></i> Requisitions
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#approvals" role="tab" aria-selected="false" tabindex="-1">
+                            <i class="fas fa-check-circle"></i> Approvals
+                        </a>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link" data-bs-toggle="tab" href="#settings" role="tab" aria-selected="false" tabindex="-1">
+                            <i class="fas fa-cog"></i> Settings
+                        </a>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card-body p-4">
+                <div class="tab-content">
+                    <!-- Personal Details Tab -->
+                    <div class="tab-pane active" id="personalDetails" role="tabpanel">
+                        <!-- Basic Information Card -->
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Basic Information</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Payroll Number</label>
+                                                    <input type="text" class="form-control" value="@Model.PayrollNo" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Roll Number</label>
+                                                    <input type="text" class="form-control" value="@Model.RollNo" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Employee ID</label>
+                                                    <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.EmployeId) ? "-" : Model.EmployeId)" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Full Name</label>
+                                                    <input type="text" class="form-control" value="@Model.Fullname" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Surname</label>
+                                                    <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.SurName) ? "-" : Model.SurName)" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Other Names</label>
+                                                    <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.OtherNames) ? "-" : Model.OtherNames)" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Email Address</label>
+                                                    <input type="email" class="form-control" value="@(string.IsNullOrEmpty(Model.EmailAddress) ? "-" : Model.EmailAddress)" readonly="">
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Username</label>
+                                                    <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.Username) ? "-" : Model.Username)" readonly="">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Payroll Number</label>
-                                        <div class="form-control bg-light">@Model.PayrollNo</div>
+                        </div>
+
+                        <!-- Job Information -->
+                        <div class="row">
+                            <div class="col-lg-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Job Information</h5>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Roll Number</label>
-                                        <div class="form-control bg-light">@Model.RollNo</div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Employee ID</label>
-                                        <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.EmployeId) ? "-" : Model.EmployeId)</div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Designation</label>
+                                            <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.Designation) ? "-" : Model.Designation)" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Department</label>
+                                            <input type="text" class="form-control" value="@departmentName" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Station</label>
+                                            <input type="text" class="form-control" value="@stationName" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Role</label>
+                                            <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.Role) ? "-" : Model.Role)" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Scale</label>
+                                            <input type="text" class="form-control" value="@(string.IsNullOrEmpty(Model.Scale) ? "-" : Model.Scale)" readonly="">
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Surname</label>
-                                        <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.SurName) ? "-" : Model.SurName)</div>
+                            </div>
+
+                            <div class="col-lg-6">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Employment Information</h5>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Other Names</label>
-                                        <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.OtherNames) ? "-" : Model.OtherNames)</div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Full Name</label>
-                                        <div class="form-control bg-light">@Model.Fullname</div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Hire Date</label>
+                                            <input type="text" class="form-control" value="@(Model.HireDate.HasValue ? Model.HireDate.Value.ToString("dd MMM yyyy") : "-")" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Service Years</label>
+                                            <input type="text" class="form-control" value="@(Model.ServiceYears.HasValue ? Model.ServiceYears.Value.ToString() : "-")" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Contract End Date</label>
+                                            <input type="text" class="form-control" value="@(Model.ContractEnd.HasValue ? Model.ContractEnd.Value.ToString("dd MMM yyyy") : "-")" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Retirement Date</label>
+                                            <input type="text" class="form-control" value="@(Model.RetireDate.HasValue ? Model.RetireDate.Value.ToString("dd MMM yyyy") : "-")" readonly="">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Last Pay Date</label>
+                                            <input type="text" class="form-control" value="@(Model.LastPay.HasValue ? Model.LastPay.Value.ToString("dd MMM yyyy") : "-")" readonly="">
+                                        </div>
                                     </div>
                                 </div>
-                                
-                                <div class="row">
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Email Address</label>
-                                        <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.EmailAddress) ? "-" : Model.EmailAddress)</div>
+                            </div>
+                        </div>
+
+                        <!-- Reporting Structure -->
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Reporting Structure</h5>
                                     </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Username</label>
-                                        <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Username) ? "-" : Model.Username)</div>
-                                    </div>
-                                    <div class="col-md-4 mb-3">
-                                        <label class="form-label text-muted">Status</label>
-                                        <div class="form-control bg-light">
-                                            @if (Model.EmpisCurrActive == 0)
-                                            {
-                                                <span class="badge bg-success">Active</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-danger">Inactive</span>
-                                            }
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Supervisor</label>
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" value="@(string.IsNullOrEmpty(supervisorName) ? "Not assigned" : supervisorName)" readonly="">
+                                                        @if (!string.IsNullOrEmpty(Model.Supervisor))
+                                                        {
+                                                            <span class="input-group-text">(@Model.Supervisor)</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-6">
+                                                <div class="mb-3">
+                                                    <label class="form-label">Head of Department</label>
+                                                    <div class="input-group">
+                                                        <input type="text" class="form-control" value="@(string.IsNullOrEmpty(hodName) ? "Not assigned" : hodName)" readonly="">
+                                                        @if (!string.IsNullOrEmpty(Model.Hod))
+                                                        {
+                                                            <span class="input-group-text">(@Model.Hod)</span>
+                                                        }
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <div class="card border h-100">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Job Information</h5>
+
+                    <!-- Materials Tab -->
+                    <div class="tab-pane" id="materials" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-boxes text-primary me-1"></i> Materials
+                                </h5>
                             </div>
                             <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Designation</label>
-                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Designation) ? "-" : Model.Designation)</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Department</label>
-                                    <div class="form-control bg-light">@departmentName</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Station</label>
-                                    <div class="form-control bg-light">@stationName</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Role</label>
-                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Role) ? "-" : Model.Role)</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Scale</label>
-                                    <div class="form-control bg-light">@(string.IsNullOrEmpty(Model.Scale) ? "-" : Model.Scale)</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6 mb-4">
-                        <div class="card border h-100">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Employment Information</h5>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Hire Date</label>
-                                    <div class="form-control bg-light">
-                                        @(Model.HireDate.HasValue ? Model.HireDate.Value.ToString("dd MMM yyyy") : "-")
+                                <div class="text-center py-5">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-primary-subtle text-primary rounded-circle fs-20">
+                                            <i class="fas fa-boxes"></i>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Service Years</label>
-                                    <div class="form-control bg-light">@(Model.ServiceYears.HasValue ? Model.ServiceYears.Value.ToString() : "-")</div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Contract End Date</label>
-                                    <div class="form-control bg-light">
-                                        @(Model.ContractEnd.HasValue ? Model.ContractEnd.Value.ToString("dd MMM yyyy") : "-")
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Retirement Date</label>
-                                    <div class="form-control bg-light">
-                                        @(Model.RetireDate.HasValue ? Model.RetireDate.Value.ToString("dd MMM yyyy") : "-")
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label text-muted">Last Pay Date</label>
-                                    <div class="form-control bg-light">
-                                        @(Model.LastPay.HasValue ? Model.LastPay.Value.ToString("dd MMM yyyy") : "-")
+                                    <h5 class="mt-3">Materials Assigned</h5>
+                                    <p class="text-muted mb-4">This section will display all materials assigned to this employee.</p>
+                                    <div class="alert alert-info" role="alert">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Materials data will be loaded here in the next phase of implementation.
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="col-md-12 mb-4">
-                        <div class="card border">
-                            <div class="card-header bg-light">
-                                <h5 class="mb-0">Reporting Structure</h5>
+
+                    <!-- Requisitions Tab -->
+                    <div class="tab-pane" id="requisitions" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-file-alt text-success me-1"></i> Requisitions
+                                </h5>
                             </div>
                             <div class="card-body">
-                                <div class="row">
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label text-muted">Supervisor</label>
-                                        <div class="form-control bg-light">
-                                            @if (!string.IsNullOrEmpty(Model.Supervisor))
-                                            {
-                                                <span>@supervisorName</span>
-                                                <small class="d-block text-muted">(@Model.Supervisor)</small>
-                                            }
-                                            else
-                                            {
-                                                <span>Not assigned</span>
-                                            }
+                                <div class="text-center py-5">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-success-subtle text-success rounded-circle fs-20">
+                                            <i class="fas fa-file-alt"></i>
                                         </div>
                                     </div>
-                                    <div class="col-md-6 mb-3">
-                                        <label class="form-label text-muted">Head of Department</label>
-                                        <div class="form-control bg-light">
-                                            @if (!string.IsNullOrEmpty(Model.Hod))
-                                            {
-                                                <span>@hodName</span>
-                                                <small class="d-block text-muted">(@Model.Hod)</small>
-                                            }
-                                            else
-                                            {
-                                                <span>Not assigned</span>
-                                            }
+                                    <h5 class="mt-3">Requisitions History</h5>
+                                    <p class="text-muted mb-4">This section will display all requisitions created by this employee.</p>
+                                    <div class="alert alert-success" role="alert">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Requisitions data will be loaded here in the next phase of implementation.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Approvals Tab -->
+                    <div class="tab-pane" id="approvals" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-check-circle text-warning me-1"></i> Approvals
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center py-5">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-warning-subtle text-warning rounded-circle fs-20">
+                                            <i class="fas fa-check-circle"></i>
                                         </div>
+                                    </div>
+                                    <h5 class="mt-3">Approval History</h5>
+                                    <p class="text-muted mb-4">This section will display all approvals processed by this employee.</p>
+                                    <div class="alert alert-warning" role="alert">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Approvals data will be loaded here in the next phase of implementation.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Settings Tab -->
+                    <div class="tab-pane" id="settings" role="tabpanel">
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">
+                                    <i class="fas fa-cog text-info me-1"></i> Settings
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="text-center py-5">
+                                    <div class="avatar-md mx-auto mb-3">
+                                        <div class="avatar-title bg-info-subtle text-info rounded-circle fs-20">
+                                            <i class="fas fa-cog"></i>
+                                        </div>
+                                    </div>
+                                    <h5 class="mt-3">Profile Settings</h5>
+                                    <p class="text-muted mb-4">This section will contain user preferences and profile settings.</p>
+                                    <div class="alert alert-info" role="alert">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Settings panel will be implemented in the next phase.
                                     </div>
                                 </div>
                             </div>

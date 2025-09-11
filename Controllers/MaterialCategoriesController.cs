@@ -18,11 +18,13 @@ namespace MRIV.Controllers
     {
         private readonly RequisitionContext _context;
         private readonly IMediaService _mediaService;
+        private readonly IMaterialImportService _importService;
 
-        public MaterialCategoriesController(RequisitionContext context, IMediaService mediaService)
+        public MaterialCategoriesController(RequisitionContext context, IMediaService mediaService, IMaterialImportService importService)
         {
             _context = context;
             _mediaService = mediaService;
+            _importService = importService;
         }
 
         // GET: MaterialCategories
@@ -227,6 +229,41 @@ namespace MRIV.Controllers
             _context.MaterialCategories.Remove(materialCategory);
             await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
+        }
+
+        // GET: MaterialCategories/Import
+        public IActionResult Import()
+        {
+            return View();
+        }
+
+        // POST: MaterialCategories/Import
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                ModelState.AddModelError("", "Please select a file to import.");
+                return View();
+            }
+
+            var result = await _importService.ImportCategoriesAsync(file);
+            return View("ImportResults", result);
+        }
+
+        // GET: MaterialCategories/DownloadSample
+        public IActionResult DownloadSample()
+        {
+            var csvContent = "Name,Description,UnitOfMeasure\n" +
+                           "IT Equipment,Computer hardware and accessories,Each\n" +
+                           "Office Supplies,General office consumables,Pack\n" +
+                           "Furniture,Office furniture and fixtures,Each\n" +
+                           "Stationery,Writing and paper materials,Box\n" +
+                           "Cleaning Supplies,Janitorial and maintenance items,Pack";
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csvContent);
+            return File(bytes, "text/csv", "MaterialCategories_Sample.csv");
         }
 
         private bool MaterialCategoryExists(int id)

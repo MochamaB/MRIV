@@ -1,36 +1,66 @@
-﻿@model MRIV.Models.MaterialCategory
+@model MRIV.Models.MaterialCategory
 
 @{
-    ViewData["Title"] = "Details";
+    ViewData["Title"] = "Material Category Details";
 }
 
-<h1>Details</h1>
-
-<div>
-    <h4>MaterialCategory</h4>
-    <hr />
-    <dl class="row">
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Name)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Name)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.Description)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.Description)
-        </dd>
-        <dt class = "col-sm-2">
-            @Html.DisplayNameFor(model => model.UnitOfMeasure)
-        </dt>
-        <dd class = "col-sm-10">
-            @Html.DisplayFor(model => model.UnitOfMeasure)
-        </dd>
-    </dl>
-</div>
-<div>
-    <a asp-action="Edit" asp-route-id="@Model?.Id">Edit</a> |
-    <a asp-action="Index">Back to List</a>
+<div class="card">
+    <div class="card-header mb-2">
+        <h5 class="card-title mb-0">Material Category Details</h5>
+    </div>
+    <div class="card-body cardview">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label class="control-label">@Html.DisplayNameFor(model => model.Name)</label>
+                    <input value="@Model.Name" class="form-control" readonly />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="control-label">@Html.DisplayNameFor(model => model.Description)</label>
+                    <input value="@Model.Description" class="form-control" readonly />
+                </div>
+                <div class="form-group mb-3">
+                    <label class="control-label">@Html.DisplayNameFor(model => model.UnitOfMeasure)</label>
+                    <input value="@Model.UnitOfMeasure" class="form-control" readonly />
+                </div>
+                <div class="form-group mt-4">
+                    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                        <i class="ri-edit-line me-1"></i> Edit
+                    </a>
+                    <a asp-action="Index" class="btn btn-secondary">
+                        <i class="ri-arrow-left-line me-1"></i> Back to List
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="form-group mb-3">
+                    <label class="control-label">Category Image</label>
+                    
+                    @if (Model.Media.Any())
+                    {
+                        <div class="mb-3">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Category Image</h5>
+                                    <img src="/@Model.Media.First().FilePath" class="img-fluid rounded" style="max-height: 200px;" alt="@Model.Media.First().FileName" />
+                                    <p class="card-text mt-2">
+                                        <small class="text-muted">
+                                            @Model.Media.First().FileName (@(Model.Media.First().FileSize / 1024) KB)
+                                        </small>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="text-center p-4 border rounded bg-light">
+                            <i class="ri-image-line display-4 text-muted"></i>
+                            <p class="text-muted mt-2 mb-0">No image available</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
 </div>

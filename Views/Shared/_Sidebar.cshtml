@@ -79,17 +79,7 @@
                 </a>
             </li>
 
-            <li class="nav-item">
-                <a class="nav-link menu-link @(currentController == "WorkflowConfigs" ? "active" : "")" href="/WorkflowConfigs/">
-                    <i class="ri-flow-chart"></i> <span data-key="t-approval-config">Approval Config</span>
-                </a>
-            </li>
-
-            <li class="nav-item">
-                <a class="nav-link menu-link @(currentController == "StationCategories" ? "active" : "")" href="/StationCategories/">
-                    <i class="ri-building-line"></i> <span data-key="t-station-categories">Station Categories</span>
-                </a>
-            </li>
+      
             <li class="nav-item">
                 <a class="nav-link menu-link @(currentController == "Documents" ? "active" : "")" href="/Documents/">
                     <i class="ri-file-text-line"></i> <span data-key="t-documents">Documents</span>
@@ -127,8 +117,29 @@
                     <i class="ri-book-open-line"></i> <span data-key="t-user-guide">User Guide</span>
                 </a>
             </li>
+             <li class="nav-item">
+                <a class="nav-link menu-link @(currentController == "WorkflowConfigs" ? "active" : "")" href="/WorkflowConfigs/">
+                    <i class="ri-flow-chart"></i> <span data-key="t-approval-config">Approval Config</span>
+                </a>
+            </li>
+
+            <li class="nav-item">
+                <a class="nav-link menu-link @(currentController == "StationCategories" ? "active" : "")" href="/StationCategories/">
+                    <i class="ri-building-line"></i> <span data-key="t-station-categories">Station Categories</span>
+                </a>
+            </li>
+
+            <li class="menu-title"><i class="ri-user-line"></i> <span data-key="t-user-section">User</span></li>
+
+          
 
             <li class="menu-title" asp-authorize-role="Admin"><i class="ri-more-fill"></i> <span data-key="t-administration">Administration</span></li>
+
+              <li class="nav-item">
+                <a class="nav-link menu-link @((currentController == "Employees" && currentAction == "Profile") || (currentController == "Employees" && currentAction == "Details" && Context.Session.GetString("EmployeePayrollNo") == Context.Request.Query["id"]) ? "active" : "")" href="/Employees/Profile">
+                    <i class="ri-user-3-line"></i> <span data-key="t-profile">My Profile</span>
+                </a>
+            </li>
 
             <li class="nav-item" asp-authorize-role="Admin">
                 <a class="nav-link menu-link @(currentController == "Settings" ? "active" : "")" href="/Settings/Global">
@@ -168,6 +179,7 @@
                     </ul>
                 </div>
             </li>
+            
             <li class="nav-item" asp-authorize-role="Admin">
                 <a class="nav-link menu-link">
                     <i class="ri-user"></i> <span data-key="t-employees"></span>
@@ -178,6 +190,7 @@
                     <i class="ri-user"></i> <span data-key="t-employees"></span>
                 </a>
             </li>
+           
         </ul>
     </div>
     <!-- Sidebar -->

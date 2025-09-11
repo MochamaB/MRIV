@@ -1,0 +1,113 @@
+@model MRIV.ViewModels.MaterialImportViewModel
+
+@{
+    ViewData["Title"] = "Import Results - Material Categories";
+}
+
+<div class="row">
+    <div class="col-lg-10 offset-lg-1">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Import Results - Material Categories</h5>
+            </div>
+            <div class="card-body">
+                @if (Model.HasResults)
+                {
+                    <!-- Summary -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-success-subtle border-success">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success mb-1">@Model.SuccessCount</h4>
+                                    <p class="text-muted mb-0">Successfully Imported</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-danger-subtle border-danger">
+                                <div class="card-body text-center">
+                                    <h4 class="text-danger mb-1">@(Model.Results.Count(r => !r.IsSuccess))</h4>
+                                    <p class="text-muted mb-0">Failed</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-info-subtle border-info">
+                                <div class="card-body text-center">
+                                    <h4 class="text-info mb-1">@Model.TotalRows</h4>
+                                    <p class="text-muted mb-0">Total Rows Processed</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Results -->
+                    <div class="table-responsive">
+                        <table class="table table-bordered align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th style="width: 80px;">Row #</th>
+                                    <th style="width: 80px;">Status</th>
+                                    <th>Category Name</th>
+                                    <th>Description</th>
+                                    <th>Unit of Measure</th>
+                                    <th>Error Message</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var result in Model.Results)
+                                {
+                                    <tr class="@(result.IsSuccess ? "table-success" : "table-danger")">
+                                        <td>@result.RowNumber</td>
+                                        <td class="text-center">
+                                            @if (result.IsSuccess)
+                                            {
+                                                <i class="ri-check-line text-success fs-16"></i>
+                                            }
+                                            else
+                                            {
+                                                <i class="ri-close-line text-danger fs-16"></i>
+                                            }
+                                        </td>
+                                        <td>@result.Name</td>
+                                        <td>@result.Description</td>
+                                        <td>@result.AdditionalInfo</td>
+                                        <td>
+                                            @if (!result.IsSuccess)
+                                            {
+                                                <span class="text-danger">@result.ErrorMessage</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-success">Success</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        <h6><i class="ri-alert-line me-2"></i>No Results</h6>
+                        <p class="mb-0">No import results to display. Please try importing a valid file.</p>
+                    </div>
+                }
+                <hr />
+                <div class="d-flex gap-2 mt-4">
+                    <a href="@Url.Action("DownloadSample")" class="btn btn-info">
+                        <i class="ri-download-line me-1"></i> Download Sample CSV
+                    </a>
+                    <a href="@Url.Action("Import")" class="btn btn-success">
+                        <i class="ri-upload-line me-1"></i> Import More Categories
+                    </a>
+                    <a href="@Url.Action("Index")" class="btn btn-primary">
+                        <i class="ri-list-check me-1"></i> View All Categories
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
