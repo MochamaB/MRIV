@@ -31,6 +31,9 @@
     <link rel="stylesheet" href="~/css/wizard.css">
     <link href="~/css/guide.css" rel="stylesheet" />
     
+    <!-- Voucher Print Styles -->
+    <link href="~/css/print-voucher.css" rel="stylesheet" type="text/css" />
+    
     <!-- Dropzone CSS -->
     <link href="~/assets/libs/dropzone/dropzone.css" rel="stylesheet" type="text/css" />
     
@@ -53,33 +56,49 @@
             }
 
         @@media print {
-            .col-md-6
+            /* Basic print layout fixes */
+            .col-md-6 {
+                width: 50% !important;
+                float: left !important;
+                display: block !important;
+            }
 
-        {
-            width: 50% !important;
-            float: left !important;
-            display: block !important;
-        }
+            .row {
+                display: flex;
+                flex-wrap: wrap;
+            }
 
-        .row {
-            display: flex;
-            flex-wrap: wrap;
-        }
-
-        .no-print {
-            display: none !important;
-        }
-
-            .printbutton {
+            /* Hide non-printable elements */
+            .no-print,
+            .printbutton,
+            .btn:not(.printbutton) {
                 display: none !important;
             }
 
-        /* Optional: Remove padding/margin if needed */
-        .card, .card-body {
-            border: none;
-            padding: 0;
-            margin: 0;
-        }
+            /* Clean card styling for print */
+            .card, .card-body {
+                border: none !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+
+            /* Body and page setup */
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+                color: black !important;
+            }
+
+            /* Ensure proper printing layout */
+            .main-content,
+            .page-content,
+            .container-fluid {
+                margin: 0 !important;
+                padding: 0 !important;
+                max-width: none !important;
+            }
         }
 
         </style>

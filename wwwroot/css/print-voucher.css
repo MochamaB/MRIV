@@ -1,0 +1,197 @@
+/* ===================================================
+   Voucher Print Styles - Ensures content fits on one page
+   ================================================== */
+
+@media print {
+    /* Page setup */
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+    
+    /* Hide non-printable elements */
+    .printbutton,
+    .btn,
+    .card-header .flex-shrink-0,
+    .navbar,
+    .sidebar,
+    .footer,
+    nav,
+    .breadcrumb {
+        display: none !important;
+    }
+    
+    /* Main voucher container - scale to fit */
+    .voucher-container {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        transform: scale(0.85); /* Scale down to fit more content */
+        transform-origin: top left;
+        page-break-inside: avoid;
+        font-size: 12px !important;
+    }
+    
+    /* Header section optimization */
+    .voucher-container .d-flex:first-child {
+        margin-bottom: 8px !important;
+    }
+    
+    .voucher-container img {
+        height: 60px !important; /* Smaller logo */
+    }
+    
+    .voucher-container h3 {
+        font-size: 16px !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .voucher-container h5 {
+        font-size: 13px !important;
+        margin-bottom: 2px !important;
+    }
+    
+    /* Details section - compact layout */
+    .voucher-container .row {
+        margin-bottom: 6px !important;
+    }
+    
+    .voucher-container .table-sm td,
+    .voucher-container .table-sm th {
+        padding: 2px 4px !important;
+        font-size: 11px !important;
+        line-height: 1.2 !important;
+    }
+    
+    .voucher-container .table-borderless td:first-child {
+        width: 30% !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Requisition items table optimization */
+    .voucher-container .table-bordered {
+        margin-bottom: 8px !important;
+    }
+    
+    .voucher-container .table-bordered th,
+    .voucher-container .table-bordered td {
+        padding: 3px 4px !important;
+        font-size: 10px !important;
+        line-height: 1.1 !important;
+        border-width: 1px !important;
+    }
+    
+    .voucher-container .table-bordered th {
+        background-color: #f8f9fa !important;
+        font-weight: 600 !important;
+        font-size: 9px !important;
+    }
+    
+    /* Table column width optimization for better fit */
+    .voucher-container .table-bordered th:nth-child(1) { width: 4% !important; } /* # */
+    .voucher-container .table-bordered th:nth-child(2) { width: 28% !important; } /* Description */
+    .voucher-container .table-bordered th:nth-child(3) { width: 8% !important; } /* Quantity */
+    .voucher-container .table-bordered th:nth-child(4) { width: 12% !important; } /* Material Code */
+    .voucher-container .table-bordered th:nth-child(5) { width: 15% !important; } /* Condition */
+    .voucher-container .table-bordered th:nth-child(6) { width: 18% !important; } /* Category */
+    .voucher-container .table-bordered th:nth-child(7) { width: 15% !important; } /* Status */
+    
+    /* Badge styling for print */
+    .voucher-container .badge {
+        font-size: 8px !important;
+        padding: 1px 4px !important;
+        background-color: #6c757d !important;
+        color: white !important;
+        border-radius: 2px !important;
+    }
+    
+    /* Approvals section */
+    .voucher-container h6 {
+        font-size: 12px !important;
+        margin-top: 10px !important;
+        margin-bottom: 4px !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Collection section - compact */
+    .voucher-container .row:last-child p {
+        margin-bottom: 4px !important;
+        font-size: 11px !important;
+        line-height: 1.3 !important;
+    }
+    
+    /* Ensure no page breaks within critical sections */
+    .voucher-container .table-responsive,
+    .voucher-container .row {
+        page-break-inside: avoid;
+    }
+    
+    /* Force single page */
+    .voucher-container {
+        max-height: 95vh !important;
+        overflow: hidden !important;
+    }
+    
+    /* Additional space optimization */
+    .voucher-container hr {
+        margin: 4px 0 !important;
+        border-top-width: 1px !important;
+    }
+    
+    .voucher-container .mb-0,
+    .voucher-container .mb-1,
+    .voucher-container .mb-2,
+    .voucher-container .mb-3 {
+        margin-bottom: 4px !important;
+    }
+    
+    .voucher-container .pt-2,
+    .voucher-container .pt-4 {
+        padding-top: 4px !important;
+    }
+    
+    /* Text optimization */
+    .voucher-container .text-muted {
+        font-size: 10px !important;
+    }
+    
+    /* Ensure table responsiveness is disabled in print */
+    .voucher-container .table-responsive {
+        overflow: visible !important;
+    }
+    
+    /* Handle long content gracefully */
+    .voucher-container .table td {
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+    }
+    
+    /* Fine-tune scaling for different content amounts */
+    .voucher-container.large-content {
+        transform: scale(0.75) !important;
+    }
+    
+    .voucher-container.small-content {
+        transform: scale(0.9) !important;
+    }
+}
+
+/* Landscape orientation optimization */
+@media print and (orientation: landscape) {
+    .voucher-container {
+        transform: scale(1.1) !important;
+        max-width: 100% !important;
+    }
+    
+    /* Adjust table columns for landscape */
+    .voucher-container .table-bordered th:nth-child(2) { width: 35% !important; } /* More space for description */
+    .voucher-container .table-bordered th:nth-child(6) { width: 20% !important; } /* More space for category */
+}
+
+/* Portrait-specific optimizations */
+@media print and (orientation: portrait) {
+    .voucher-container {
+        transform: scale(0.8) !important;
+    }
+}
