@@ -9,12 +9,17 @@ namespace MRIV.Services
 {
     public interface IVisibilityAuthorizeService
     {
+        // Existing methods (backward compatibility)
         Task<IQueryable<T>> ApplyVisibilityScopeAsync<T>(IQueryable<T> query, string userPayrollNo) where T : class;
         Task<bool> CanUserAccessEntityAsync<T>(T entity, string userPayrollNo) where T : class;
         Task<bool> UserHasRoleForStep(int? stepConfigId, string userRole);
         Task<bool> ShouldRestrictToPayrollAsync(int? stepConfigId);
         Task<List<Department>> GetVisibleDepartmentsAsync(string userPayrollNo);
         Task<List<Station>> GetVisibleStationsAsync(string userPayrollNo);
+        
+        // Enhanced methods using cached UserProfile (Phase 2A)
+        IQueryable<T> ApplyVisibilityScopeWithProfile<T>(IQueryable<T> query, UserProfile userProfile) where T : class;
+        bool CanUserAccessEntityWithProfile<T>(T entity, UserProfile userProfile) where T : class;
     }
 
     public class VisibilityAuthorizeService : IVisibilityAuthorizeService
@@ -330,6 +335,105 @@ namespace MRIV.Services
                 return string.Equals(restrictValue.ToString(), "true", System.StringComparison.OrdinalIgnoreCase);
             }
             return false;
+        }
+
+        // ===== ENHANCED METHODS USING CACHED USERPROFILE (PHASE 2A) =====
+
+        /// <summary>
+        /// Enhanced visibility scope using cached UserProfile - NO database calls for user context
+        /// Performance improvement: 0 DB calls vs 5-6 DB calls in legacy method
+        /// </summary>
+        public IQueryable<T> ApplyVisibilityScopeWithProfile<T>(IQueryable<T> query, UserProfile userProfile) where T : class
+        {
+            if (userProfile == null)
+            {
+                // Fail secure - return empty query
+                return query.Take(0);
+            }
+
+            // Admin users see everything
+            if (userProfile.RoleInformation.IsAdmin)
+            {
+                return query;
+            }
+
+            // Apply filtering based on entity type using cached accessible locations
+            if (typeof(T) == typeof(Requisition))
+            {
+                return ApplyRequisitionVisibility(query.Cast<Requisition>(), userProfile).Cast<T>();
+            }
+            else if (typeof(T) == typeof(MaterialAssignment))
+            {
+                return ApplyMaterialAssignmentVisibility(query.Cast<MaterialAssignment>(), userProfile).Cast<T>();
+            }
+            else if (typeof(T) == typeof(Approval))
+            {
+                return ApplyApprovalVisibility(query.Cast<Approval>(), userProfile).Cast<T>();
+            }
+
+            // For other entity types, return as-is (can be extended)
+            return query;
+        }
+
+        /// <summary>
+        /// Enhanced entity access check using cached UserProfile
+        /// </summary>
+        public bool CanUserAccessEntityWithProfile<T>(T entity, UserProfile userProfile) where T : class
+        {
+            if (userProfile == null || entity == null)
+                return false;
+
+            if (userProfile.RoleInformation.IsAdmin)
+                return true;
+
+            // Check based on entity type using cached data
+            if (entity is Requisition requisition)
+            {
+                return userProfile.LocationAccess.AccessibleDepartmentIds.Contains(requisition.DepartmentId) &&
+                       (userProfile.LocationAccess.AccessibleStationIds.Contains(requisition.IssueStationId) ||
+                        userProfile.LocationAccess.AccessibleStationIds.Contains(requisition.DeliveryStationId));
+            }
+            else if (entity is MaterialAssignment assignment)
+            {
+                return assignment.DepartmentId.HasValue && 
+                       userProfile.LocationAccess.AccessibleDepartmentIds.Contains(assignment.DepartmentId.Value) &&
+                       assignment.StationId.HasValue && 
+                       userProfile.LocationAccess.AccessibleStationIds.Contains(assignment.StationId.Value);
+            }
+
+            return false;
+        }
+
+        // ===== PRIVATE HELPER METHODS FOR ENHANCED VISIBILITY =====
+
+        private IQueryable<Requisition> ApplyRequisitionVisibility(IQueryable<Requisition> query, UserProfile userProfile)
+        {
+            var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
+            var accessibleStationIds = userProfile.LocationAccess.AccessibleStationIds;
+
+            return query.Where(r =>
+                accessibleDeptIds.Contains(r.DepartmentId) &&
+                (accessibleStationIds.Contains(r.IssueStationId) ||
+                 accessibleStationIds.Contains(r.DeliveryStationId))
+            );
+        }
+
+        private IQueryable<MaterialAssignment> ApplyMaterialAssignmentVisibility(IQueryable<MaterialAssignment> query, UserProfile userProfile)
+        {
+            var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
+            var accessibleStationIds = userProfile.LocationAccess.AccessibleStationIds;
+
+            return query.Where(ma =>
+                ma.DepartmentId.HasValue && accessibleDeptIds.Contains(ma.DepartmentId.Value) &&
+                ma.StationId.HasValue && accessibleStationIds.Contains(ma.StationId.Value)
+            );
+        }
+
+        private IQueryable<Approval> ApplyApprovalVisibility(IQueryable<Approval> query, UserProfile userProfile)
+        {
+            var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
+
+            return query.Where(a => accessibleDeptIds.Contains(a.DepartmentId));
         }
     }
 }

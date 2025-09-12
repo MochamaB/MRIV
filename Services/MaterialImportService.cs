@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using MRIV.Models;
 using MRIV.ViewModels;
+using MRIV.Enums;
 using System.Text;
 
 namespace MRIV.Services
@@ -9,7 +10,7 @@ namespace MRIV.Services
     {
         Task<MaterialImportViewModel> ImportCategoriesAsync(IFormFile file);
         Task<MaterialImportViewModel> ImportSubcategoriesAsync(IFormFile file);
-        Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file);
+        Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file, string currentUserPayrollNo);
     }
 
     public class MaterialImportService : IMaterialImportService
@@ -159,6 +160,9 @@ namespace MRIV.Services
             {
                 var line = reader.ReadLine();
                 if (string.IsNullOrWhiteSpace(line)) continue;
+                
+                // Skip comment lines that start with #
+                if (line.TrimStart().StartsWith("#")) continue;
 
                 // Skip header row
                 if (isFirstLine)
@@ -369,6 +373,9 @@ namespace MRIV.Services
             {
                 var line = reader.ReadLine();
                 if (string.IsNullOrWhiteSpace(line)) continue;
+                
+                // Skip comment lines that start with #
+                if (line.TrimStart().StartsWith("#")) continue;
 
                 // Skip header row
                 if (isFirstLine)
@@ -394,7 +401,7 @@ namespace MRIV.Services
             return subcategories;
         }
 
-        public async Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file)
+        public async Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file, string currentUserPayrollNo)
         {
             var result = new MaterialImportViewModel
             {
@@ -414,24 +421,35 @@ namespace MRIV.Services
                 return result;
             }
 
-            try
+            var strategy = _context.Database.CreateExecutionStrategy();
+            await strategy.ExecuteAsync(async () =>
             {
-                var materials = await ParseMaterialsFromFileAsync(file);
-                var rowNumber = 1; // Start from 1 (assuming header row)
-
-                foreach (var materialRow in materials)
+                using var transaction = await _context.Database.BeginTransactionAsync();
+                try
                 {
-                    rowNumber++;
-                    try
+                    var materials = await ParseMaterialsFromFileAsync(file);
+                    
+                    // Load reference data for validation
+                    var categories = await LoadCategoriesAsync();
+                    var subcategories = await LoadSubcategoriesAsync();
+                    var departments = await LoadDepartmentsAsync();
+                    var employees = await LoadEmployeesAsync();
+                    var stationCategories = await LoadStationCategoriesAsync();
+                    
+                    var rowNumber = 1; // Start from 1 (assuming header row)
+
+                    foreach (var materialRow in materials)
                     {
-                        // For now, just validate the data structure
-                        // TODO: Implement actual material creation logic
-                        if (string.IsNullOrWhiteSpace(materialRow.Name))
+                        rowNumber++;
+                        try
                         {
-                            result.Results.Add(new MaterialImportResult
+                            // Validate required fields
+                            if (string.IsNullOrWhiteSpace(materialRow.Name))
                             {
-                                RowNumber = rowNumber,
-                                IsSuccess = false,
+                                result.Results.Add(new MaterialImportResult
+                                {
+                                    RowNumber = rowNumber,
+                                    IsSuccess = false,
                                 ErrorMessage = "Material name is required"
                             });
                             continue;
@@ -448,13 +466,31 @@ namespace MRIV.Services
                             continue;
                         }
 
-                        // For now, just mark as successful for testing
+                        // Step 1: Create Material
+                        var material = await CreateMaterialAsync(materialRow, categories, subcategories, currentUserPayrollNo);
+                        if (material == null)
+                        {
+                            result.Results.Add(new MaterialImportResult
+                            {
+                                RowNumber = rowNumber,
+                                IsSuccess = false,
+                                ErrorMessage = "Failed to create material - invalid category or subcategory"
+                            });
+                            continue;
+                        }
+
+                        // Step 2: Create MaterialAssignment
+                        var assignment = await CreateMaterialAssignmentAsync(material.Id, materialRow, departments, employees, stationCategories, currentUserPayrollNo);
+                        
+                        // Step 3: Create MaterialCondition
+                        var condition = await CreateMaterialConditionAsync(material.Id, assignment.Id, materialRow, currentUserPayrollNo);
+
                         result.Results.Add(new MaterialImportResult
                         {
                             RowNumber = rowNumber,
                             IsSuccess = true,
                             ItemName = materialRow.Name,
-                            Message = "Material validated successfully (not yet saved to database)"
+                            Message = $"Material '{material.Name}' created successfully with code '{material.Code}'"
                         });
                     }
                     catch (Exception ex)
@@ -468,23 +504,323 @@ namespace MRIV.Services
                     }
                 }
 
-                result.HasResults = true;
-                result.TotalProcessed = result.Results.Count;
-                result.SuccessCount = result.Results.Count(r => r.IsSuccess);
-                result.FailureCount = result.Results.Count(r => !r.IsSuccess);
-            }
-            catch (Exception ex)
-            {
-                result.Results.Add(new MaterialImportResult
+                    await transaction.CommitAsync();
+                    
+                    result.HasResults = true;
+                    result.TotalProcessed = result.Results.Count;
+                    result.SuccessCount = result.Results.Count(r => r.IsSuccess);
+                    result.FailureCount = result.Results.Count(r => !r.IsSuccess);
+                }
+                catch (Exception ex)
                 {
-                    RowNumber = 0,
-                    IsSuccess = false,
-                    ErrorMessage = $"File processing error: {ex.Message}"
-                });
-                result.HasResults = true;
-            }
+                    await transaction.RollbackAsync();
+                    result.Results.Add(new MaterialImportResult
+                    {
+                        RowNumber = 0,
+                        IsSuccess = false,
+                        ErrorMessage = $"File processing error: {ex.Message}"
+                    });
+                    result.HasResults = true;
+                }
+            });
 
             return result;
+        }
+
+        // Reference data loading methods
+        private async Task<Dictionary<string, MaterialCategory>> LoadCategoriesAsync()
+        {
+            var categories = await _context.MaterialCategories.ToListAsync();
+            return categories.ToDictionary(c => c.Name, c => c, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task<Dictionary<string, MaterialSubcategory>> LoadSubcategoriesAsync()
+        {
+            var subcategories = await _context.MaterialSubCategories
+                .Include(s => s.MaterialCategory)
+                .ToListAsync();
+            return subcategories.ToDictionary(s => s.Name, s => s, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task<Dictionary<string, Department>> LoadDepartmentsAsync()
+        {
+            var departments = await _ktdaContext.Departments.ToListAsync();
+            var dictionary = new Dictionary<string, Department>(StringComparer.OrdinalIgnoreCase);
+            
+            foreach (var dept in departments)
+            {
+                // Add by exact name
+                dictionary[dept.DepartmentName] = dept;
+                
+                // Add by ID as string for ID-based lookup
+                dictionary[dept.DepartmentId] = dept;
+                
+                // Add common aliases/variations
+                var aliases = GetDepartmentAliases(dept.DepartmentName);
+                foreach (var alias in aliases)
+                {
+                    if (!dictionary.ContainsKey(alias))
+                        dictionary[alias] = dept;
+                }
+            }
+            
+            return dictionary;
+        }
+
+        private List<string> GetDepartmentAliases(string departmentName)
+        {
+            var aliases = new List<string>();
+            
+            // Common IT department variations
+            if (departmentName.Contains("INFORMATION") && departmentName.Contains("TECH"))
+            {
+                aliases.AddRange(new[] { "IT Department", "IT", "Information Technology", "ICT", "IT Dept" });
+            }
+            
+            // Add more department aliases as needed
+            // You can expand this based on your department names
+            
+            return aliases;
+        }
+
+        private async Task<Dictionary<string, EmployeeBkp>> LoadEmployeesAsync()
+        {
+            var employees = await _ktdaContext.EmployeeBkps.ToListAsync();
+            return employees.ToDictionary(e => e.PayrollNo, e => e, StringComparer.OrdinalIgnoreCase);
+        }
+
+        private async Task<Dictionary<string, StationCategory>> LoadStationCategoriesAsync()
+        {
+            var stationCategories = await _context.StationCategories.ToListAsync();
+            return stationCategories.ToDictionary(s => s.Code, s => s, StringComparer.OrdinalIgnoreCase);
+        }
+
+        // Material creation method
+        private async Task<Material> CreateMaterialAsync(MaterialImportRow row, 
+            Dictionary<string, MaterialCategory> categories,
+            Dictionary<string, MaterialSubcategory> subcategories,
+            string currentUserPayrollNo)
+        {
+            // Validate category
+            if (!categories.TryGetValue(row.CategoryName, out var category))
+            {
+                return null;
+            }
+
+            // Validate subcategory if provided
+            MaterialSubcategory subcategory = null;
+            if (!string.IsNullOrWhiteSpace(row.SubcategoryName))
+            {
+                if (!subcategories.TryGetValue(row.SubcategoryName, out subcategory) || 
+                    subcategory.MaterialCategoryId != category.Id)
+                {
+                    return null;
+                }
+            }
+
+            // Generate code if not provided
+            var code = string.IsNullOrWhiteSpace(row.Code) 
+                ? await GenerateMaterialCodeAsync(category.Id) 
+                : row.Code;
+
+            // Check for duplicate code
+            if (await _context.Materials.AnyAsync(m => m.Code == code))
+            {
+                throw new InvalidOperationException($"Material code '{code}' already exists");
+            }
+
+            // Parse dates
+            DateTime? purchaseDate = ParseDate(row.PurchaseDate);
+            DateTime? warrantyStartDate = ParseDate(row.WarrantyStartDate);
+            DateTime? warrantyEndDate = ParseDate(row.WarrantyEndDate);
+
+            // Parse decimal values
+            decimal? purchasePrice = ParseDecimal(row.PurchasePrice);
+            int? expectedLifespanMonths = ParseInt(row.ExpectedLifespanMonths);
+            int? maintenanceIntervalMonths = ParseInt(row.MaintenanceIntervalMonths);
+
+            // Parse status
+            if (!Enum.TryParse<MaterialStatus>(row.Status, true, out var status))
+            {
+                status = MaterialStatus.Available;
+            }
+
+            var material = new Material
+            {
+                Name = row.Name,
+                Code = code,
+                Description = row.Description,
+                MaterialCategoryId = category.Id,
+                MaterialSubcategoryId = subcategory?.Id,
+                Status = status,
+                Manufacturer = row.Manufacturer,
+                ModelNumber = row.ModelNumber,
+                Specifications = row.Specifications,
+                AssetTag = row.AssetTag,
+                QRCODE = row.QRCODE,
+                VendorId = row.VendorId,
+                PurchaseDate = purchaseDate,
+                PurchasePrice = purchasePrice,
+                WarrantyStartDate = warrantyStartDate,
+                WarrantyEndDate = warrantyEndDate,
+                WarrantyTerms = row.WarrantyTerms,
+                ExpectedLifespanMonths = expectedLifespanMonths,
+                MaintenanceIntervalMonths = maintenanceIntervalMonths,
+                CreatedAt = DateTime.UtcNow,
+               
+            };
+
+            _context.Materials.Add(material);
+            await _context.SaveChangesAsync();
+            
+            return material;
+        }
+
+        // MaterialAssignment creation method
+        private async Task<MaterialAssignment> CreateMaterialAssignmentAsync(int materialId, 
+            MaterialImportRow row,
+            Dictionary<string, Department> departments,
+            Dictionary<string, EmployeeBkp> employees,
+            Dictionary<string, StationCategory> stationCategories,
+            string currentUserPayrollNo)
+        {
+            // Validate employee if provided
+            var payrollNo = string.IsNullOrWhiteSpace(row.AssignedToPayrollNo) || row.AssignedToPayrollNo == "NotAssigned" 
+                ? "NotAssigned" 
+                : row.AssignedToPayrollNo;
+
+            if (payrollNo != "NotAssigned" && !employees.ContainsKey(payrollNo))
+            {
+                throw new InvalidOperationException($"Employee with payroll number '{payrollNo}' not found");
+            }
+
+            // Validate department if provided
+            int? departmentId = null;
+
+            if (!string.IsNullOrWhiteSpace(row.DepartmentName))
+            {
+                if (departments.TryGetValue(row.DepartmentName, out var department))
+                {
+                    if (int.TryParse(department.DepartmentId, out var parsedId))
+                    {
+                        departmentId = parsedId;
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"Department '{row.DepartmentName}' has an invalid ID '{department.DepartmentId}'"
+                        );
+                    }
+                }
+                else
+                {
+                    throw new InvalidOperationException($"Department '{row.DepartmentName}' not found");
+                }
+            }
+
+
+            // Parse assignment type
+            if (!Enum.TryParse<RequisitionType>(row.AssignmentType, true, out var assignmentType))
+            {
+                assignmentType = RequisitionType.NewPurchase;
+            }
+
+            var assignment = new MaterialAssignment
+            {
+                MaterialId = materialId,
+                PayrollNo = payrollNo,
+                AssignmentDate = DateTime.UtcNow,
+                StationCategory = row.StationCategory ?? "headoffice",
+                StationId = 0, // Default for now
+                DepartmentId = departmentId ?? 0,
+                AssignmentType = assignmentType,
+                AssignedByPayrollNo = currentUserPayrollNo,
+                IsActive = true,
+                Notes = row.AssignmentNotes ?? "Imported via CSV"
+            };
+
+            _context.MaterialAssignments.Add(assignment);
+            await _context.SaveChangesAsync();
+            
+            return assignment;
+        }
+
+        // MaterialCondition creation method
+        private async Task<MaterialCondition> CreateMaterialConditionAsync(int materialId, 
+            int assignmentId, 
+            MaterialImportRow row, 
+            string currentUserPayrollNo)
+        {
+            // Parse condition check type
+            if (!Enum.TryParse<ConditionCheckType>(row.ConditionCheckType, true, out var checkType))
+            {
+                checkType = ConditionCheckType.Initial;
+            }
+
+            // Parse condition status
+            if (!Enum.TryParse<Condition>(row.ConditionStatus, true, out var conditionStatus))
+            {
+                conditionStatus = Condition.GoodCondition;
+            }
+
+            // Parse dates
+            DateTime inspectionDate = ParseDate(row.InspectionDate) ?? DateTime.UtcNow;
+
+            var condition = new MaterialCondition
+            {
+                MaterialId = materialId,
+                MaterialAssignmentId = assignmentId,
+                ConditionCheckType = checkType,
+                Stage = row.Stage ?? "Import",
+                Condition = conditionStatus,
+                FunctionalStatus = FunctionalStatus.FullyFunctional,
+                CosmeticStatus = CosmeticStatus.Excellent,
+                InspectedBy = currentUserPayrollNo,
+                InspectionDate = inspectionDate,
+                Notes = row.ConditionNotes ?? "Initial condition recorded during import"
+            };
+
+            _context.MaterialConditions.Add(condition);
+            await _context.SaveChangesAsync();
+            
+            return condition;
+        }
+
+        // Code generation method
+        private async Task<string> GenerateMaterialCodeAsync(int categoryId)
+        {
+            var lastMaterial = await _context.Materials
+                .Where(m => m.MaterialCategoryId == categoryId)
+                .OrderByDescending(m => m.Id)
+                .FirstOrDefaultAsync();
+
+            var nextId = (lastMaterial?.Id ?? 0) + 1;
+            return $"MAT-{nextId:D3}-{categoryId:D3}";
+        }
+
+        // Helper parsing methods
+        private DateTime? ParseDate(string dateString)
+        {
+            if (string.IsNullOrWhiteSpace(dateString))
+                return null;
+            
+            return DateTime.TryParse(dateString, out var date) ? date : null;
+        }
+
+        private decimal? ParseDecimal(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            
+            return decimal.TryParse(value, out var result) ? result : null;
+        }
+
+        private int? ParseInt(string value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                return null;
+            
+            return int.TryParse(value, out var result) ? result : null;
         }
 
         private async Task<List<MaterialImportRow>> ParseMaterialsFromFileAsync(IFormFile file)
@@ -499,14 +835,20 @@ namespace MRIV.Services
                     throw new InvalidOperationException("CSV file appears to be empty or invalid");
                 }
 
-                var headers = headerLine.Split(',').Select(h => h.Trim().Trim('"')).ToArray();
+                var headers = ParseCsvLine(headerLine);
 
                 string line;
                 while ((line = await reader.ReadLineAsync()) != null)
                 {
                     if (string.IsNullOrWhiteSpace(line)) continue;
+                    
+                    // Skip comment lines that start with #
+                    if (line.TrimStart().StartsWith("#")) continue;
 
-                    var values = line.Split(',').Select(v => v.Trim().Trim('"')).ToArray();
+                    var values = ParseCsvLine(line);
+                    
+                    // Skip rows that are effectively empty (all values are empty or whitespace)
+                    if (values.All(v => string.IsNullOrWhiteSpace(v))) continue;
                     
                     var material = new MaterialImportRow();
 
@@ -603,9 +945,6 @@ namespace MRIV.Services
                                 break;
                             case "inspectiondate":
                                 material.InspectionDate = value;
-                                break;
-                            case "nextinspectiondate":
-                                material.NextInspectionDate = value;
                                 break;
                             case "conditionchecktype":
                                 material.ConditionCheckType = value;

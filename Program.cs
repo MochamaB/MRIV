@@ -64,6 +64,10 @@ builder.Services.AddScoped<IMaterialImportService>(provider =>
         provider.GetRequiredService<KtdaleaveContext>()
     ));
 
+// User profile services for enhanced login
+builder.Services.AddScoped<IUserProfileService, UserProfileService>();
+builder.Services.AddScoped<IUserProfileCacheService, UserProfileCacheService>();
+
 // Report services
 builder.Services.AddScoped<IRequisitionReportService, RequisitionReportService>();
 builder.Services.AddScoped<IReportFilterService, ReportFilterService>();

@@ -82,8 +82,7 @@ namespace MRIV.ViewModels
         // Condition Data
         public string ConditionStatus { get; set; }
         public string ConditionNotes { get; set; }
-        public string InspectionDate { get; set; }
-        public string NextInspectionDate { get; set; }
+        public string? InspectionDate { get; set; }
         public string ConditionCheckType { get; set; }
         public string Stage { get; set; }
     }

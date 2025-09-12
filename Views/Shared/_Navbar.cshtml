@@ -4,6 +4,9 @@
 @{
     var employeeName = HttpContextAccessor.HttpContext.Session.GetString("EmployeeName");
     var employeePayrollNo = HttpContextAccessor.HttpContext.Session.GetString("EmployeePayrollNo");
+    // Get current controller name for active menu highlighting
+    var currentController = ViewContext.RouteData.Values["controller"].ToString();
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString() ?? "";
 }
 
 <header id="page-topbar">
@@ -111,7 +114,17 @@
                     <div class="dropdown-menu dropdown-menu-end">
                         <!-- item-->
                         <h6 class="dropdown-header">Welcome @employeeName!</h6>
-                        <a class="dropdown-item" href="/Profile"><i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i> <span class="align-middle">Profile</span></a>
+                        <a class="dropdown-item @(
+                                   (currentController == "Employees" && currentAction == "Profile") ||
+                                   (currentController == "Employees" && currentAction == "Details" &&
+                                    Context.Session.GetString("EmployeePayrollNo") == Context.Request.Query["id"])
+                                   ? "active"
+                                   : "")"
+                           href="/Employees/Profile">
+                            <i class="mdi mdi-account-circle text-muted fs-16 align-middle me-1"></i>
+                            <span class="align-middle">Profile</span>
+                        </a>
+
                         <div class="dropdown-divider"></div>
                         <form asp-action="Logout" asp-controller="Login" method="post" style="display:inline;">
                             <button type="submit" class="dropdown-item">

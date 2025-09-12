@@ -1345,7 +1345,8 @@ namespace MRIV.Controllers
                 return View();
             }
 
-            var result = await _materialImportService.ImportMaterialsAsync(file);
+            var currentUser = HttpContext.Session.GetString("EmployeePayrollNo") ?? "System";
+            var result = await _materialImportService.ImportMaterialsAsync(file, currentUser);
             return View("ImportResults", result);
         }
 
@@ -1355,12 +1356,12 @@ namespace MRIV.Controllers
             var csv = new StringBuilder();
             
             // Add header
-            csv.AppendLine("Name,CategoryName,SubcategoryName,Code,Description,Status,Manufacturer,ModelNumber,Specifications,AssetTag,QRCODE,VendorId,PurchaseDate,PurchasePrice,WarrantyStartDate,WarrantyEndDate,WarrantyTerms,ExpectedLifespanMonths,MaintenanceIntervalMonths,AssignedToPayrollNo,StationCategory,StationName,DepartmentName,SpecificLocation,AssignmentType,AssignmentNotes,ConditionStatus,ConditionNotes,InspectionDate,NextInspectionDate,ConditionCheckType,Stage");
+            csv.AppendLine("Name,CategoryName,SubcategoryName,Code,Description,Status,Manufacturer,ModelNumber,Specifications,AssetTag,QRCODE,VendorId,PurchaseDate,PurchasePrice,WarrantyStartDate,WarrantyEndDate,WarrantyTerms,ExpectedLifespanMonths,MaintenanceIntervalMonths,AssignedToPayrollNo,StationCategory,StationName,DepartmentName,SpecificLocation,AssignmentType,AssignmentNotes,ConditionStatus,InspectionDate,ConditionCheckType,Stage,ConditionNotes");
             
             // Add sample data
-            csv.AppendLine("\"Lenovo ThinkPad T14\",\"IT Equipment\",\"Laptops\",\"\",\"Business laptop with Intel Core i5\",\"Available\",\"Lenovo\",\"T14 Gen 2\",\"Intel Core i5, 16GB RAM, 512GB SSD\",\"LT001\",\"QR001\",\"1\",\"2024-01-15\",\"85000\",\"2024-01-15\",\"2027-01-15\",\"3 year manufacturer warranty\",\"60\",\"12\",\"12345\",\"Internal\",\"IT Station 1\",\"IT Department\",\"Room 101\",\"NewPurchase\",\"Initial assignment to IT staff\",\"Good\",\"New laptop in excellent condition\",\"2024-01-15\",\"2025-01-15\",\"Initial\",\"Import\"");
-            csv.AppendLine("\"HP LaserJet Pro\",\"IT Equipment\",\"Printers\",\"\",\"Monochrome laser printer\",\"Available\",\"HP\",\"LaserJet Pro M404dn\",\"Duplex printing, Network ready\",\"PR001\",\"QR002\",\"2\",\"2024-02-01\",\"25000\",\"2024-02-01\",\"2025-02-01\",\"1 year warranty\",\"84\",\"6\",\"NotAssigned\",\"Internal\",\"Admin Station\",\"Administration\",\"Print Room\",\"NewPurchase\",\"For general office use\",\"Good\",\"Printer working properly\",\"2024-02-01\",\"2024-08-01\",\"Initial\",\"Import\"");
-            csv.AppendLine("\"Office Chair Executive\",\"Furniture\",\"Chairs\",\"\",\"Ergonomic executive office chair\",\"Available\",\"Local Supplier\",\"EXE-001\",\"Leather, adjustable height, lumbar support\",\"CH001\",\"QR003\",\"3\",\"2024-03-01\",\"15000\",\"\",\"\",\"No warranty\",\"120\",\"24\",\"67890\",\"Internal\",\"Manager Station\",\"Finance\",\"Manager Office\",\"NewPurchase\",\"For department manager\",\"Good\",\"Chair in good working condition\",\"2024-03-01\",\"2025-03-01\",\"Initial\",\"Import\"");
+            csv.AppendLine("\"Lenovo ThinkPad T14\",\"IT Equipment\",\"Laptops\",\"\",\"Business laptop with Intel Core i5\",\"Available\",\"Lenovo\",\"T14 Gen 2\",\"Intel Core i5, 16GB RAM, 512GB SSD\",\"LT001\",\"QR001\",\"1\",\"2024-01-15\",\"85000\",\"2024-01-15\",\"2027-01-15\",\"3 year manufacturer warranty\",\"60\",\"12\",\"NotAssigned\",\"headoffice\",\"HQ\",\"INFORMATION COMM & TECH\",\"Store Room\",\"NewPurchase\",\"Initial assignment to IT staff\",\"GoodCondition\",\"2024-01-15\",\"Initial\",\"Import\",\"New laptop in excellent condition\"");
+            csv.AppendLine("\"HP LaserJet Pro\",\"IT Equipment\",\"Printers\",\"\",\"Monochrome laser printer\",\"Available\",\"HP\",\"LaserJet Pro M404dn\",\"Duplex printing, Network ready\",\"PR001\",\"QR002\",\"2\",\"2024-02-01\",\"25000\",\"2024-02-01\",\"2025-02-01\",\"1 year warranty\",\"84\",\"6\",\"NotAssigned\",\"headoffice\",\"HQ\",\"INFORMATION COMM & TECH\",\"Store Room\",\"NewPurchase\",\"Initial assignment to IT staff\",\"GoodCondition\",\"2024-02-01\",\"Initial\",\"Import\",\"Printer working properly\"");
+            csv.AppendLine("\"Office Chair Executive\",\"Furniture\",\"Chairs\",\"\",\"Ergonomic executive office chair\",\"Available\",\"Local Supplier\",\"EXE-001\",\"Leather, adjustable height, lumbar support\",\"CH001\",\"QR003\",\"3\",\"2024-03-01\",\"15000\",\"\",\"\",\"No warranty\",\"120\",\"24\",\"NotAssigned\",\"headoffice\",\"HQ\",\"INFORMATION COMM & TECH\",\"Store Room\",\"NewPurchase\",\"Initial assignment to IT staff\",\"GoodCondition\",\"2024-03-01\",\"Initial\",\"Import\",\"Chair in good working condition\"");
 
             // Add reference data as comments
             csv.AppendLine();
@@ -1392,20 +1393,35 @@ namespace MRIV.Controllers
             }
 
             csv.AppendLine();
-            csv.AppendLine("# Available Departments:");
+            csv.AppendLine("# Available Departments (Name or ID):");
             
             var departments = await _ktdacontext.Departments.OrderBy(d => d.DepartmentName).ToListAsync();
             foreach (var dept in departments)
             {
-                csv.AppendLine($"# - {dept.DepartmentName}");
+                csv.AppendLine($"# - {dept.DepartmentId} - {dept.DepartmentName}");
+            }
+            
+            csv.AppendLine();
+            csv.AppendLine("# Common Department Aliases:");
+            csv.AppendLine("# - IT Department, IT, ICT → INFORMATION COMM & TECH");
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Vendors:");
+           var allVendors = await _vendorService.GetVendorsAsync();
+
+           foreach (var vendor in allVendors.OrderBy(v => v.VendorID))
+            {
+                 csv.AppendLine($"# - {vendor.VendorID} - {vendor.Name}");
             }
 
             csv.AppendLine();
             csv.AppendLine("# Available Station Categories:");
-            csv.AppendLine("# - Internal");
-            csv.AppendLine("# - External");
-            csv.AppendLine("# - Mobile");
+            var stationcategories = _context.StationCategories;
+            foreach (var stationcategory in stationcategories) {
+                csv.AppendLine($"# - {stationcategory.Code}");
 
+            }
+           
             csv.AppendLine();
             csv.AppendLine("# Available Material Status Values:");
             csv.AppendLine("# - Available");
@@ -1424,11 +1440,11 @@ namespace MRIV.Controllers
 
             csv.AppendLine();
             csv.AppendLine("# Available Condition Status Values:");
-            csv.AppendLine("# - Excellent");
-            csv.AppendLine("# - Good");
-            csv.AppendLine("# - Fair");
-            csv.AppendLine("# - Poor");
-            csv.AppendLine("# - Damaged");
+            csv.AppendLine("# - GoodCondition");
+            csv.AppendLine("# - MinorDamage");
+            csv.AppendLine("# - MajorDamage");
+            csv.AppendLine("# - BeyondRepair");
+            csv.AppendLine("# - RequiresInspection");
 
             csv.AppendLine();
             csv.AppendLine("# Available Condition Check Types:");

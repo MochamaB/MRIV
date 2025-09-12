@@ -1,0 +1,6 @@
+'MaterialCondition' does not contain a definition for 'NextInspectionDate'
+Cannot implicitly convert type 'int?' to 'string'
+Cannot implicitly convert type 'string' to 'int?'
+The type or namespace name 'MaterialSubCategory' could not be found (are you missing a using directive or an assembly reference?)
+The type or namespace name 'MaterialSubCategory' could not be found (are you missing a using directive or an assembly reference?)
+The type or namespace name 'MaterialSubCategory' could not be found (are you missing a using directive or an assembly reference?)

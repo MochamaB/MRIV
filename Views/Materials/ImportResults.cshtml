@@ -16,29 +16,26 @@
                     {
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <div class="info-box bg-success">
-                                    <span class="info-box-icon"><i class="fas fa-check"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Successful</span>
-                                        <span class="info-box-number">@Model.SuccessCount</span>
+                                 <div class="card bg-success-subtle border-success">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success mb-1">@Model.SuccessCount</h4>
+                                    <p class="text-muted mb-0">Successfully Imported</p>
+                                </div>
+                            </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="card bg-danger-subtle border-danger">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-danger mb-1">@Model.FailureCount</h4>
+                                        <p class="text-muted mb-0">Failed</p>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-4">
-                                <div class="info-box bg-danger">
-                                    <span class="info-box-icon"><i class="fas fa-times"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Failed</span>
-                                        <span class="info-box-number">@Model.FailureCount</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="info-box bg-info">
-                                    <span class="info-box-icon"><i class="fas fa-list"></i></span>
-                                    <div class="info-box-content">
-                                        <span class="info-box-text">Total Processed</span>
-                                        <span class="info-box-number">@Model.TotalProcessed</span>
+                                <div class="card bg-info-subtle border-info">
+                                    <div class="card-body text-center">
+                                        <h4 class="text-info mb-1">@Model.TotalProcessed</h4>
+                                        <p class="text-muted mb-0">Total Processed</p>
                                     </div>
                                 </div>
                             </div>
