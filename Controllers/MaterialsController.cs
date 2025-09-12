@@ -12,6 +12,7 @@ using MRIV.ViewModels;
 using MRIV.Attributes;
 using MRIV.Extensions;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace MRIV.Controllers
 {
@@ -25,6 +26,7 @@ namespace MRIV.Controllers
         private readonly IEmployeeService _employeeService;
         private readonly IMediaService _mediaService;
         private readonly ILocationService _locationService;
+        private readonly IMaterialImportService _materialImportService;
 
         public MaterialsController(
             RequisitionContext context,
@@ -33,7 +35,8 @@ namespace MRIV.Controllers
             IEmployeeService employeeService,
             KtdaleaveContext ktdacontext,
             IMediaService mediaService,
-            ILocationService locationService)
+            ILocationService locationService,
+            IMaterialImportService materialImportService)
         {
             _context = context;
             _vendorService = vendorService;
@@ -42,6 +45,7 @@ namespace MRIV.Controllers
             _ktdacontext = ktdacontext;
             _mediaService = mediaService;
             _locationService = locationService;
+            _materialImportService = materialImportService;
 
         }
 
@@ -1322,6 +1326,132 @@ namespace MRIV.Controllers
         private bool MaterialExists(int id)
         {
             return _context.Materials.Any(e => e.Id == id);
+        }
+
+        // GET: Materials/Import
+        public IActionResult Import()
+        {
+            return View();
+        }
+
+        // POST: Materials/Import
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                ModelState.AddModelError("", "Please select a CSV file to upload.");
+                return View();
+            }
+
+            var result = await _materialImportService.ImportMaterialsAsync(file);
+            return View("ImportResults", result);
+        }
+
+        // GET: Materials/DownloadSample
+        public async Task<IActionResult> DownloadSample()
+        {
+            var csv = new StringBuilder();
+            
+            // Add header
+            csv.AppendLine("Name,CategoryName,SubcategoryName,Code,Description,Status,Manufacturer,ModelNumber,Specifications,AssetTag,QRCODE,VendorId,PurchaseDate,PurchasePrice,WarrantyStartDate,WarrantyEndDate,WarrantyTerms,ExpectedLifespanMonths,MaintenanceIntervalMonths,AssignedToPayrollNo,StationCategory,StationName,DepartmentName,SpecificLocation,AssignmentType,AssignmentNotes,ConditionStatus,ConditionNotes,InspectionDate,NextInspectionDate,ConditionCheckType,Stage");
+            
+            // Add sample data
+            csv.AppendLine("\"Lenovo ThinkPad T14\",\"IT Equipment\",\"Laptops\",\"\",\"Business laptop with Intel Core i5\",\"Available\",\"Lenovo\",\"T14 Gen 2\",\"Intel Core i5, 16GB RAM, 512GB SSD\",\"LT001\",\"QR001\",\"1\",\"2024-01-15\",\"85000\",\"2024-01-15\",\"2027-01-15\",\"3 year manufacturer warranty\",\"60\",\"12\",\"12345\",\"Internal\",\"IT Station 1\",\"IT Department\",\"Room 101\",\"NewPurchase\",\"Initial assignment to IT staff\",\"Good\",\"New laptop in excellent condition\",\"2024-01-15\",\"2025-01-15\",\"Initial\",\"Import\"");
+            csv.AppendLine("\"HP LaserJet Pro\",\"IT Equipment\",\"Printers\",\"\",\"Monochrome laser printer\",\"Available\",\"HP\",\"LaserJet Pro M404dn\",\"Duplex printing, Network ready\",\"PR001\",\"QR002\",\"2\",\"2024-02-01\",\"25000\",\"2024-02-01\",\"2025-02-01\",\"1 year warranty\",\"84\",\"6\",\"NotAssigned\",\"Internal\",\"Admin Station\",\"Administration\",\"Print Room\",\"NewPurchase\",\"For general office use\",\"Good\",\"Printer working properly\",\"2024-02-01\",\"2024-08-01\",\"Initial\",\"Import\"");
+            csv.AppendLine("\"Office Chair Executive\",\"Furniture\",\"Chairs\",\"\",\"Ergonomic executive office chair\",\"Available\",\"Local Supplier\",\"EXE-001\",\"Leather, adjustable height, lumbar support\",\"CH001\",\"QR003\",\"3\",\"2024-03-01\",\"15000\",\"\",\"\",\"No warranty\",\"120\",\"24\",\"67890\",\"Internal\",\"Manager Station\",\"Finance\",\"Manager Office\",\"NewPurchase\",\"For department manager\",\"Good\",\"Chair in good working condition\",\"2024-03-01\",\"2025-03-01\",\"Initial\",\"Import\"");
+
+            // Add reference data as comments
+            csv.AppendLine();
+            csv.AppendLine("# Available Material Categories:");
+            
+            var categories = await _context.MaterialCategories.OrderBy(c => c.Name).ToListAsync();
+            foreach (var category in categories)
+            {
+                csv.AppendLine($"# - {category.Name}");
+            }
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Material Subcategories by Category:");
+            
+            var subcategoriesGrouped = await _context.MaterialSubCategories
+                .Include(s => s.MaterialCategory)
+                .OrderBy(s => s.MaterialCategory.Name)
+                .ThenBy(s => s.Name)
+                .ToListAsync();
+
+            var groupedByCategory = subcategoriesGrouped.GroupBy(s => s.MaterialCategory.Name);
+            foreach (var group in groupedByCategory)
+            {
+                csv.AppendLine($"# {group.Key}:");
+                foreach (var subcategory in group)
+                {
+                    csv.AppendLine($"#   - {subcategory.Name}");
+                }
+            }
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Departments:");
+            
+            var departments = await _ktdacontext.Departments.OrderBy(d => d.DepartmentName).ToListAsync();
+            foreach (var dept in departments)
+            {
+                csv.AppendLine($"# - {dept.DepartmentName}");
+            }
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Station Categories:");
+            csv.AppendLine("# - Internal");
+            csv.AppendLine("# - External");
+            csv.AppendLine("# - Mobile");
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Material Status Values:");
+            csv.AppendLine("# - Available");
+            csv.AppendLine("# - InUse");
+            csv.AppendLine("# - UnderMaintenance");
+            csv.AppendLine("# - Damaged");
+            csv.AppendLine("# - Disposed");
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Assignment Types:");
+            csv.AppendLine("# - NewPurchase");
+            csv.AppendLine("# - Replacement");
+            csv.AppendLine("# - Upgrade");
+            csv.AppendLine("# - Transfer");
+            csv.AppendLine("# - Temporary");
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Condition Status Values:");
+            csv.AppendLine("# - Excellent");
+            csv.AppendLine("# - Good");
+            csv.AppendLine("# - Fair");
+            csv.AppendLine("# - Poor");
+            csv.AppendLine("# - Damaged");
+
+            csv.AppendLine();
+            csv.AppendLine("# Available Condition Check Types:");
+            csv.AppendLine("# - Initial");
+            csv.AppendLine("# - Routine");
+            csv.AppendLine("# - Maintenance");
+            csv.AppendLine("# - Incident");
+
+            csv.AppendLine();
+            csv.AppendLine("# Notes:");
+            csv.AppendLine("# - Name and CategoryName are required fields");
+            csv.AppendLine("# - Code will be auto-generated if left empty");
+            csv.AppendLine("# - Use 'NotAssigned' for AssignedToPayrollNo if no specific assignment");
+            csv.AppendLine("# - Dates should be in YYYY-MM-DD format");
+            csv.AppendLine("# - Prices should be numeric values without currency symbols");
+            csv.AppendLine("# - ConditionStatus defaults to 'Good' if not specified");
+            csv.AppendLine("# - ConditionCheckType defaults to 'Initial' for imports");
+            csv.AppendLine("# - Stage defaults to 'Import' for imported materials");
+
+            var fileName = $"Materials_Import_Template_{DateTime.Now:yyyyMMdd_HHmmss}.csv";
+            var bytes = Encoding.UTF8.GetBytes(csv.ToString());
+            
+            return File(bytes, "text/csv", fileName);
         }
     }
 }

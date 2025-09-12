@@ -1,0 +1,146 @@
+@{
+    ViewData["Title"] = "Import Materials";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">Import Materials from CSV</h3>
+                </div>
+                <div class="card-body">
+                    @if (!ViewData.ModelState.IsValid)
+                    {
+                        <div class="alert alert-danger">
+                            @foreach (var error in ViewData.ModelState.Values.SelectMany(v => v.Errors))
+                            {
+                                <p>@error.ErrorMessage</p>
+                            }
+                        </div>
+                    }
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <form asp-action="Import" method="post" enctype="multipart/form-data">
+                                <div class="form-group">
+                                    <label for="file" class="form-label">Select CSV File:</label>
+                                    <input type="file" class="form-control" id="file" name="file" accept=".csv" required>
+                                    <small class="form-text text-muted">
+                                        Please select a CSV file containing material data to import.
+                                    </small>
+                                </div>
+                                
+                                <div class="form-group mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-upload"></i> Import Materials
+                                    </button>
+                                    <a asp-action="Index" class="btn btn-secondary">
+                                        <i class="fas fa-arrow-left"></i> Back to Materials
+                                    </a>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">CSV Format Instructions</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p><strong>Required Columns:</strong></p>
+                                    <ul>
+                                        <li><code>Name</code> - Material name (required)</li>
+                                        <li><code>CategoryName</code> - Must match existing category (required)</li>
+                                    </ul>
+                                    
+                                    <p><strong>Optional Columns:</strong></p>
+                                    <ul>
+                                        <li><code>SubcategoryName</code> - Must match existing subcategory</li>
+                                        <li><code>Code</code> - Auto-generated if empty</li>
+                                        <li><code>Description</code> - Material description</li>
+                                        <li><code>Status</code> - Available, InUse, UnderMaintenance, Damaged, Disposed</li>
+                                        <li><code>Manufacturer</code> - Manufacturer name</li>
+                                        <li><code>ModelNumber</code> - Model/part number</li>
+                                        <li><code>AssignedToPayrollNo</code> - Employee payroll number or "NotAssigned"</li>
+                                        <li><code>DepartmentName</code> - Must match existing department</li>
+                                        <li><code>AssignmentType</code> - NewPurchase, Replacement, Upgrade, Transfer, Temporary</li>
+                                    </ul>
+                                    
+                                    <div class="mt-3">
+                                        <a asp-action="DownloadSample" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-download"></i> Download Sample CSV
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="card-title">Sample CSV Format</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Name</th>
+                                                    <th>CategoryName</th>
+                                                    <th>SubcategoryName</th>
+                                                    <th>Description</th>
+                                                    <th>Status</th>
+                                                    <th>AssignedToPayrollNo</th>
+                                                    <th>DepartmentName</th>
+                                                    <th>AssignmentType</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr>
+                                                    <td>Lenovo ThinkPad T14</td>
+                                                    <td>IT Equipment</td>
+                                                    <td>Laptops</td>
+                                                    <td>Business laptop with Intel Core i5</td>
+                                                    <td>Available</td>
+                                                    <td>12345</td>
+                                                    <td>IT Department</td>
+                                                    <td>NewPurchase</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>HP LaserJet Pro</td>
+                                                    <td>IT Equipment</td>
+                                                    <td>Printers</td>
+                                                    <td>Monochrome laser printer</td>
+                                                    <td>Available</td>
+                                                    <td>NotAssigned</td>
+                                                    <td>Administration</td>
+                                                    <td>NewPurchase</td>
+                                                </tr>
+                                                <tr>
+                                                    <td>Office Chair Executive</td>
+                                                    <td>Furniture</td>
+                                                    <td>Chairs</td>
+                                                    <td>Ergonomic executive office chair</td>
+                                                    <td>Available</td>
+                                                    <td>67890</td>
+                                                    <td>Finance</td>
+                                                    <td>NewPurchase</td>
+                                                </tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <small class="text-muted">
+                                        <strong>Note:</strong> The sample CSV includes all available columns with reference data for your convenience.
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

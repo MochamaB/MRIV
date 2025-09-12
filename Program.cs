@@ -58,7 +58,11 @@ builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<INotificationManager, NotificationManager>();
 builder.Services.AddScoped<IGuideService, GuideService>();
-builder.Services.AddScoped<IMaterialImportService, MaterialImportService>();
+builder.Services.AddScoped<IMaterialImportService>(provider =>
+    new MaterialImportService(
+        provider.GetRequiredService<RequisitionContext>(),
+        provider.GetRequiredService<KtdaleaveContext>()
+    ));
 
 // Report services
 builder.Services.AddScoped<IRequisitionReportService, RequisitionReportService>();

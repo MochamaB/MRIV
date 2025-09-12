@@ -1,0 +1,122 @@
+@model MRIV.ViewModels.MaterialImportViewModel
+
+@{
+    ViewData["Title"] = "Material Import Results";
+}
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">@Model.ImportType Import Results</h3>
+                </div>
+                <div class="card-body">
+                    @if (Model.HasResults)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="info-box bg-success">
+                                    <span class="info-box-icon"><i class="fas fa-check"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Successful</span>
+                                        <span class="info-box-number">@Model.SuccessCount</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box bg-danger">
+                                    <span class="info-box-icon"><i class="fas fa-times"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Failed</span>
+                                        <span class="info-box-number">@Model.FailureCount</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="info-box bg-info">
+                                    <span class="info-box-icon"><i class="fas fa-list"></i></span>
+                                    <div class="info-box-content">
+                                        <span class="info-box-text">Total Processed</span>
+                                        <span class="info-box-number">@Model.TotalProcessed</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-striped table-hover">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>Row</th>
+                                        <th>Status</th>
+                                        <th>Item Name</th>
+                                        <th>Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var result in Model.Results)
+                                    {
+                                        <tr class="@(result.IsSuccess ? "table-success" : "table-danger")">
+                                            <td>@result.RowNumber</td>
+                                            <td>
+                                                @if (result.IsSuccess)
+                                                {
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check"></i> Success
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times"></i> Failed
+                                                    </span>
+                                                }
+                                            </td>
+                                            <td>@(result.ItemName ?? "N/A")</td>
+                                            <td>
+                                                @if (result.IsSuccess)
+                                                {
+                                                    <span class="text-success">@(result.Message ?? "Imported successfully")</span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-danger">@result.ErrorMessage</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            No results to display. Please try importing a valid CSV file.
+                        </div>
+                    }
+
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <a asp-action="Import" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Import Another File
+                            </a>
+                            <a asp-action="Index" class="btn btn-secondary">
+                                <i class="fas fa-list"></i> Back to Materials
+                            </a>
+                        </div>
+                        <div class="col-md-6 text-end">
+                            <a asp-action="DownloadSample" class="btn btn-outline-info">
+                                <i class="fas fa-download"></i> Download Sample CSV
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

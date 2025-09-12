@@ -1,35 +1,37 @@
 # Login Enhancement Refactoring Plan
-## Dual-Permission Authorization Architecture
+## Performance-Focused User Profile Caching
 
 ### Document Information
-- **Version**: 1.0
+- **Version**: 2.0
 - **Date**: December 2024
-- **Purpose**: Complete refactoring plan for login enhancement with dual-permission model
-- **Scope**: System-wide authorization architecture transformation
+- **Purpose**: Login enhancement implementation plan focused on performance improvements
+- **Scope**: User profile caching and session enhancement (without complex permission system)
 
 ---
 
 ## Executive Summary
 
 ### Current Problems
-1. **Performance Issues**: Every request requires cross-context database calls for authorization
-2. **Inefficient Query Pattern**: `_context.Requisitions.AsQueryable()` loads all data before filtering
-3. **Mixed Authorization Logic**: Display and action permissions are conflated
-4. **Repeated Cross-Context Calls**: Employee/department/station lookups on every request
-5. **Session Under-utilization**: Only storing PayrollNo instead of comprehensive user context
+1. **Performance Issues**: Every request requires cross-context database calls for user context
+2. **Inefficient Query Pattern**: Repeated employee lookups across all controllers
+3. **Session Under-utilization**: Only storing PayrollNo instead of comprehensive user context  
+4. **Repeated Cross-Context Calls**: Employee/department/station/rolegroup lookups on every request
+5. **No User Context Caching**: Same user data calculated multiple times per session
 
 ### Solution Overview
-Transform from **reactive runtime authorization** to **proactive login-time authorization** with a dual-permission model that separates:
-- **Display Permissions**: What users can see (restrictive)
-- **Reference Data Permissions**: What users can select from (broader)
-- **Action Permissions**: What users can do (contextual)
+Transform from **reactive runtime user context loading** to **proactive login-time user profile caching**:
+- **Login-Time Profile Building**: Calculate comprehensive user profile once at login
+- **Session-Based Caching**: Store rich user context in session for fast access
+- **Cross-Context Data Integration**: Pre-calculate department names, station names, role information
+- **Existing RoleGroup Integration**: Leverage current VisibilityAuthorizeService with cached data
 
 ### Expected Benefits
-- **90%+ reduction** in authorization-related database calls
-- **Faster page loads** through cached permission contexts
-- **Clearer security model** with separated concerns
-- **Operational flexibility** for complex workflows
+- **90%+ reduction** in user context database calls per request
+- **Faster page loads** through cached user profile data
+- **Improved user experience** with richer session context
+- **Foundation for future enhancements** (action permissions, advanced features)
 - **Better scalability** with reduced database load
+- **Simplified controller code** with cached user context
 
 ---
 
@@ -39,33 +41,57 @@ Transform from **reactive runtime authorization** to **proactive login-time auth
 
 #### Current Architecture
 ```
-Request → Controller → Load All Data → Apply Runtime Authorization → Filter → Return Results
-                    ↓
-             Cross-Context DB Calls (KtdaleaveContext + RequisitionContext)
+Every Request:
+├── Get PayrollNo from session
+├── Query EmployeeBkp for user details  
+├── Query RoleGroupMembers for user's role groups
+├── Query RoleGroups for permission flags
+├── Query Department for department name
+├── Query Station for station name
+└── Apply VisibilityAuthorizeService → Return Results
+
+Database Calls: 5-6 per request
 ```
 
 #### New Architecture  
 ```
-Login → Calculate All Permissions → Cache in Session
-Request → Controller → Use Cached Permissions → Direct Filtered Query → Return Results
+Login Time (Once):
+├── Calculate UserProfile from all contexts
+├── Cache in Session + Memory Cache
+
+Every Request:
+├── Get UserProfile from session (0 DB calls)
+├── Use VisibilityAuthorizeService with cached data
+└── Return Results
+
+Database Calls: 0 for user context
 ```
 
-### Dual-Permission Model
+### User Profile Caching Model
 
-#### 1. Display Permissions (Restrictive)
-- **Purpose**: Control what data users can view in lists, reports, dashboards
-- **Scope**: User's direct access scope based on role and location
-- **Usage**: Index pages, search results, reports, dashboards
+#### UserProfile Structure (In-Memory Model, Not Database Table)
+```
+UserProfile:
+├── BasicInfo: { PayrollNo, Name, Email, Designation, Department, Station }
+├── RoleInformation: { SystemRole, RoleGroups[], IsAdmin }
+├── LocationAccess: { 
+│   ├── HomeDepartment: { Id, Code, Name }
+│   ├── HomeStation: { Id, Name }
+│   ├── AccessibleDepartmentIds[]
+│   └── AccessibleStationIds[]
+│   }
+├── VisibilityScope: {
+│   ├── CanAccessAcrossStations (from RoleGroups)
+│   ├── CanAccessAcrossDepartments (from RoleGroups)
+│   └── PermissionLevel (Default/Manager/Admin)
+│   }
+└── CacheInfo: { CreatedAt, ExpiresAt, LastRefresh, Version }
+```
 
-#### 2. Reference Data Permissions (Broader)
-- **Purpose**: Control what options users can select from in forms
-- **Scope**: Broader than display permissions to enable operational flexibility
-- **Usage**: Dropdown lists, form selections, new record creation
-
-#### 3. Action Permissions (Contextual)
-- **Purpose**: Control what actions users can perform on specific entities
-- **Scope**: Context-sensitive based on user role, entity state, and business rules
-- **Usage**: Approve, reject, dispatch, receive, edit, delete operations
+#### Integration with Existing VisibilityAuthorizeService
+- **No changes to VisibilityAuthorizeService logic**
+- **Enhanced with cached data instead of runtime lookups**
+- **Same authorization rules, better performance**
 
 ---
 
@@ -180,21 +206,31 @@ public interface IUserProfileCacheService
 }
 ```
 
-#### Database Changes
-```sql
--- New table for persistent profile caching
-CREATE TABLE UserProfileCache (
-    Id uniqueidentifier PRIMARY KEY,
-    PayrollNo nvarchar(50) NOT NULL,
-    ProfileData nvarchar(MAX) NOT NULL, -- JSON serialized profile
-    CreatedAt datetime2 NOT NULL,
-    ExpiresAt datetime2 NOT NULL,
-    LastRefresh datetime2 NOT NULL,
-    Version int NOT NULL DEFAULT 1
-);
+#### Caching Implementation
+```csharp
+// UserProfile is an in-memory model only - NO database table created
+// Caching strategy:
+// 1. Session storage: Core profile data for current user session
+// 2. Memory cache: Shared profiles across requests (IMemoryCache)
+// 3. No persistent database caching - profiles rebuilt from source data as needed
 
-CREATE INDEX IX_UserProfileCache_PayrollNo ON UserProfileCache (PayrollNo);
-CREATE INDEX IX_UserProfileCache_ExpiresAt ON UserProfileCache (ExpiresAt);
+public class UserProfileCacheService : IUserProfileCacheService
+{
+    private readonly IMemoryCache _memoryCache;
+    private readonly IHttpContextAccessor _httpContext;
+    
+    public async Task SetProfileAsync(UserProfile profile)
+    {
+        // Session storage for current user
+        var session = _httpContext.HttpContext.Session;
+        session.SetString($"UserProfile_{profile.BasicInfo.PayrollNo}", 
+                         JsonSerializer.Serialize(profile));
+        
+        // Memory cache for cross-request sharing
+        _memoryCache.Set($"UserProfile_{profile.BasicInfo.PayrollNo}", 
+                        profile, TimeSpan.FromMinutes(30));
+    }
+}
 ```
 
 ### 1.5 Backward Compatibility Strategy

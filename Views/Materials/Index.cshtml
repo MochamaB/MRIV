@@ -22,9 +22,11 @@
                             </div>
 
                             @await Html.PartialAsync("_FilterToggleButton")
-
-                            <a href="@Url.Action("Create", "Materials")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
+                             <a href="@Url.Action("Create", "Materials")" class="btn btn-primary btn-sm d-flex align-items-center py-2">
                                 <i class="ri-add-line align-bottom me-1"></i> New Material
+                            </a>
+                            <a href="@Url.Action("Import", "Materials")" class="btn btn-outline-primary btn-sm d-flex align-items-center py-2 me-2">
+                                <i class="ri-upload-line align-bottom me-1"></i> Import Materials
                             </a>
                         </div>
                     </div>

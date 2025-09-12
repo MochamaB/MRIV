@@ -9,15 +9,18 @@ namespace MRIV.Services
     {
         Task<MaterialImportViewModel> ImportCategoriesAsync(IFormFile file);
         Task<MaterialImportViewModel> ImportSubcategoriesAsync(IFormFile file);
+        Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file);
     }
 
     public class MaterialImportService : IMaterialImportService
     {
         private readonly RequisitionContext _context;
+        private readonly KtdaleaveContext _ktdaContext;
 
-        public MaterialImportService(RequisitionContext context)
+        public MaterialImportService(RequisitionContext context, KtdaleaveContext ktdaContext)
         {
             _context = context;
+            _ktdaContext = ktdaContext;
         }
 
         public async Task<MaterialImportViewModel> ImportCategoriesAsync(IFormFile file)
@@ -389,6 +392,235 @@ namespace MRIV.Services
             }
 
             return subcategories;
+        }
+
+        public async Task<MaterialImportViewModel> ImportMaterialsAsync(IFormFile file)
+        {
+            var result = new MaterialImportViewModel
+            {
+                ImportType = "Material",
+                Results = new List<MaterialImportResult>()
+            };
+
+            if (file == null || file.Length == 0)
+            {
+                result.Results.Add(new MaterialImportResult
+                {
+                    RowNumber = 0,
+                    IsSuccess = false,
+                    ErrorMessage = "No file uploaded or file is empty"
+                });
+                result.HasResults = true;
+                return result;
+            }
+
+            try
+            {
+                var materials = await ParseMaterialsFromFileAsync(file);
+                var rowNumber = 1; // Start from 1 (assuming header row)
+
+                foreach (var materialRow in materials)
+                {
+                    rowNumber++;
+                    try
+                    {
+                        // For now, just validate the data structure
+                        // TODO: Implement actual material creation logic
+                        if (string.IsNullOrWhiteSpace(materialRow.Name))
+                        {
+                            result.Results.Add(new MaterialImportResult
+                            {
+                                RowNumber = rowNumber,
+                                IsSuccess = false,
+                                ErrorMessage = "Material name is required"
+                            });
+                            continue;
+                        }
+
+                        if (string.IsNullOrWhiteSpace(materialRow.CategoryName))
+                        {
+                            result.Results.Add(new MaterialImportResult
+                            {
+                                RowNumber = rowNumber,
+                                IsSuccess = false,
+                                ErrorMessage = "Category name is required"
+                            });
+                            continue;
+                        }
+
+                        // For now, just mark as successful for testing
+                        result.Results.Add(new MaterialImportResult
+                        {
+                            RowNumber = rowNumber,
+                            IsSuccess = true,
+                            ItemName = materialRow.Name,
+                            Message = "Material validated successfully (not yet saved to database)"
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        result.Results.Add(new MaterialImportResult
+                        {
+                            RowNumber = rowNumber,
+                            IsSuccess = false,
+                            ErrorMessage = $"Error processing row: {ex.Message}"
+                        });
+                    }
+                }
+
+                result.HasResults = true;
+                result.TotalProcessed = result.Results.Count;
+                result.SuccessCount = result.Results.Count(r => r.IsSuccess);
+                result.FailureCount = result.Results.Count(r => !r.IsSuccess);
+            }
+            catch (Exception ex)
+            {
+                result.Results.Add(new MaterialImportResult
+                {
+                    RowNumber = 0,
+                    IsSuccess = false,
+                    ErrorMessage = $"File processing error: {ex.Message}"
+                });
+                result.HasResults = true;
+            }
+
+            return result;
+        }
+
+        private async Task<List<MaterialImportRow>> ParseMaterialsFromFileAsync(IFormFile file)
+        {
+            var materials = new List<MaterialImportRow>();
+
+            using (var reader = new StreamReader(file.OpenReadStream()))
+            {
+                var headerLine = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(headerLine))
+                {
+                    throw new InvalidOperationException("CSV file appears to be empty or invalid");
+                }
+
+                var headers = headerLine.Split(',').Select(h => h.Trim().Trim('"')).ToArray();
+
+                string line;
+                while ((line = await reader.ReadLineAsync()) != null)
+                {
+                    if (string.IsNullOrWhiteSpace(line)) continue;
+
+                    var values = line.Split(',').Select(v => v.Trim().Trim('"')).ToArray();
+                    
+                    var material = new MaterialImportRow();
+
+                    for (int i = 0; i < headers.Length && i < values.Length; i++)
+                    {
+                        var header = headers[i];
+                        var value = values[i];
+
+                        switch (header.ToLower())
+                        {
+                            case "name":
+                                material.Name = value;
+                                break;
+                            case "categoryname":
+                                material.CategoryName = value;
+                                break;
+                            case "subcategoryname":
+                                material.SubcategoryName = value;
+                                break;
+                            case "code":
+                                material.Code = value;
+                                break;
+                            case "description":
+                                material.Description = value;
+                                break;
+                            case "status":
+                                material.Status = value;
+                                break;
+                            case "manufacturer":
+                                material.Manufacturer = value;
+                                break;
+                            case "modelnumber":
+                                material.ModelNumber = value;
+                                break;
+                            case "specifications":
+                                material.Specifications = value;
+                                break;
+                            case "assettag":
+                                material.AssetTag = value;
+                                break;
+                            case "qrcode":
+                                material.QRCODE = value;
+                                break;
+                            case "vendorid":
+                                material.VendorId = value;
+                                break;
+                            case "purchasedate":
+                                material.PurchaseDate = value;
+                                break;
+                            case "purchaseprice":
+                                material.PurchasePrice = value;
+                                break;
+                            case "warrantystardate":
+                                material.WarrantyStartDate = value;
+                                break;
+                            case "warrantyenddate":
+                                material.WarrantyEndDate = value;
+                                break;
+                            case "warrantyterms":
+                                material.WarrantyTerms = value;
+                                break;
+                            case "expectedlifespanmonths":
+                                material.ExpectedLifespanMonths = value;
+                                break;
+                            case "maintenanceintervalmonths":
+                                material.MaintenanceIntervalMonths = value;
+                                break;
+                            case "assignedtopayrollno":
+                                material.AssignedToPayrollNo = value;
+                                break;
+                            case "stationcategory":
+                                material.StationCategory = value;
+                                break;
+                            case "stationname":
+                                material.StationName = value;
+                                break;
+                            case "departmentname":
+                                material.DepartmentName = value;
+                                break;
+                            case "specificlocation":
+                                material.SpecificLocation = value;
+                                break;
+                            case "assignmenttype":
+                                material.AssignmentType = value;
+                                break;
+                            case "assignmentnotes":
+                                material.AssignmentNotes = value;
+                                break;
+                            case "conditionstatus":
+                                material.ConditionStatus = value;
+                                break;
+                            case "conditionnotes":
+                                material.ConditionNotes = value;
+                                break;
+                            case "inspectiondate":
+                                material.InspectionDate = value;
+                                break;
+                            case "nextinspectiondate":
+                                material.NextInspectionDate = value;
+                                break;
+                            case "conditionchecktype":
+                                material.ConditionCheckType = value;
+                                break;
+                            case "stage":
+                                material.Stage = value;
+                                break;
+                        }
+                    }
+
+                    materials.Add(material);
+                }
+            }
+
+            return materials;
         }
     }
 }
