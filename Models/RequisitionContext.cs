@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using MRIV.Enums;
+using MRIV.Models.Views;
 
 namespace MRIV.Models;
 
@@ -48,6 +49,11 @@ public partial class RequisitionContext : DbContext
     // Authorization entities
     public DbSet<RoleGroup> RoleGroups { get; set; }
     public DbSet<RoleGroupMember> RoleGroupMembers { get; set; }
+
+    // Database views
+    public DbSet<EmployeeDetailsView> EmployeeDetailsViews { get; set; }
+    public DbSet<StationDetailsView> StationDetailsViews { get; set; }
+    public DbSet<LocationHierarchyView> LocationHierarchyViews { get; set; }
 
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -230,6 +236,26 @@ public partial class RequisitionContext : DbContext
           FilterCriteria = null // No special filtering for vendors
       }
   );
+
+        // Configure database views as read-only entities
+        modelBuilder.Entity<EmployeeDetailsView>(entity =>
+        {
+            entity.HasKey(e => e.PayrollNo);
+            entity.ToView("vw_EmployeeDetails");
+            entity.Property(e => e.PayrollNo).IsRequired();
+        });
+
+        modelBuilder.Entity<StationDetailsView>(entity =>
+        {
+            entity.HasKey(e => e.StationId);
+            entity.ToView("vw_StationDetails");
+        });
+
+        modelBuilder.Entity<LocationHierarchyView>(entity =>
+        {
+            entity.HasNoKey(); // Composite key scenario
+            entity.ToView("vw_LocationHierarchy");
+        });
     }
 
     partial void OnModelCreatingPartial(ModelBuilder modelBuilder);

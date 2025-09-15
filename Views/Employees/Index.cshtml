@@ -4,6 +4,7 @@
 @model IEnumerable<MRIV.ViewModels.EmployeeViewModel>
 
 @{
+
     ViewData["Title"] = "Employees";
     var departmentNames = ViewBag.DepartmentNames as Dictionary<string, string>;
     var stationNames = ViewBag.StationNames as Dictionary<string, string>;
@@ -13,7 +14,9 @@
     var currentSortField = ViewBag.SortField;
     var currentSortOrder = ViewBag.SortOrder;
     var searchTerm = ViewBag.SearchTerm as string;
-    
+
+    var counter = 1;
+
     // Get filter values from query string
     var departmentFilter = ViewBag.DepartmentFilter as string ?? Context.Request.Query["Department"].ToString();
     var stationFilter = ViewBag.StationFilter as string ?? Context.Request.Query["Station"].ToString();
@@ -43,6 +46,20 @@
             
         return currentSortOrder == "asc" ? "mdi mdi-sort-ascending text-success" : "mdi mdi-sort-descending text-danger";
     };
+    var roleBadges = new Dictionary<string, (string Label, string Css)>(StringComparer.OrdinalIgnoreCase)
+    {
+        { "Deactivated", ("Deactivated", "badge bg-danger-subtle text-danger") },
+        { "Admin", ("Admin", "badge bg-primary-subtle text-primary") },
+        { "HR", ("HR", "badge bg-info-subtle text-info") },
+        { "Hod", ("HOD", "badge bg-warning-subtle text-warning") },
+        { "Supervisor", ("Supervisor", "badge bg-secondary-subtle text-secondary") },
+        { "User", ("User", "badge bg-dark-subtle text-dark") },
+        { "2_step_mgrs", ("2 Step Managers", "badge bg-success-subtle text-success") },
+        { "2_step_secs", ("2 Step Secretaries", "badge bg-success-subtle text-success") },
+        { "FieldUser", ("Field User", "badge bg-primary-subtle text-primary") },
+        { "FieldSupervisor", ("Field Supervisor", "badge bg-secondary-subtle text-secondary") }
+    };
+
 }
 
 <div class="row">
@@ -78,23 +95,23 @@
                     <table class="table table-bordered align-middle mb-0 table-hover">
                         <thead>
                             <tr class="table-light">
-                                <th>#</th>
-                                <th>
-                                    <a href="@GetSortUrl("PayrollNo")" class="text-primary">
-                                        Payroll No
-                                        <i class="@GetSortIcon("PayrollNo") ms-1"></i>
-                                    </a>
-                                </th>
+                                <th></th>
                                 <th>
                                     <a href="@GetSortUrl("Fullname")" class="d-flex align-items-center text-primary">
-                                        Full Name
+                                        Employee
                                         <i class="@GetSortIcon("Fullname") ms-1"></i>
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="@GetSortUrl("Designation")" class="d-flex align-items-center text-primary">
+                                    <a href="@GetSortUrl("StationCategory")" class="d-flex align-items-center text-primary">
                                         Designation
-                                        <i class="@GetSortIcon("Designation") ms-1"></i>
+                                        <i class="@GetSortIcon("StationCategory") ms-1"></i>
+                                    </a>
+                                </th>
+                                <th>
+                                    <a href="@GetSortUrl("Station")" class="d-flex align-items-center text-primary">
+                                        Station
+                                        <i class="@GetSortIcon("Station") ms-1"></i>
                                     </a>
                                 </th>
                                 <th>
@@ -104,9 +121,9 @@
                                     </a>
                                 </th>
                                 <th>
-                                    <a href="@GetSortUrl("Station")" class="d-flex align-items-center text-primary">
-                                        Station
-                                        <i class="@GetSortIcon("Station") ms-1"></i>
+                                    <a href="@GetSortUrl("PayrollNo")" class="text-primary">
+                                        Payroll No
+                                        <i class="@GetSortIcon("PayrollNo") ms-1"></i>
                                     </a>
                                 </th>
                                 <th>
@@ -121,35 +138,57 @@
                         <tbody>
                             @if (Model.Any())
                             {
-                                int rowNumber = startNumber;
                                 foreach (var employee in Model)
                                 {
+
                                     <tr class="clickable-row @(employee.EmpisCurrActive != 0 ? "text-muted" : "")" data-href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })">
-                                        <td>@(rowNumber++)</td>
-                                        <td><a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="fw-bold @(employee.EmpisCurrActive != 0 ? "text-muted" : "")">
-                                        @employee.PayrollNo</a></td>
-                                        <td>@employee.FullName</td>
-                                        <td>@(string.IsNullOrEmpty(employee.Designation) ? "-" : employee.Designation)</td>
+                                        <!-- Employee Column with Profile Initials, Name and Email -->
+                                        <td>@counter</td>
                                         <td>
-                                            @if (!string.IsNullOrEmpty(employee.Department) && !string.IsNullOrEmpty(employee.DepartmentName))
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    <span class="text-white fw-bold">@employee.Initials</span>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-bold">
+                                                        <a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="text-decoration-none @(employee.EmpisCurrActive != 0 ? "text-muted" : "text-dark")">
+                                                            @employee.FullName
+                                                        </a>
+                                                    </div>
+                                                    @if (!string.IsNullOrEmpty(employee.EmailAddress))
+                                                    {
+                                                        <small class="text-muted">@employee.EmailAddress</small>
+                                                    }
+                                                   
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(employee.Designation))
                                             {
-                                                <div class="font-weight-bold pb-2">@employee.DepartmentName</div>
-                                                <small class="text-muted">@employee.Department</small>
+                                                <div><small class="text-success">@employee.Designation</small></div>
                                             }
-                                            else if (!string.IsNullOrEmpty(employee.Department))
+                                        </td>
+                                        
+                                       
+                                   
+                                        <!-- Station Column -->
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(employee.StationCategoryName))
                                             {
-                                                <span>@employee.Department</span>
+                                                <div class="fw-medium">@employee.StationCategoryName</div>
                                             }
                                             else
                                             {
                                                 <span class="text-muted">-</span>
                                             }
-                                        </td>
-                                        <td>
-                                            @if (!string.IsNullOrEmpty(employee.Station) && !string.IsNullOrEmpty(employee.StationName))
+                                            @if (!string.IsNullOrEmpty(employee.StationName))
                                             {
-                                                <div class="font-weight-bold pb-2">@employee.StationName</div>
-                                                <small class="text-muted">@employee.Station</small>
+                                               <small class="text-muted">@employee.StationName</small>
+                                                @if (!string.IsNullOrEmpty(employee.Station) && employee.Station != employee.StationName)
+                                                {
+                                                    <small class="text-muted">(@employee.Station)</small>
+                                                }
                                             }
                                             else if (!string.IsNullOrEmpty(employee.Station))
                                             {
@@ -160,29 +199,73 @@
                                                 <span class="text-muted">-</span>
                                             }
                                         </td>
+                                        
+                                        <!-- Department Column -->
                                         <td>
-                                            @if (!string.IsNullOrEmpty(employee.Role))
+                                            @if (!string.IsNullOrEmpty(employee.DepartmentName))
                                             {
-                                                <span class="text-primary @(employee.EmpisCurrActive != 0 ? "text-muted" : "")">@employee.Role</span>
+                                                <div class="fw-medium">@employee.DepartmentName</div>
+                                                @if (!string.IsNullOrEmpty(employee.Department) && employee.Department != employee.DepartmentName)
+                                                {
+                                                    <small class="text-muted">(@employee.Department)</small>
+                                                }
                                             }
-                                            else
-                                            {
-                                                <span class="text-muted">-</span>
-                                            }
+                                            
                                         </td>
+                                        
+                                        <!-- Payroll No Column -->
                                         <td>
-                                            <div class="d-flex gap-2 align-items-center">
-                                                <a href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="btn btn-sm btn-soft-primary"><i class="mdi mdi-eye-outline"></i></a>
-                                                <a href="@Url.Action("Edit", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })" class="btn btn-sm btn-soft-warning"><i class="mdi mdi-pencil-outline"></i></a>
+                                            <span class="fw-bold text-primary @(employee.EmpisCurrActive != 0 ? "text-muted" : "")">
+                                                @employee.PayrollNo
+                                            </span>
+                                        </td>
+                                        
+                                        <!-- Role Column -->
+                                        <td>
+                                            @{
+                                                var role = !string.IsNullOrEmpty(employee.Role) && roleBadges.ContainsKey(employee.Role)
+                                                ? roleBadges[employee.Role]
+                                                : ("Unknown", "badge bg-light text-muted");
+                                            }
+                                            <span class="@role.Item2">@role.Item1</span>
+                                        </td>
+                                        
+                                        <!-- Actions Dropdown -->
+                                        <td>
+                                            <div class="dropdown">
+                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                                    <i class="mdi mdi-dots-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li>
+                                                        <a class="dropdown-item" href="@Url.Action("Details", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })">
+                                                            <i class="mdi mdi-eye-outline me-2"></i>View Details
+                                                        </a>
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item" href="@Url.Action("Edit", "Employees", new { id = employee.PayrollNo, rollNo = employee.RollNo })">
+                                                            <i class="mdi mdi-pencil-outline me-2"></i>Edit
+                                                        </a>
+                                                    </li>
+                                                    <li><hr class="dropdown-divider"></li>
+                                                    <li>
+                                                        <span class="dropdown-item-text">
+                                                            <small class="text-muted">
+                                                                Status: <span class="badge @employee.StatusClass">@employee.StatusBadge</span>
+                                                            </small>
+                                                        </span>
+                                                    </li>
+                                                </ul>
                                             </div>
                                         </td>
                                     </tr>
+                                    counter++;
                                 }
                             }
                             else
                             {
                                 <tr>
-                                    <td colspan="8" class="text-center">
+                                    <td colspan="7" class="text-center">
                                         @if (!string.IsNullOrEmpty(searchTerm) || !string.IsNullOrEmpty(departmentFilter) || !string.IsNullOrEmpty(stationFilter) || !string.IsNullOrEmpty(roleFilter))
                                         {
                                             <div class="p-3">
@@ -310,6 +393,28 @@
             font-size: 85%;
             font-weight: 500;
             padding: 0.35em 0.65em;
+        }
+        
+        .avatar-sm {
+            width: 40px;
+            height: 40px;
+            font-size: 14px;
+        }
+        
+        .bg-info-subtle {
+            background-color: rgba(13, 202, 240, 0.1) !important;
+        }
+        
+        .bg-success-subtle {
+            background-color: rgba(25, 135, 84, 0.1) !important;
+        }
+        
+        .text-info {
+            color: #0dcaf0 !important;
+        }
+        
+        .text-success {
+            color: #198754 !important;
         }
     </style>
 }

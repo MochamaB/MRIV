@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using MRIV.Attributes;
 using MRIV.Extensions;
 using MRIV.Models;
+using MRIV.Models.Views;
 using MRIV.Services;
 using MRIV.ViewModels;
 using System;
@@ -16,17 +17,20 @@ namespace MRIV.Controllers
     [CustomAuthorize]
     public class EmployeesController : Controller
     {
+        private readonly RequisitionContext _context;
         private readonly KtdaleaveContext _ktdaContext;
         private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly ILogger<EmployeesController> _logger;
 
         public EmployeesController(
+            RequisitionContext context,
             KtdaleaveContext ktdaContext,
             IEmployeeService employeeService,
             IDepartmentService departmentService,
             ILogger<EmployeesController> logger)
         {
+            _context = context;
             _ktdaContext = ktdaContext;
             _employeeService = employeeService;
             _departmentService = departmentService;
@@ -38,128 +42,50 @@ namespace MRIV.Controllers
         {
             // Set page size
             int pageSize = 50;
-            
+
             // Ensure valid pagination parameters
             page = page < 1 ? 1 : page;
-            
-            // Start with base query for employees - include all employees (both active and inactive)
-            // Use AsNoTracking for read-only operations to improve performance
-            var employeesQuery = _ktdaContext.EmployeeBkps
+
+            // Start with the optimized view query - single source with all resolved names
+            var employeesQuery = _context.EmployeeDetailsViews
                 .AsNoTracking()
                 .AsQueryable();
-                
+
             // Get filter values from request query string
             var filters = new Dictionary<string, string>();
             foreach (var key in Request.Query.Keys.Where(k => k != "page" && k != "pageSize" && k != "sortField" && k != "sortOrder" && k != "searchTerm"))
             {
-                // Skip if the value is null or empty
                 if (!string.IsNullOrEmpty(Request.Query[key]))
                 {
                     filters[key] = Request.Query[key];
                 }
             }
-            
-            // Get department names for filters - use AsNoTracking for better performance
-            var departmentsList = await _ktdaContext.Departments
-                .AsNoTracking()
-                .Select(d => new { Id = d.DepartmentId.ToString(), Name = d.DepartmentName })
-                .ToListAsync();
-            var allDepartments = departmentsList
-                .GroupBy(d => d.Id)
-                .ToDictionary(g => g.Key, g => g.First().Name);
-            
-            // Get station names for filters - use AsNoTracking for better performance
-            var stationsList = await _ktdaContext.Stations
-                .AsNoTracking()
-                .Select(s => new { Id = s.StationId.ToString(), Name = s.StationName })
-                .ToListAsync();
-                
-            // Normalize station names - remove any existing "Head Office" entries to avoid duplicates
-            var headOfficeEntries = stationsList
-                .Where(s => s.Name.Contains("Head Office", StringComparison.OrdinalIgnoreCase) ||
-                            s.Name.Contains("Headoffice", StringComparison.OrdinalIgnoreCase) ||
-                            s.Name.Contains("HQ", StringComparison.OrdinalIgnoreCase) ||
-                            s.Id == "0" ||
-                            s.Id == "HQ")
-                .ToList();
-                
-            foreach (var entry in headOfficeEntries)
-            {
-                stationsList.Remove(entry);
-            }
-            
-            var allStations = stationsList
-                .GroupBy(s => s.Id)
-                .ToDictionary(g => g.Key, g => g.First().Name);
-                
-            // Add single standardized HQ entry
-            allStations["HQ"] = "Head Office (HQ)";
-            allStations["0"] = "Head Office (HQ)";
-            
-            // Get distinct station values from employees table to ensure we have the exact format used in the data
-            // Optimize by using Take(1000) to prevent excessive query time on large datasets
-            var distinctStations = await employeesQuery
-                .Where(e => !string.IsNullOrEmpty(e.Station))
-                .Select(e => e.Station)
-                .OrderBy(s => s)  // Add explicit ordering before pagination
+
+            // Get distinct values for filter dropdowns directly from the view
+            var allDepartments = await employeesQuery
+                .Where(e => !string.IsNullOrEmpty(e.DepartmentName) && !string.IsNullOrEmpty(e.DepartmentCode))
+                .Select(e => new { Id = e.DepartmentCode, Name = e.DepartmentName })
                 .Distinct()
-                .Take(1000)  // Limit to prevent excessive query time
-                .ToListAsync();
-                
-            // Create a more complete station dictionary that includes both formatted and unformatted IDs
-            var completeStationDict = new Dictionary<string, string>();
-            
-            // Add all stations from the stations table
-            foreach (var station in allStations)
-            {
-                completeStationDict[station.Key] = station.Value;
-                
-                // For numeric IDs, also add versions with/without leading zeros
-                if (int.TryParse(station.Key, out int stationId))
-                {
-                    string paddedId = stationId.ToString().PadLeft(3, '0');
-                    if (!completeStationDict.ContainsKey(paddedId))
-                    {
-                        completeStationDict[paddedId] = station.Value;
-                    }
-                }
-            }
-            
-            // Add HQ option
-            if (!completeStationDict.ContainsKey("HQ"))
-            {
-                completeStationDict["HQ"] = "Head Office (HQ)";
-            }
-            
-            // Add any stations from the employee table that might not be in the stations table
-            foreach (var stationId in distinctStations)
-            {
-                if (!completeStationDict.ContainsKey(stationId))
-                {
-                    completeStationDict[stationId] = $"Station {stationId}";
-                }
-            }
-            
-            // Create a dictionary for display names
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+            var allStations = await employeesQuery
+                .Where(e => !string.IsNullOrEmpty(e.StationName) && !string.IsNullOrEmpty(e.OriginalStationName))
+                .Select(e => new { Id = e.OriginalStationName, Name = e.StationName })
+                .Distinct()
+                .ToDictionaryAsync(x => x.Id, x => x.Name);
+
+            // Create display names dictionary for filters
             var displayNames = new Dictionary<string, Dictionary<string, string>>();
-            
-            // Only add dictionaries if they have values
             if (allDepartments.Any())
-            {
-                displayNames.Add("Department", allDepartments);
-            }
-            
-            if (completeStationDict.Any())
-            {
-                displayNames.Add("Station", completeStationDict);
-            }
-            
-            // Create filter view model with explicit type for the array
+                displayNames.Add("DepartmentCode", allDepartments);
+            if (allStations.Any())
+                displayNames.Add("OriginalStationName", allStations);
+
+            // Create filters using the view properties
             ViewBag.Filters = await employeesQuery.CreateFiltersAsync(
-                new Expression<Func<EmployeeBkp, object>>[] {
-                    // Select which properties to create filters for - Station first
-                    e => e.Station,
-                    e => e.Department,
+                new Expression<Func<EmployeeDetailsView, object>>[] {
+                    e => e.OriginalStationName,
+                    e => e.DepartmentCode,
                     e => e.Role,
                     e => e.Designation
                 },
@@ -174,114 +100,26 @@ namespace MRIV.Controllers
             if (!string.IsNullOrEmpty(searchTerm))
             {
                 searchTerm = searchTerm.Trim().ToLower();
-                employeesQuery = employeesQuery.Where(e => 
-                    (e.Fullname != null && e.Fullname.ToLower().Contains(searchTerm)) || 
+                employeesQuery = employeesQuery.Where(e =>
+                    (e.Fullname != null && e.Fullname.ToLower().Contains(searchTerm)) ||
                     (e.PayrollNo != null && e.PayrollNo.ToLower().Contains(searchTerm)) ||
-                    (e.EmployeId != null && e.EmployeId.ToLower().Contains(searchTerm)) ||
                     (e.Designation != null && e.Designation.ToLower().Contains(searchTerm)) ||
-                    (e.EmailAddress != null && e.EmailAddress.ToLower().Contains(searchTerm)));
+                    (e.EmailAddress != null && e.EmailAddress.ToLower().Contains(searchTerm)) ||
+                    (e.DepartmentName != null && e.DepartmentName.ToLower().Contains(searchTerm)) ||
+                    (e.StationName != null && e.StationName.ToLower().Contains(searchTerm)));
             }
 
             // Get total count for pagination after filtering
             var totalEmployees = await employeesQuery.CountAsync();
 
-            // Apply sorting
-            employeesQuery = ApplySorting(employeesQuery, sortField, sortOrder);
-            
-            // If no sort field is provided, add a default sort to ensure consistent pagination
-            if (string.IsNullOrEmpty(sortField))
-            {
-                employeesQuery = employeesQuery.OrderBy(e => e.Fullname).ThenBy(e => e.PayrollNo);
-            }
+            // Apply sorting - map old sort fields to view properties
+            employeesQuery = ApplyViewSorting(employeesQuery, sortField, sortOrder);
 
             // Apply pagination
             var employees = await employeesQuery
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .ToListAsync();
-
-            // Create query for distinct departments in the filtered employee list (for the filter dropdown)
-            // Optimize by using Take(1000) to prevent excessive query time on large datasets
-            var distinctDepartments = await employeesQuery
-                .Where(e => !string.IsNullOrEmpty(e.Department))
-                .Select(e => e.Department)
-                .OrderBy(d => d)  // Add explicit ordering before pagination
-                .Distinct()
-                .Take(1000)  // Limit to prevent excessive query time
-                .ToListAsync();
-                
-            // Get department names for display
-            var departmentIds = employees.Where(e => !string.IsNullOrEmpty(e.Department))
-                .Select(e => e.Department)
-                .OrderBy(d => d)  // Add explicit ordering before pagination
-                .Distinct()
-                .ToList();
-                
-            var departmentNames = new Dictionary<string, string>();
-            foreach (var deptId in departmentIds)
-            {
-                if (!string.IsNullOrEmpty(deptId) && !departmentNames.ContainsKey(deptId))
-                {
-                    try
-                    {
-                        int departmentId;
-                        if (int.TryParse(deptId, out departmentId))
-                        {
-                            var department = await _departmentService.GetDepartmentByIdAsync(departmentId);
-                            departmentNames[deptId] = department?.DepartmentName ?? "Unknown";
-                        }
-                        else
-                        {
-                            departmentNames[deptId] = deptId;
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error getting department name for ID: {DepartmentId}", deptId);
-                        departmentNames[deptId] = "Error";
-                    }
-                }
-            }
-
-            // Get station names for display
-            var stationIds = employees.Where(e => !string.IsNullOrEmpty(e.Station))
-                .Select(e => e.Station)
-                .Distinct()
-                .ToList();
-                
-            var stationNames = new Dictionary<string, string>();
-            foreach (var stationId in stationIds)
-            {
-                if (!string.IsNullOrEmpty(stationId) && !stationNames.ContainsKey(stationId))
-                {
-                    try
-                    {
-                        // Handle HQ special case
-                        if (stationId.Equals("HQ", StringComparison.OrdinalIgnoreCase))
-                        {
-                            stationNames[stationId] = "HQ";
-                        }
-                        else
-                        {
-                            int sId;
-                            if (int.TryParse(stationId, out sId))
-                            {
-                                var station = await _departmentService.GetStationByIdAsync(sId);
-                                stationNames[stationId] = station?.StationName ?? "Unknown";
-                            }
-                            else
-                            {
-                                stationNames[stationId] = stationId;
-                            }
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Error getting station name for ID: {StationId}", stationId);
-                        stationNames[stationId] = "Error";
-                    }
-                }
-            }
 
             // Set up pagination view model
             var paginationViewModel = new PaginationViewModel
@@ -293,35 +131,35 @@ namespace MRIV.Controllers
                 Controller = "Employees"
             };
 
-            // Pass data to view
-            ViewBag.DepartmentNames = departmentNames;
-            ViewBag.StationNames = stationNames;
+            // Pass data to view - no need for additional dictionary lookups since view has resolved names
             ViewBag.Pagination = paginationViewModel;
             ViewBag.TotalCount = totalEmployees;
             ViewBag.SortField = sortField;
             ViewBag.SortOrder = sortOrder;
             ViewBag.SearchTerm = searchTerm;
 
-            // Create view models for the employees
-            var viewModels = new List<EmployeeViewModel>();
-            foreach (var employee in employees)
+            // Create view models directly from the view data (all names are already resolved)
+            var viewModels = employees.Select(employee => new EmployeeViewModel
             {
-                viewModels.Add(new EmployeeViewModel
-                {
-                    PayrollNo = employee.PayrollNo,
-                    RollNo = employee.RollNo,
-                    EmployeeId = employee.EmployeId,
-                    FullName = employee.Fullname,
-                    Department = employee.Department,
-                    DepartmentName = departmentNames.ContainsKey(employee.Department) ? departmentNames[employee.Department] : "Unknown",
-                    Station = employee.Station,
-                    StationName = stationNames.ContainsKey(employee.Station) ? stationNames[employee.Station] : "Unknown",
-                    Role = employee.Role,
-                    Designation = employee.Designation,
-                    EmailAddress = employee.EmailAddress,
-                    EmpisCurrActive = (int)employee.EmpisCurrActive
-                });
-            }
+                PayrollNo = employee.PayrollNo,
+                RollNo = employee.RollNo,
+                FullName = employee.Fullname,
+                SurName = employee.SurName,
+                OtherNames = employee.OtherNames,
+                Department = employee.DepartmentCode,
+                DepartmentName = employee.DepartmentName ?? "Unknown",
+                Station = employee.OriginalStationName,
+                StationName = employee.StationName ?? "Unknown",
+                StationCategoryCode = employee.StationCategoryCode,
+                StationCategoryName = employee.StationCategoryName ?? "Unknown",
+                Role = employee.Role,
+                Designation = employee.Designation,
+                EmailAddress = employee.EmailAddress,
+                SupervisorName = employee.SupervisorName,
+                HeadOfDepartmentName = employee.HeadOfDepartmentName,
+                Scale = employee.Scale,
+                EmpisCurrActive = employee.IsActive
+            }).ToList();
 
             return View(viewModels);
         }
@@ -1040,6 +878,47 @@ namespace MRIV.Controllers
                     break;
             }
             
+            return query;
+        }
+
+        // Helper method to apply sorting to the view query
+        private IQueryable<EmployeeDetailsView> ApplyViewSorting(IQueryable<EmployeeDetailsView> query, string sortField, string sortOrder)
+        {
+            // Default to sorting by Fullname if sortField is invalid
+            if (string.IsNullOrEmpty(sortField))
+            {
+                sortField = "Fullname";
+            }
+
+            // Determine if sorting ascending or descending
+            bool isAscending = string.IsNullOrEmpty(sortOrder) || sortOrder.ToLower() == "asc";
+
+            // Apply sorting based on the field - map old field names to view properties
+            switch (sortField.ToLower())
+            {
+                case "payrollno":
+                    query = isAscending ? query.OrderBy(e => e.PayrollNo) : query.OrderByDescending(e => e.PayrollNo);
+                    break;
+                case "fullname":
+                    query = isAscending ? query.OrderBy(e => e.Fullname) : query.OrderByDescending(e => e.Fullname);
+                    break;
+                case "department":
+                    query = isAscending ? query.OrderBy(e => e.DepartmentName) : query.OrderByDescending(e => e.DepartmentName);
+                    break;
+                case "station":
+                    query = isAscending ? query.OrderBy(e => e.StationName) : query.OrderByDescending(e => e.StationName);
+                    break;
+                case "designation":
+                    query = isAscending ? query.OrderBy(e => e.Designation) : query.OrderByDescending(e => e.Designation);
+                    break;
+                case "role":
+                    query = isAscending ? query.OrderBy(e => e.Role) : query.OrderByDescending(e => e.Role);
+                    break;
+                default:
+                    query = isAscending ? query.OrderBy(e => e.Fullname) : query.OrderByDescending(e => e.Fullname);
+                    break;
+            }
+
             return query;
         }
 
