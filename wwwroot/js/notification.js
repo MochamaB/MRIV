@@ -1,4 +1,4 @@
-﻿
+
   
         $(document).ready(function() {
             // Function to load notifications

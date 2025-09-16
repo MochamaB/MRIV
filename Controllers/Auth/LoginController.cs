@@ -137,6 +137,46 @@ namespace MRIV.Controllers.Auth
                 return View("~/Views/Auth/Login.cshtml");
             }
         }
+
+        [HttpGet]
+        public async Task<IActionResult> ProfileDebug()
+        {
+            try
+            {
+                var payrollNo = HttpContext.Session.GetString("EmployeePayrollNo");
+                if (string.IsNullOrEmpty(payrollNo))
+                {
+                    ViewBag.ErrorMessage = "No payroll number found in session";
+                    return View("~/Views/Auth/ProfileDebug.cshtml", null);
+                }
+
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+                
+                if (userProfile == null)
+                {
+                    // Try to create profile again with detailed error info
+                    try
+                    {
+                        userProfile = await _userProfileService.BuildUserProfileAsync(payrollNo);
+                        ViewBag.DebugInfo = $"Profile recreation attempt for {payrollNo} - Success: {userProfile != null}";
+                    }
+                    catch (Exception ex)
+                    {
+                        ViewBag.ErrorMessage = $"Profile creation failed: {ex.Message}";
+                        ViewBag.DebugInfo = $"Exception Details:\n{ex}";
+                    }
+                }
+
+                return View("~/Views/Auth/ProfileDebug.cshtml", userProfile);
+            }
+            catch (Exception ex)
+            {
+                ViewBag.ErrorMessage = $"Debug view error: {ex.Message}";
+                ViewBag.DebugInfo = $"Exception Details:\n{ex}";
+                return View("~/Views/Auth/ProfileDebug.cshtml", null);
+            }
+        }
+
         [HttpPost]
         [ValidateAntiForgeryToken]
         public IActionResult Logout()

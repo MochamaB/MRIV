@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using MRIV.Extensions;
 using MRIV.Models;
+using MRIV.Models.Views;
 
 namespace MRIV.Services
 {
@@ -32,22 +33,23 @@ namespace MRIV.Services
             try
             {
                 _logger.LogInformation("Building user profile for PayrollNo: {PayrollNo}", payrollNo);
+                Console.WriteLine("Building user profile for PayrollNo:", payrollNo);
 
-                // Get employee from KtdaleaveContext
-                var employee = await _ktdaContext.EmployeeBkps
-                    .FirstOrDefaultAsync(e => e.PayrollNo == payrollNo);
+                // Get employee from vw_EmployeeDetails view for complete resolved information
+                var employeeDetails = await _requisitionContext.EmployeeDetailsViews
+                    .FirstOrDefaultAsync(e => e.PayrollNo == payrollNo && e.IsActive == 0);
 
-                if (employee == null)
+                if (employeeDetails == null)
                 {
-                    _logger.LogWarning("Employee not found for PayrollNo: {PayrollNo}", payrollNo);
+                    _logger.LogWarning("Employee not found or inactive for PayrollNo: {PayrollNo}", payrollNo);
                     return null;
                 }
 
                 var profile = new UserProfile
                 {
-                    BasicInfo = await BuildBasicInfoAsync(employee),
+                    BasicInfo = BuildBasicInfoFromView(employeeDetails),
                     RoleInformation = await BuildRoleInformationAsync(payrollNo),
-                    LocationAccess = await BuildLocationAccessAsync(employee),
+                    LocationAccess = BuildLocationAccessFromView(employeeDetails),
                     CacheInfo = new CacheInfo
                     {
                         CreatedAt = DateTime.UtcNow,
@@ -64,11 +66,15 @@ namespace MRIV.Services
                 await CalculateAccessibleLocationsAsync(profile);
 
                 _logger.LogInformation("Successfully built user profile for PayrollNo: {PayrollNo}", payrollNo);
+                Console.WriteLine("Successfully built user profile for PayrollNo:", payrollNo);
+
                 return profile;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error building user profile for PayrollNo: {PayrollNo}", payrollNo);
+                Console.WriteLine("Error building user profile for PayrollNo:", payrollNo);
+
                 throw;
             }
         }
@@ -113,17 +119,22 @@ namespace MRIV.Services
             return await GetCachedProfileAsync(payrollNo);
         }
 
-        private async Task<BasicInfo> BuildBasicInfoAsync(EmployeeBkp employee)
+        private BasicInfo BuildBasicInfoFromView(EmployeeDetailsView employeeDetails)
         {
             return new BasicInfo
             {
-                PayrollNo = employee.PayrollNo,
-                Name = employee.Fullname ?? string.Empty,
-                Email = employee.EmailAddress ?? string.Empty,
-                Designation = employee.Designation ?? string.Empty,
-                Department = employee.Department ?? string.Empty,
-                Station = employee.Station ?? string.Empty,
-                Role = employee.Role ?? string.Empty
+                PayrollNo = employeeDetails.PayrollNo,
+                Fullname = employeeDetails.Fullname ?? string.Empty,
+                SurName = employeeDetails.SurName ?? string.Empty,
+                OtherNames = employeeDetails.OtherNames ?? string.Empty,
+                EmailAddress = employeeDetails.EmailAddress ?? string.Empty,
+                Designation = employeeDetails.Designation ?? string.Empty,
+                Role = employeeDetails.Role ?? string.Empty,
+                Scale = employeeDetails.Scale ?? string.Empty,
+                RollNo = employeeDetails.RollNo ?? string.Empty,
+                IsActive = employeeDetails.IsActive,
+                Department = employeeDetails.DepartmentName ?? string.Empty,
+                Station = employeeDetails.StationName ?? string.Empty
             };
         }
 
@@ -167,143 +178,81 @@ namespace MRIV.Services
             return roleInfo;
         }
 
-        private async Task<LocationAccess> BuildLocationAccessAsync(EmployeeBkp employee)
+        private LocationAccess BuildLocationAccessFromView(EmployeeDetailsView employeeDetails)
         {
             var locationAccess = new LocationAccess();
 
-            // Map employee's home department (handle legacy inconsistencies)
-            if (!string.IsNullOrEmpty(employee.Department))
+            // Department information is already resolved in the view
+            if (employeeDetails.DepartmentId.HasValue)
             {
-                Department department = null;
-                
-                // Try multiple lookup strategies
-                // 1. Exact DepartmentId match
-                department = await _ktdaContext.Departments
-                    .FirstOrDefaultAsync(d => d.DepartmentId == employee.Department);
-                
-                // 2. If not found, try departmentCode match (if employee.Department is numeric)
-                if (department == null && int.TryParse(employee.Department, out int deptCode))
+                locationAccess.HomeDepartment = new EnhancedDepartmentInfo
                 {
-                    department = await _ktdaContext.Departments
-                        .FirstOrDefaultAsync(d => d.DepartmentCode == deptCode);
-                }
-                
-                // 3. If still not found, load all departments and try name matching in memory
-                if (department == null)
+                    Id = employeeDetails.DepartmentId.Value,
+                    Code = employeeDetails.DepartmentCode ?? string.Empty,
+                    Name = employeeDetails.DepartmentName ?? string.Empty
+                };
+            }
+            else
+            {
+                // Fallback for employees with unresolved departments
+                locationAccess.HomeDepartment = new EnhancedDepartmentInfo
                 {
-                    var allDepartments = await _ktdaContext.Departments.ToListAsync();
-                    
-                    department = allDepartments.FirstOrDefault(d => 
-                        d.DepartmentName.Contains(employee.Department, StringComparison.OrdinalIgnoreCase) ||
-                        d.DepartmentCode.ToString() == employee.Department
-                    );
-                }
-                
-                if (department != null)
-                {
-                    locationAccess.HomeDepartment = new DepartmentInfo
-                    {
-                        Id = department.DepartmentCode,
-                        Code = department.DepartmentId,
-                        Name = department.DepartmentName ?? string.Empty
-                    };
-                }
-                else
-                {
-                    // Fallback: Create a placeholder for unmatched departments
-                    locationAccess.HomeDepartment = new DepartmentInfo
-                    {
-                        Id = 0, // Use 0 for unknown departments
-                        Code = employee.Department,
-                        Name = $"Unknown Department ({employee.Department})"
-                    };
-                    
-                    _logger.LogWarning("Could not find department mapping for employee {PayrollNo} with department '{Department}'", 
-                        employee.PayrollNo, employee.Department);
-                }
+                    Id = 0,
+                    Code = employeeDetails.DepartmentCode ?? "Unknown",
+                    Name = $"Unknown Department ({employeeDetails.DepartmentCode})"
+                };
+
+                _logger.LogWarning("Employee {PayrollNo} has unresolved department: {DepartmentCode}",
+                    employeeDetails.PayrollNo, employeeDetails.DepartmentCode);
             }
 
-            // Map employee's home station (handle legacy inconsistencies)
-            if (!string.IsNullOrEmpty(employee.Station))
+            // Station information is already resolved in the view with proper HQ=0 mapping
+            if (employeeDetails.StationId.HasValue)
             {
-                Station station = null;
-                
-                // Try multiple lookup strategies
-                // 1. Exact name match
-                station = await _ktdaContext.Stations
-                    .FirstOrDefaultAsync(s => s.StationName == employee.Station);
-                
-                // 2. If not found, try case-insensitive name match  
-                if (station == null)
+                locationAccess.HomeStation = new EnhancedStationInfo
                 {
-                    station = await _ktdaContext.Stations
-                        .FirstOrDefaultAsync(s => s.StationName.ToLower() == employee.Station.ToLower());
-                }
-                
-                // 3. If not found and employee.Station is numeric, try ID match
-                if (station == null && int.TryParse(employee.Station, out int stationId))
-                {
-                    station = await _ktdaContext.Stations
-                        .FirstOrDefaultAsync(s => s.StationId == stationId);
-                }
-                
-                // 4. If still not found, try to find by padded station code (load all and match in memory)
-                if (station == null)
-                {
-                    var normalizedEmployeeStation = NormalizeStationCode(employee.Station);
-                    var allStations = await _ktdaContext.Stations.ToListAsync();
-                    
-                    station = allStations.FirstOrDefault(s => 
-                        s.StationId.ToString().PadLeft(3, '0') == normalizedEmployeeStation ||
-                        s.StationName.Equals(employee.Station, StringComparison.OrdinalIgnoreCase)
-                    );
-                }
-                
-                if (station != null)
-                {
-                    locationAccess.HomeStation = new StationInfo
+                    Id = employeeDetails.StationId.Value,
+                    Name = employeeDetails.StationName ?? string.Empty,
+                    OriginalName = employeeDetails.OriginalStationName ?? string.Empty,
+                    Category = new StationCategoryInfo
                     {
-                        Id = station.StationId,
-                        Name = station.StationName ?? string.Empty,
-                        Code = station.StationId.ToString()
-                    };
-                }
-                else
-                {
-                    // Fallback: Create a placeholder for unmatched stations
-                    locationAccess.HomeStation = new StationInfo
-                    {
-                        Id = 0, // Use 0 for unknown stations
-                        Name = $"Unknown Station ({employee.Station})",
-                        Code = employee.Station
-                    };
-                    
-                    _logger.LogWarning("Could not find station mapping for employee {PayrollNo} with station '{Station}'", 
-                        employee.PayrollNo, employee.Station);
-                }
+                        Code = employeeDetails.StationCategoryCode ?? string.Empty,
+                        Name = employeeDetails.StationCategoryName ?? string.Empty
+                    }
+                };
             }
+            else
+            {
+                // Fallback for employees with unresolved stations
+                locationAccess.HomeStation = new EnhancedStationInfo
+                {
+                    Id = 0,
+                    Name = $"Unknown Station ({employeeDetails.OriginalStationName})",
+                    OriginalName = employeeDetails.OriginalStationName ?? "Unknown",
+                    Category = new StationCategoryInfo
+                    {
+                        Code = "unknown",
+                        Name = "Unknown"
+                    }
+                };
+
+                _logger.LogWarning("Employee {PayrollNo} has unresolved station: {OriginalStation}",
+                    employeeDetails.PayrollNo, employeeDetails.OriginalStationName);
+            }
+
+            // Station Category (already included in HomeStation)
+            locationAccess.StationCategory = locationAccess.HomeStation.Category;
+
+            // Hierarchy information from the view
+            locationAccess.Hierarchy = new HierarchyInfo
+            {
+                HeadOfDepartment = employeeDetails.HeadOfDepartment ?? string.Empty,
+                HeadOfDepartmentName = employeeDetails.HeadOfDepartmentName ?? string.Empty,
+                Supervisor = employeeDetails.Supervisor ?? string.Empty,
+                SupervisorName = employeeDetails.SupervisorName ?? string.Empty
+            };
 
             return locationAccess;
-        }
-
-        /// <summary>
-        /// Normalize station codes to handle legacy data inconsistencies
-        /// </summary>
-        private string NormalizeStationCode(string stationCode)
-        {
-            if (string.IsNullOrEmpty(stationCode)) return string.Empty;
-            
-            // Handle special cases
-            if (stationCode.Equals("HQ", StringComparison.OrdinalIgnoreCase))
-                return "0";
-                
-            // Convert numeric codes to 3-digit format
-            if (int.TryParse(stationCode, out int numericCode))
-            {
-                return numericCode.ToString("D3"); // Pad to 3 digits: "5" -> "005"
-            }
-            
-            return stationCode;
         }
 
         private VisibilityScope BuildVisibilityScope(RoleInformation roleInfo)
@@ -348,18 +297,23 @@ namespace MRIV.Services
                 var allDepartments = await _ktdaContext.Departments.ToListAsync();
                 var allStations = await _ktdaContext.Stations.ToListAsync();
 
-                profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new DepartmentInfo
+                profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new EnhancedDepartmentInfo
                 {
                     Id = d.DepartmentCode,
                     Code = d.DepartmentId,
                     Name = d.DepartmentName ?? string.Empty
                 }).ToList();
 
-                profile.LocationAccess.AccessibleStations = allStations.Select(s => new StationInfo
+                profile.LocationAccess.AccessibleStations = allStations.Select(s => new EnhancedStationInfo
                 {
                     Id = s.StationId,
                     Name = s.StationName ?? string.Empty,
-                    Code = s.StationId.ToString()
+                    OriginalName = s.StationName ?? string.Empty,
+                    Category = new StationCategoryInfo
+                    {
+                        Code = DetermineStationCategory(s.StationId, s.StationName),
+                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                    }
                 }).ToList();
 
                 profile.LocationAccess.AccessibleDepartmentIds = allDepartments.Select(d => d.DepartmentCode).ToList();
@@ -369,7 +323,7 @@ namespace MRIV.Services
             {
                 // Can access all departments at home station
                 var allDepartments = await _ktdaContext.Departments.ToListAsync();
-                profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new DepartmentInfo
+                profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new EnhancedDepartmentInfo
                 {
                     Id = d.DepartmentCode,
                     Code = d.DepartmentId,
@@ -378,33 +332,78 @@ namespace MRIV.Services
                 profile.LocationAccess.AccessibleDepartmentIds = allDepartments.Select(d => d.DepartmentCode).ToList();
 
                 // Only home station
-                profile.LocationAccess.AccessibleStations = new List<StationInfo> { profile.LocationAccess.HomeStation };
+                profile.LocationAccess.AccessibleStations = new List<EnhancedStationInfo> { profile.LocationAccess.HomeStation };
                 profile.LocationAccess.AccessibleStationIds = new List<int> { profile.LocationAccess.HomeStation.Id };
             }
             else if (profile.VisibilityScope.CanAccessAcrossStations)
             {
                 // Can access home department at all stations
                 var allStations = await _ktdaContext.Stations.ToListAsync();
-                profile.LocationAccess.AccessibleStations = allStations.Select(s => new StationInfo
+                profile.LocationAccess.AccessibleStations = allStations.Select(s => new EnhancedStationInfo
                 {
                     Id = s.StationId,
                     Name = s.StationName ?? string.Empty,
-                    Code = s.StationId.ToString()
+                    OriginalName = s.StationName ?? string.Empty,
+                    Category = new StationCategoryInfo
+                    {
+                        Code = DetermineStationCategory(s.StationId, s.StationName),
+                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                    }
                 }).ToList();
                 profile.LocationAccess.AccessibleStationIds = allStations.Select(s => s.StationId).ToList();
 
                 // Only home department
-                profile.LocationAccess.AccessibleDepartments = new List<DepartmentInfo> { profile.LocationAccess.HomeDepartment };
+                profile.LocationAccess.AccessibleDepartments = new List<EnhancedDepartmentInfo> { profile.LocationAccess.HomeDepartment };
                 profile.LocationAccess.AccessibleDepartmentIds = new List<int> { profile.LocationAccess.HomeDepartment.Id };
             }
             else
             {
                 // Default user - only home department and station
-                profile.LocationAccess.AccessibleDepartments = new List<DepartmentInfo> { profile.LocationAccess.HomeDepartment };
-                profile.LocationAccess.AccessibleStations = new List<StationInfo> { profile.LocationAccess.HomeStation };
+                profile.LocationAccess.AccessibleDepartments = new List<EnhancedDepartmentInfo> { profile.LocationAccess.HomeDepartment };
+                profile.LocationAccess.AccessibleStations = new List<EnhancedStationInfo> { profile.LocationAccess.HomeStation };
                 profile.LocationAccess.AccessibleDepartmentIds = new List<int> { profile.LocationAccess.HomeDepartment.Id };
                 profile.LocationAccess.AccessibleStationIds = new List<int> { profile.LocationAccess.HomeStation.Id };
             }
+        }
+
+        /// <summary>
+        /// Determine station category based on station ID and name (fallback for stations not in view)
+        /// </summary>
+        private string DetermineStationCategory(int stationId, string stationName)
+        {
+            // HQ mapping
+            if (stationId == 0 || stationId == 55 || stationName?.Contains("HQ", StringComparison.OrdinalIgnoreCase) == true ||
+                stationName?.Contains("HEAD OFFICE", StringComparison.OrdinalIgnoreCase) == true)
+                return "headoffice";
+
+            // Region mapping
+            if (stationName?.Contains("REGION", StringComparison.OrdinalIgnoreCase) == true ||
+                stationName?.Contains("ZONAL", StringComparison.OrdinalIgnoreCase) == true)
+                return "region";
+
+            // Other mapping
+            var otherStations = new[] { "EXTERNAL", "KETEPA", "KOBEL", "KTDA_HOLDINGS", "KTDA_POWER", "GREENLAND_FEDHA" };
+            if (otherStations.Any(os => stationName?.Contains(os, StringComparison.OrdinalIgnoreCase) == true))
+                return "other";
+
+            // Default to factory
+            return "factory";
+        }
+
+        /// <summary>
+        /// Get display name for station category
+        /// </summary>
+        private string DetermineStationCategoryName(int stationId, string stationName)
+        {
+            var category = DetermineStationCategory(stationId, stationName);
+            return category switch
+            {
+                "headoffice" => "Head Office",
+                "region" => "Region",
+                "other" => "Other",
+                "factory" => "Factory",
+                _ => "Unknown"
+            };
         }
     }
 }

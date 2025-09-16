@@ -17,13 +17,29 @@ namespace MRIV.Models
 
     public class BasicInfo
     {
+        // Core Identity
         public string PayrollNo { get; set; } = string.Empty;
-        public string Name { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
+        public string Fullname { get; set; } = string.Empty;
+        public string SurName { get; set; } = string.Empty;
+        public string OtherNames { get; set; } = string.Empty;
+        
+        // Contact & Role
+        public string EmailAddress { get; set; } = string.Empty;
         public string Designation { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string Scale { get; set; } = string.Empty;
+        public string RollNo { get; set; } = string.Empty;
+        
+        // Status
+        public int IsActive { get; set; }  // Match EmployeeDetailsView (0 = Active)
+        
+        // Legacy compatibility properties
+        public string Name => Fullname;
+        public string Email => EmailAddress;
+        
+        // Department and Station info (populated from LocationAccess for backward compatibility)
         public string Department { get; set; } = string.Empty;
         public string Station { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
     }
 
     public class RoleInformation
@@ -45,12 +61,23 @@ namespace MRIV.Models
 
     public class LocationAccess
     {
-        public DepartmentInfo HomeDepartment { get; set; } = new();
-        public StationInfo HomeStation { get; set; } = new();
+        // Home Department (from EmployeeDetailsView)
+        public EnhancedDepartmentInfo HomeDepartment { get; set; } = new();
+        
+        // Home Station (from EmployeeDetailsView)  
+        public EnhancedStationInfo HomeStation { get; set; } = new();
+        
+        // Station Category (NEW - critical for workflows)
+        public StationCategoryInfo StationCategory { get; set; } = new();
+        
+        // Hierarchy (NEW - from EmployeeDetailsView)
+        public HierarchyInfo Hierarchy { get; set; } = new();
+        
+        // Accessible locations (existing)
+        public List<EnhancedDepartmentInfo> AccessibleDepartments { get; set; } = new();
+        public List<EnhancedStationInfo> AccessibleStations { get; set; } = new();
         public List<int> AccessibleDepartmentIds { get; set; } = new();
         public List<int> AccessibleStationIds { get; set; } = new();
-        public List<DepartmentInfo> AccessibleDepartments { get; set; } = new();
-        public List<StationInfo> AccessibleStations { get; set; } = new();
     }
 
     public class DepartmentInfo
@@ -65,6 +92,36 @@ namespace MRIV.Models
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string Code { get; set; } = string.Empty;
+    }
+
+    // New enhanced classes for robust UserProfile structure
+    public class StationCategoryInfo
+    {
+        public string Code { get; set; } = string.Empty;        // headoffice, factory, region, other
+        public string Name { get; set; } = string.Empty;        // Head Office, Factory, Region, Other
+    }
+
+    public class HierarchyInfo  
+    {
+        public string HeadOfDepartment { get; set; } = string.Empty;     // PayrollNo
+        public string HeadOfDepartmentName { get; set; } = string.Empty;
+        public string Supervisor { get; set; } = string.Empty;           // PayrollNo  
+        public string SupervisorName { get; set; } = string.Empty;
+    }
+
+    public class EnhancedDepartmentInfo
+    {
+        public int Id { get; set; }           // DepartmentId (int primary key)
+        public string Code { get; set; } = string.Empty;      // DepartmentCode (string business code)
+        public string Name { get; set; } = string.Empty;      // DepartmentName
+    }
+
+    public class EnhancedStationInfo
+    {
+        public int Id { get; set; }           // StationId (with HQ=0 mapping)
+        public string Name { get; set; } = string.Empty;      // StationName (resolved)
+        public string OriginalName { get; set; } = string.Empty; // OriginalStationName (raw)
+        public StationCategoryInfo Category { get; set; } = new();
     }
 
     public class VisibilityScope
