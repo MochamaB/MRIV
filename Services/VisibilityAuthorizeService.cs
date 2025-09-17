@@ -357,7 +357,13 @@ namespace MRIV.Services
                 return query;
             }
 
-            // Apply filtering based on entity type using cached accessible locations
+            // Default users (not in any role group) see only their own data
+            if (userProfile.VisibilityScope.IsDefaultUser)
+            {
+                return ApplyPersonalDataFilter(query, userProfile.BasicInfo.PayrollNo);
+            }
+
+            // Users in role groups: apply location-based filtering
             if (typeof(T) == typeof(Requisition))
             {
                 return ApplyRequisitionVisibility(query.Cast<Requisition>(), userProfile).Cast<T>();
@@ -386,25 +392,66 @@ namespace MRIV.Services
             if (userProfile.RoleInformation.IsAdmin)
                 return true;
 
-            // Check based on entity type using cached data
-            if (entity is Requisition requisition)
+            // Default users can only access their own data
+            if (userProfile.VisibilityScope.IsDefaultUser)
             {
-                return userProfile.LocationAccess.AccessibleDepartmentIds.Contains(requisition.DepartmentId) &&
-                       (userProfile.LocationAccess.AccessibleStationIds.Contains(requisition.IssueStationId) ||
-                        userProfile.LocationAccess.AccessibleStationIds.Contains(requisition.DeliveryStationId));
+                if (entity is Requisition requisition)
+                    return requisition.PayrollNo == userProfile.BasicInfo.PayrollNo;
+                if (entity is Approval approval)
+                    return approval.PayrollNo == userProfile.BasicInfo.PayrollNo;
+                if (entity is MaterialAssignment assignment)
+                    return assignment.PayrollNo == userProfile.BasicInfo.PayrollNo;
+                return false;
             }
-            else if (entity is MaterialAssignment assignment)
+
+            // Users in role groups: check based on entity type using cached accessible locations
+            if (entity is Requisition req)
             {
-                return assignment.DepartmentId.HasValue && 
-                       userProfile.LocationAccess.AccessibleDepartmentIds.Contains(assignment.DepartmentId.Value) &&
-                       assignment.StationId.HasValue && 
-                       userProfile.LocationAccess.AccessibleStationIds.Contains(assignment.StationId.Value);
+                return userProfile.LocationAccess.AccessibleDepartmentIds.Contains(req.DepartmentId) &&
+                       (userProfile.LocationAccess.AccessibleStationIds.Contains(req.IssueStationId) ||
+                        userProfile.LocationAccess.AccessibleStationIds.Contains(req.DeliveryStationId));
+            }
+            else if (entity is MaterialAssignment assign)
+            {
+                return assign.DepartmentId.HasValue &&
+                       userProfile.LocationAccess.AccessibleDepartmentIds.Contains(assign.DepartmentId.Value) &&
+                       assign.StationId.HasValue &&
+                       userProfile.LocationAccess.AccessibleStationIds.Contains(assign.StationId.Value);
+            }
+            else if (entity is Approval app)
+            {
+                return userProfile.LocationAccess.AccessibleDepartmentIds.Contains(app.DepartmentId);
             }
 
             return false;
         }
 
         // ===== PRIVATE HELPER METHODS FOR ENHANCED VISIBILITY =====
+
+        /// <summary>
+        /// Apply personal data filter for default users (PayrollNo-based filtering)
+        /// </summary>
+        private IQueryable<T> ApplyPersonalDataFilter<T>(IQueryable<T> query, string payrollNo) where T : class
+        {
+            if (typeof(T) == typeof(Requisition))
+            {
+                var requisitions = query.Cast<Requisition>();
+                return requisitions.Where(r => r.PayrollNo == payrollNo).Cast<T>();
+            }
+            else if (typeof(T) == typeof(Approval))
+            {
+                var approvals = query.Cast<Approval>();
+                return approvals.Where(a => a.PayrollNo == payrollNo).Cast<T>();
+            }
+            else if (typeof(T) == typeof(MaterialAssignment))
+            {
+                var assignments = query.Cast<MaterialAssignment>();
+                return assignments.Where(ma => ma.PayrollNo == payrollNo).Cast<T>();
+            }
+
+            // For other entity types, return empty query (default users should not see them)
+            return query.Take(0);
+        }
 
         private IQueryable<Requisition> ApplyRequisitionVisibility(IQueryable<Requisition> query, UserProfile userProfile)
         {

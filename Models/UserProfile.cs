@@ -128,6 +128,7 @@ namespace MRIV.Models
     {
         public bool CanAccessAcrossStations { get; set; }
         public bool CanAccessAcrossDepartments { get; set; }
+        public bool IsDefaultUser { get; set; }  // True if user is not in any role group
         public PermissionLevel PermissionLevel { get; set; } = PermissionLevel.Default;
     }
 

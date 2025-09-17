@@ -9,49 +9,49 @@
                     // Clear loading indicator
                     $('#notificationLoadingIndicator').hide();
 
-                    // Find the notifications container
-                    var container = $('#all-noti-tab [data-simplebar]');
+                    // Find the notifications container and list
+                    var container = $('#notificationContainer');
+                    var notificationList = $('#notificationList');
 
                     // Display notifications
                     if (data.length === 0) {
-                        container.html('<div class="text-center my-3">No new notifications</div>');
+                        container.find('#notificationLoadingIndicator').hide();
+                        container.find('#noNotificationsMessage').removeClass('d-none');
+                        $('#viewAllSection').hide();
                     } else {
-                        var notificationsHtml = '';
+                        container.find('#noNotificationsMessage').addClass('d-none');
+                        container.find('#notificationLoadingIndicator').hide();
 
-                        // Create HTML for each notification
-                        $.each(data, function(i, notification) {
+                        // Clear existing notifications
+                        notificationList.empty();
+
+                        // Create notifications using template cloning (limit to 5)
+                        $.each(data.slice(0, 5), function(i, notification) {
                             var timeAgo = moment(notification.createdAt).fromNow();
                             var iconClass = getNotificationIconClass(notification.notificationType);
                             var icon = getNotificationIcon(notification.notificationType);
 
-                            notificationsHtml += `
-                                <div class="text-reset notification-item d-block" data-id="${notification.id}">
-                                    <div class="d-flex">
-                                        <div class="avatar-xs me-3">
-                                            <span class="avatar-title ${iconClass} rounded-circle fs-16">
-                                                <i class="${icon}"></i>
-                                            </span>
-                                        </div>
-                                        <div class="flex-1">
-                                            <a href="${notification.url || '#'}" class="stretched-link">
-                                                <h6 class="mt-0 mb-1 fs-13 fw-semibold">${notification.title}</h6>
-                                            </a>
-                                            <div class="fs-13 text-muted">
-                                                <p class="mb-1">${notification.message}</p>
-                                            </div>
-                                            <p class="mb-0 fs-11 fw-medium text-uppercase text-muted">
-                                                <span><i class="mdi mdi-clock-outline"></i> ${timeAgo}</span>
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            `;
+                            // Clone the template
+                            var notificationItem = $('#notificationTemplate').find('.notification-item').clone();
+                            
+                            // Populate the cloned template with data
+                            notificationItem.attr('data-id', notification.id);
+                            notificationItem.find('.notification-icon').addClass(iconClass);
+                            notificationItem.find('.notification-icon-class').removeClass().addClass(icon);
+                            notificationItem.find('.notification-link').attr('href', notification.url || '#');
+                            notificationItem.find('.notification-title').text(notification.title);
+                            notificationItem.find('.notification-message').text(notification.message);
+                            notificationItem.find('.notification-time').text(timeAgo);
+
+                            // Append to notification list
+                            notificationList.append(notificationItem);
                         });
 
-                        container.html(notificationsHtml);
+                        // Show the View All button after notifications
+                        $('#viewAllSection').show();
 
                         // Add click handler for notification items
-                        $('.notification-item').on('click', function() {
+                        notificationList.find('.notification-item').on('click', function() {
                             markAsRead($(this).data('id'));
                         });
                     }
@@ -66,11 +66,11 @@
         // Function to get notification icon class based on type
         function getNotificationIconClass(type) {
             switch(String(type).toLowerCase()) {
-                case 'approval': return 'bg-success';
-                case 'rejection': return 'bg-danger';
-                case 'dispatch': return 'bg-primary';
-                case 'receipt': return 'bg-info';
-                default: return 'bg-secondary';
+                case 'approval': return 'bg-success-subtle text-success';
+                case 'rejection': return 'bg-danger-subtle text-danger';
+                case 'dispatch': return 'bg-primary-subtle text-primary';
+                case 'receipt': return 'bg-info-subtle text-info';
+                default: return 'bg-secondary-subtle text-secondary';
             }
         }
 
@@ -103,8 +103,8 @@
                         $badge.addClass('d-none');
                     }
 
-                    // Update count in dropdown header
-                    $('.nav-tabs-custom a[href="#all-noti-tab"]').html(`All (${count})`);
+                    // Update count in dropdown header badge
+                    $('.dropdown-tabs .badge').text(`${count} New`);
                 },
                 error: function(xhr, status, error) {
                     console.log("Error fetching notification count: " + error);
@@ -130,8 +130,9 @@
 
         // Load notifications when dropdown is clicked
         $('#page-header-notifications-dropdown').on('click', function() {
-            // Show loading indicator
+            // Show loading indicator and hide empty message
             $('#notificationLoadingIndicator').show();
+            $('#noNotificationsMessage').addClass('d-none');
             loadNotifications();
         });
 

@@ -50,11 +50,11 @@ ELSE IF both CanAccessAcrossStations = TRUE and CanAccessAcrossDepartments = TRU
 
 | Group Type / Example         | CanAccessAcrossStations | CanAccessAcrossDepartments | What They Can See                                 |
 |-----------------------------|:----------------------:|:-------------------------:|---------------------------------------------------|
-| Default User (not in group)  |          NO            |            NO             | Own department at own station                     |
-| Department Manager           |          NO            |            NO             | Own department at own station                     |
-| Station Support/Manager      |          NO            |           YES             | All departments at own station                    |
-| Group/General Manager        |         YES            |            NO             | Own department at all stations                    |
-| Administrator                |         YES            |           YES             | All data everywhere                               |
+| Default User (not in group)  |          NULL          |      NULL     | Own Information |
+| Department Manager           |          NO            |      NO       | Own department at own station|
+| Station Support/Manager      |          NO            |      YES      | All departments at own station  |
+| Group/General Manager        |         YES            |      NO       | Own department at all stations |
+| Administrator                |         YES            |      YES      | All data everywhere     |
 
 ## Predefined Role Groups
 

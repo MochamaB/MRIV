@@ -262,30 +262,45 @@ namespace MRIV.Services
         {
             var scope = new VisibilityScope();
 
+            // Admin users bypass all scope restrictions
             if (roleInfo.IsAdmin)
             {
                 scope.CanAccessAcrossStations = true;
                 scope.CanAccessAcrossDepartments = true;
+                scope.IsDefaultUser = false;
                 scope.PermissionLevel = PermissionLevel.Administrator;
                 return scope;
             }
 
-            // Check role group permissions (OR logic - any role group with permission grants it)
-            scope.CanAccessAcrossStations = roleInfo.RoleGroups.Any(rg => rg.CanAccessAcrossStations);
-            scope.CanAccessAcrossDepartments = roleInfo.RoleGroups.Any(rg => rg.CanAccessAcrossDepartments);
+            // Determine if user is a default user (not in any role group)
+            scope.IsDefaultUser = !roleInfo.RoleGroups.Any();
 
-            // Set permission level based on capabilities
-            if (scope.CanAccessAcrossStations && scope.CanAccessAcrossDepartments)
+            if (scope.IsDefaultUser)
             {
-                scope.PermissionLevel = PermissionLevel.Administrator;
-            }
-            else if (scope.CanAccessAcrossDepartments || scope.CanAccessAcrossStations)
-            {
-                scope.PermissionLevel = PermissionLevel.Manager;
+                // Default users: NULL, NULL - only personal data access
+                scope.CanAccessAcrossStations = false;
+                scope.CanAccessAcrossDepartments = false;
+                scope.PermissionLevel = PermissionLevel.Default;
             }
             else
             {
-                scope.PermissionLevel = PermissionLevel.Default;
+                // Users in role groups: check permissions (OR logic)
+                scope.CanAccessAcrossStations = roleInfo.RoleGroups.Any(rg => rg.CanAccessAcrossStations);
+                scope.CanAccessAcrossDepartments = roleInfo.RoleGroups.Any(rg => rg.CanAccessAcrossDepartments);
+
+                // Set permission level based on capabilities
+                if (scope.CanAccessAcrossStations && scope.CanAccessAcrossDepartments)
+                {
+                    scope.PermissionLevel = PermissionLevel.Administrator;
+                }
+                else if (scope.CanAccessAcrossDepartments || scope.CanAccessAcrossStations)
+                {
+                    scope.PermissionLevel = PermissionLevel.Manager;
+                }
+                else
+                {
+                    scope.PermissionLevel = PermissionLevel.Default;
+                }
             }
 
             return scope;
@@ -293,10 +308,51 @@ namespace MRIV.Services
 
         private async Task CalculateAccessibleLocationsAsync(UserProfile profile)
         {
-            if (profile.RoleInformation.IsAdmin || 
-                (profile.VisibilityScope.CanAccessAcrossStations && profile.VisibilityScope.CanAccessAcrossDepartments))
+            // Admin users see everything
+            if (profile.RoleInformation.IsAdmin)
             {
-                // Admin access - can see all departments and stations
+                var allDepartments = await _ktdaContext.Departments.ToListAsync();
+                var allStations = await _ktdaContext.Stations.ToListAsync();
+
+                profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new EnhancedDepartmentInfo
+                {
+                    Id = d.DepartmentCode,
+                    Code = d.DepartmentId,
+                    Name = d.DepartmentName ?? string.Empty
+                }).ToList();
+
+                profile.LocationAccess.AccessibleStations = allStations.Select(s => new EnhancedStationInfo
+                {
+                    Id = s.StationId,
+                    Name = s.StationName ?? string.Empty,
+                    OriginalName = s.StationName ?? string.Empty,
+                    Category = new StationCategoryInfo
+                    {
+                        Code = DetermineStationCategory(s.StationId, s.StationName),
+                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                    }
+                }).ToList();
+
+                profile.LocationAccess.AccessibleDepartmentIds = allDepartments.Select(d => d.DepartmentCode).ToList();
+                profile.LocationAccess.AccessibleStationIds = allStations.Select(s => s.StationId).ToList();
+                return;
+            }
+
+            // Default users (not in any role group) have no accessible locations
+            // They access data only through PayrollNo filtering, not location filtering
+            if (profile.VisibilityScope.IsDefaultUser)
+            {
+                profile.LocationAccess.AccessibleDepartments = new List<EnhancedDepartmentInfo>();
+                profile.LocationAccess.AccessibleStations = new List<EnhancedStationInfo>();
+                profile.LocationAccess.AccessibleDepartmentIds = new List<int>();
+                profile.LocationAccess.AccessibleStationIds = new List<int>();
+                return;
+            }
+
+            // Users in role groups: calculate based on their permissions
+            if (profile.VisibilityScope.CanAccessAcrossStations && profile.VisibilityScope.CanAccessAcrossDepartments)
+            {
+                // Full organizational access
                 var allDepartments = await _ktdaContext.Departments.ToListAsync();
                 var allStations = await _ktdaContext.Stations.ToListAsync();
 
