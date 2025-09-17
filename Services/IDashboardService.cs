@@ -1,9 +1,14 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MRIV.Enums;
 using MRIV.Extensions;
 using MRIV.Models;
+using MRIV.Models.Views;
 using MRIV.ViewModels;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace MRIV.Services
@@ -21,59 +26,82 @@ namespace MRIV.Services
     public class DashboardService : IDashboardService
     {
         private readonly RequisitionContext _context;
-        private readonly IEmployeeService _employeeService;
         private readonly IDepartmentService _departmentService;
         private readonly IUserProfileService _userProfileService;
+        private readonly IVisibilityAuthorizeService _visibilityService;
+        private readonly ILogger<DashboardService> _logger;
 
-        public DashboardService(RequisitionContext context, IEmployeeService employeeService, IDepartmentService departmentService, IUserProfileService userProfileService)
+        public DashboardService(
+            RequisitionContext context,
+            IDepartmentService departmentService,
+            IUserProfileService userProfileService,
+            IVisibilityAuthorizeService visibilityService,
+            ILogger<DashboardService> logger)
         {
             _context = context;
-            _employeeService = employeeService;
             _departmentService = departmentService;
             _userProfileService = userProfileService;
+            _visibilityService = visibilityService;
+            _logger = logger;
         }
 
         public async Task<MyRequisitionsDashboardViewModel> GetMyRequisitionsDashboardAsync(HttpContext httpContext)
         {
             try
             {
-                // Try UserProfile first, fallback to session
+                // Get UserProfile - this is our primary data source
                 var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
-                var payrollNo = userProfile?.BasicInfo?.PayrollNo ?? httpContext.Session.GetString("EmployeePayrollNo");
 
-                if (string.IsNullOrEmpty(payrollNo))
+                if (userProfile?.BasicInfo?.PayrollNo == null)
                 {
-                    return new MyRequisitionsDashboardViewModel();
+                    // Try to rebuild profile from session if missing
+                    var sessionPayrollNo = httpContext.Session.GetString("EmployeePayrollNo");
+                    if (!string.IsNullOrEmpty(sessionPayrollNo))
+                    {
+                        userProfile = await _userProfileService.BuildUserProfileAsync(sessionPayrollNo);
+                    }
+
+                    if (userProfile?.BasicInfo?.PayrollNo == null)
+                    {
+                        _logger.LogWarning("Unable to load user profile for dashboard");
+                        return new MyRequisitionsDashboardViewModel
+                        {
+                            ErrorMessage = "Unable to load user profile. Please log in again."
+                        };
+                    }
                 }
 
-                // Get employee, department, and station information
-                var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) =
-                    await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                var payrollNo = userProfile.BasicInfo.PayrollNo;
+                _logger.LogInformation("Loading dashboard for user: {PayrollNo}", payrollNo);
 
                 // Create enhanced dashboard view model
                 var viewModel = new MyRequisitionsDashboardViewModel();
 
-                // Set user context from profile if available
-                if (userProfile != null)
-                {
-                    viewModel.UserInfo = new UserDashboardInfo
-                    {
-                        Name = userProfile.BasicInfo.Name,
-                        Department = userProfile.BasicInfo.Department,
-                        Station = userProfile.BasicInfo.Station,
-                        Role = userProfile.BasicInfo.Role,
-                        PayrollNo = userProfile.BasicInfo.PayrollNo,
-                        LastLogin = userProfile.CacheInfo.LastRefresh
-                    };
-                    viewModel.CanAccessDepartmentData = userProfile.VisibilityScope.CanAccessAcrossDepartments;
-                    viewModel.CanAccessStationData = userProfile.VisibilityScope.CanAccessAcrossStations;
-                 //   viewModel.PermissionLevel = userProfile.VisibilityScope.PermissionLevel;
-                }
+                // Set user context from UserProfile (single source of truth)
+                _logger.LogInformation("UserProfile BasicInfo - PayrollNo: {PayrollNo}, Fullname: '{Fullname}', Role: '{Role}'",
+                    userProfile.BasicInfo.PayrollNo, userProfile.BasicInfo.Fullname, userProfile.BasicInfo.Role);
 
-                // Get requisitions for the current user
-                var userRequisitions = await _context.Requisitions
-                    .Where(r => r.PayrollNo == payrollNo)
+                viewModel.UserInfo = new UserDashboardInfo
+                {
+                    Name = !string.IsNullOrEmpty(userProfile.BasicInfo.Fullname) ? userProfile.BasicInfo.Fullname : userProfile.BasicInfo.PayrollNo,
+                    Department = userProfile.LocationAccess?.HomeDepartment?.Name ?? "Unknown Department",
+                    Station = userProfile.LocationAccess?.HomeStation?.Name ?? "Unknown Station",
+                    Role = userProfile.BasicInfo.Role ?? "Unknown Role",
+                    PayrollNo = userProfile.BasicInfo.PayrollNo,
+                    LastLogin = userProfile.CacheInfo.LastRefresh
+                };
+                viewModel.CanAccessDepartmentData = userProfile.VisibilityScope.CanAccessAcrossDepartments;
+                viewModel.CanAccessStationData = userProfile.VisibilityScope.CanAccessAcrossStations;
+
+                // Get all requisitions and apply visibility scope using enhanced method
+                var allRequisitions = _context.Requisitions
                     .Include(r => r.RequisitionItems)
+                    .AsQueryable();
+
+                // Apply visibility filtering using enhanced UserProfile-based method
+                var visibleRequisitions = _visibilityService.ApplyVisibilityScopeWithProfile(allRequisitions, userProfile);
+
+                var userRequisitions = await visibleRequisitions
                     .OrderByDescending(r => r.CreatedAt)
                     .ToListAsync();
 
@@ -118,34 +146,49 @@ namespace MRIV.Services
 
         public async Task<DepartmentDashboardViewModel> GetDepartmentDashboardAsync(HttpContext httpContext)
         {
-            // Get current user's payroll number from session
-            var payrollNo = httpContext.Session.GetString("EmployeePayrollNo");
-            if (string.IsNullOrEmpty(payrollNo))
+            try
             {
-                return new DepartmentDashboardViewModel();
-            }
+                // Get UserProfile for department context
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
 
-            // Get employee, department, and station information
-            var (loggedInUserEmployee, loggedInUserDepartment, loggedInUserStation) =
-                await _employeeService.GetEmployeeAndDepartmentAsync(payrollNo);
+                if (userProfile?.LocationAccess?.HomeDepartment == null)
+                {
+                    _logger.LogWarning("Unable to load user profile or department for department dashboard");
+                    return new DepartmentDashboardViewModel
+                    {
+                        DepartmentName = "Unknown Department"
+                    };
+                }
 
-            if (loggedInUserDepartment == null)
-            {
-                return new DepartmentDashboardViewModel();
-            }
+                // Verify user has department access
+                if (!userProfile.VisibilityScope.CanAccessAcrossDepartments &&
+                    !userProfile.RoleInformation.IsAdmin)
+                {
+                    _logger.LogWarning("User {PayrollNo} attempted to access department dashboard without permission",
+                        userProfile.BasicInfo.PayrollNo);
+                    return new DepartmentDashboardViewModel
+                    {
+                        DepartmentName = userProfile.LocationAccess.HomeDepartment.Name
+                    };
+                }
 
-            // Create dashboard view model
-            var viewModel = new DepartmentDashboardViewModel
-            {
-                DepartmentName = loggedInUserDepartment.DepartmentName
-            };
+                // Create dashboard view model using UserProfile data
+                var viewModel = new DepartmentDashboardViewModel
+                {
+                    DepartmentName = userProfile.LocationAccess.HomeDepartment.Name
+                };
 
-            // Get all requisitions for the department
-            var departmentRequisitions = await _context.Requisitions
-                .Where(r => r.DepartmentId == loggedInUserDepartment.DepartmentCode)
-                .Include(r => r.RequisitionItems)
-                .OrderByDescending(r => r.CreatedAt)
-                .ToListAsync();
+                // Get all requisitions and apply visibility scope
+                var allRequisitions = _context.Requisitions
+                    .Include(r => r.RequisitionItems)
+                    .AsQueryable();
+
+                // Apply visibility filtering based on user's access level
+                var visibleRequisitions = _visibilityService.ApplyVisibilityScopeWithProfile(allRequisitions, userProfile);
+
+                var departmentRequisitions = await visibleRequisitions
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToListAsync();
 
             // Calculate metrics
             viewModel.TotalDepartmentRequisitions = departmentRequisitions.Count();
@@ -173,7 +216,7 @@ namespace MRIV.Services
             
             foreach (var r in recentDepartmentRequisitions)
             {
-                // Resolve location names
+                // Resolve location names using department service
                 string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(
                     r.IssueStationId, r.IssueDepartmentId);
                 
@@ -197,17 +240,27 @@ namespace MRIV.Services
                 });
             }
 
-            // Get employee names for the requisitions
+            // Get employee names using the new EmployeeDetailsView method
             var payrollNumbers = viewModel.RecentDepartmentRequisitions.Select(r => r.PayrollNo).Distinct().ToList();
+            var employeeNames = await GetEmployeeNamesAsync(payrollNumbers);
 
-            // Retrieve employees one by one since there's no bulk method available
             foreach (var requisition in viewModel.RecentDepartmentRequisitions)
             {
-                var employee = await _employeeService.GetEmployeeByPayrollAsync(requisition.PayrollNo);
-                requisition.EmployeeName = employee != null ? $"{employee.SurName} {employee.OtherNames}" : requisition.PayrollNo;
+                requisition.EmployeeName = employeeNames.ContainsKey(requisition.PayrollNo)
+                    ? employeeNames[requisition.PayrollNo]
+                    : requisition.PayrollNo;
             }
 
-            return viewModel;
+                return viewModel;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading department dashboard");
+                return new DepartmentDashboardViewModel
+                {
+                    DepartmentName = "Error Loading Department"
+                };
+            }
         }
 
         #region Enhanced Helper Methods
@@ -330,8 +383,8 @@ namespace MRIV.Services
                 string issueLocationName = await _departmentService.GetLocationNameFromIdsAsync(r.IssueStationId, r.IssueDepartmentId);
                 string deliveryLocationName = await _departmentService.GetLocationNameFromIdsAsync(r.DeliveryStationId, r.DeliveryDepartmentId);
 
-                var employee = await _employeeService.GetEmployeeByPayrollAsync(r.PayrollNo);
-                string employeeName = employee != null ? $"{employee.SurName} {employee.OtherNames}" : r.PayrollNo;
+                // Get employee name using the new EmployeeDetailsView method
+                string employeeName = await GetEmployeeNameAsync(r.PayrollNo);
 
                 viewModel.RecentRequisitions.Add(new RequisitionSummary
                 {
@@ -462,5 +515,59 @@ namespace MRIV.Services
         }
 
         #endregion
+
+        /// <summary>
+        /// Get employee name from the EmployeeDetailsView (replacing EmployeeService functionality)
+        /// </summary>
+        private async Task<string> GetEmployeeNameAsync(string payrollNo)
+        {
+            try
+            {
+                var employeeDetails = await _context.EmployeeDetailsViews
+                    .Where(e => e.PayrollNo == payrollNo && e.IsActive == 0)
+                    .Select(e => new { e.Fullname, e.SurName, e.OtherNames })
+                    .FirstOrDefaultAsync();
+
+                if (employeeDetails != null)
+                {
+                    return !string.IsNullOrEmpty(employeeDetails.Fullname)
+                        ? employeeDetails.Fullname
+                        : $"{employeeDetails.SurName} {employeeDetails.OtherNames}".Trim();
+                }
+
+                return payrollNo; // Fallback to PayrollNo if not found
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error getting employee name for PayrollNo: {PayrollNo}", payrollNo);
+                return payrollNo; // Fallback to PayrollNo on error
+            }
+        }
+
+        /// <summary>
+        /// Get multiple employee names in a single query for better performance
+        /// </summary>
+        private async Task<Dictionary<string, string>> GetEmployeeNamesAsync(IEnumerable<string> payrollNumbers)
+        {
+            try
+            {
+                var employees = await _context.EmployeeDetailsViews
+                    .Where(e => payrollNumbers.Contains(e.PayrollNo) && e.IsActive == 0)
+                    .Select(e => new { e.PayrollNo, e.Fullname, e.SurName, e.OtherNames })
+                    .ToListAsync();
+
+                return employees.ToDictionary(
+                    e => e.PayrollNo,
+                    e => !string.IsNullOrEmpty(e.Fullname)
+                        ? e.Fullname
+                        : $"{e.SurName} {e.OtherNames}".Trim()
+                );
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Error getting employee names for multiple PayrollNos");
+                return new Dictionary<string, string>();
+            }
+        }
     }
 }

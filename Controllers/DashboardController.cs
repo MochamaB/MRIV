@@ -16,20 +16,17 @@ namespace MRIV.Controllers
     public class DashboardController : Controller
     {
         private readonly RequisitionContext _context;
-        private readonly IEmployeeService _employeeService;
         private readonly IDashboardService _dashboardService;
         private readonly IDepartmentService _departmentService;
         private readonly IUserProfileService _userProfileService;
 
         public DashboardController(
             RequisitionContext context,
-            IEmployeeService employeeService,
             IDashboardService dashboardService,
             IDepartmentService departmentService,
             IUserProfileService userProfileService)
         {
             _context = context;
-            _employeeService = employeeService;
             _dashboardService = dashboardService;
             _departmentService = departmentService;
             _userProfileService = userProfileService;

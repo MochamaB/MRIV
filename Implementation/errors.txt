@@ -1,22 +1,29 @@
-'DateTime?' does not contain a definition for 'Month' and no accessible extension method 'Month' accepting a first argument of type 'DateTime?' could be found (are you missing a using directive or an assembly reference?)
-'DateTime?' does not contain a definition for 'Year' and no accessible extension method 'Year' accepting a first argument of type 'DateTime?' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'CompletedAt' and no accessible extension method 'CompletedAt' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'CompletedAt' and no accessible extension method 'CompletedAt' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'CompletedAt' and no accessible extension method 'CompletedAt' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'ExpectedDeliveryDate' and no accessible extension method 'ExpectedDeliveryDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'IsUrgent' and no accessible extension method 'IsUrgent' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'LastStatusChangeDate' and no accessible extension method 'LastStatusChangeDate' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'Priority' and no accessible extension method 'Priority' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'Requisition' does not contain a definition for 'Priority' and no accessible extension method 'Priority' accepting a first argument of type 'Requisition' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'Category' and no accessible extension method 'Category' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'Category' and no accessible extension method 'Category' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'Category' and no accessible extension method 'Category' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'ItemCode' and no accessible extension method 'ItemCode' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'ItemName' and no accessible extension method 'ItemName' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
-'RequisitionItem' does not contain a definition for 'QuantityRequested' and no accessible extension method 'QuantityRequested' accepting a first argument of type 'RequisitionItem' could be found (are you missing a using directive or an assembly reference?)
+to load resource: the server responded with a status of 404 ()Understand this error
+logo-sm.png:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+app.js:1 Uncaught TypeError: Cannot read properties of null (reading 'addEventListener')
+    at app.js:1:53090
+    at app.js:1:58254Understand this error
+logo-sm.png:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+hkgrotesk-regular.woff:1  Failed to load resource: the server responded with a status of 404 ()Understand this error
+Dashboard:1752 === DASHBOARD MODEL DEBUG ===
+Dashboard:1753 Model.RequisitionStatusCounts: ObjectCancelled: 0Completed: 2In Dispatch: 0Not Started: 2Receiving: 0[[Prototype]]: Object
+Dashboard:1754 Model.TrendData: Object
+Dashboard:1755 Model.RecentRequisitions count: 4
+Dashboard:1756 Model.QuickStats: Object
+Dashboard:1757 Model.ActionRequired: Object
+Dashboard:1758 Basic Metrics: Object
+Dashboard:1766 User Info: Object
+Dashboard:1767 === END MODEL DEBUG ===
+Dashboard:1806 Status Chart Data: Object
+chart.js:13 Failed to create chart: can't acquire context from the given item
+Tn @ chart.js:13Understand this error
+Dashboard:1864 Status chart created successfully
+Dashboard:1879 Trend Chart Data: Array(2)0: {month: 'May', year: 2025, count: 3, completed: 1, pending: 2, …}1: {month: 'Jul', year: 2025, count: 1, completed: 1, pending: 0, …}length: 2[[Prototype]]: Array(0)
+chart.js:13 Failed to create chart: can't acquire context from the given item
+Tn @ chart.js:13Understand this error
+Dashboard:1994 Trend chart created successfully
+Dashboard:1431 DashboardManager initialized
+Pdfview.js:8 Script section loaded
+requisitionitems.js:528 Material search elements not found - skipping search initialization
+requisitionitems.js:943 No .myForm found - skipping validation
+Dashboard:1077 Script section loaded

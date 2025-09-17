@@ -18,7 +18,28 @@
                 <p class="text-muted mb-0">Here's what's happening with the MRIV system today.</p>
             </div>
             <div class="mt-3 mt-lg-1">
-               
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="refresh">
+                        <i class="ri-refresh-line"></i> Refresh
+                    </button>
+                    @if (Model.HasActionItems)
+                    {
+                        <button type="button" class="btn btn-primary btn-sm" data-action="show-actions">
+                            <i class="ri-notification-line"></i> Actions (@Model.AwaitingMyAction)
+                        </button>
+                    }
+                    <div class="dropdown">
+                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="ri-filter-line"></i> Filter
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-filter="all">All Requisitions</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="pending">Pending Only</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="completed">Completed Only</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="thisMonth">This Month</a></li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div><!-- end card header -->
     </div>
@@ -202,37 +223,37 @@
             </div>
             <div class="card-body">
                 <div class="row g-3">
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3 border border-dashed border-start-0 border-top-0 border-end-0">
                             <h5 class="mb-1"><span class="counter-value" data-target="@Model.QuickStats.CompletedThisMonth">@Model.QuickStats.CompletedThisMonth</span></h5>
                             <p class="text-muted mb-0">Completed This Month</p>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3 border border-dashed border-start-0 border-top-0 border-end-0">
                             <h5 class="mb-1">@Model.QuickStats.FormattedAverageItems</h5>
                             <p class="text-muted mb-0">Avg Items/Request</p>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3 border border-dashed border-start-0 border-top-0 border-end-0">
                             <h5 class="mb-1">@Model.FormattedAverageProcessingDays</h5>
                             <p class="text-muted mb-0">Avg Processing Time</p>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3 border border-dashed border-start-0 border-top-0 border-end-0">
                             <h5 class="mb-1"><span class="counter-value" data-target="@Model.QuickStats.TotalItemsRequested">@Model.QuickStats.TotalItemsRequested</span></h5>
                             <p class="text-muted mb-0">Total Items Requested</p>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3 border border-dashed border-start-0 border-top-0 border-end-0">
                             <h5 class="mb-1">@(string.IsNullOrEmpty(Model.QuickStats.MostRequestedCategory) ? "N/A" : Model.QuickStats.MostRequestedCategory)</h5>
                             <p class="text-muted mb-0">Top Category</p>
                         </div>
                     </div>
-                    <div class="col-xl-2 col-md-4 col-6">
+                    <div class="col-xl-2 col-md-4 col-6" style="border-right: 2px solid #dee2e6;">
                         <div class="p-3">
                             <h5 class="mb-1"><span class="counter-value" data-target="@Model.QuickStats.ActiveRequisitions">@Model.QuickStats.ActiveRequisitions</span></h5>
                             <p class="text-muted mb-0">Active Requests</p>
@@ -351,7 +372,7 @@
                 </div>
             </div>
             <div class="card-body">
-                <div id="status-chart" style="height: 350px;"></div>
+                <canvas id="status-chart" class="chart-container" style="height: 350px;"></canvas>
             </div>
         </div>
 
@@ -361,7 +382,7 @@
                 <h4 class="card-title mb-0 flex-grow-1">Monthly Trends</h4>
             </div>
             <div class="card-body">
-                <div id="trend-chart" style="height: 300px;"></div>
+                <canvas id="trend-chart" class="chart-container" style="height: 300px;"></canvas>
             </div>
         </div>
     </div>
@@ -471,8 +492,472 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <style>
+        /* Enhanced Dashboard Animations */
+        .card-animate {
+            transition: all 0.3s ease-out;
+        }
+
+        .card-animate:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .counter-value.updated {
+            animation: pulse 0.6s ease-out;
+        }
+
+        @@keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); color: #28a745; }
+            100% { transform: scale(1); }
+        }
+
+        .notification-toast {
+            animation: slideInRight 0.3s ease-out;
+        }
+
+        @@keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .ri-loader-4-line.spin {
+            animation: spin 1s linear infinite;
+        }
+
+        @@keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Enhanced Card Hover Effects */
+        .card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Filter Button Active State */
+        .dropdown-item.active {
+            background-color: var(--bs-primary);
+            color: white;
+        }
+
+        /* Chart Container Enhancement */
+        .chart-container {
+            position: relative;
+            opacity: 0;
+            animation: fadeInUp 0.6s ease-out forwards;
+        }
+
+        @@keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Action Required Animation */
+        .alert-additional {
+            animation: slideInDown 0.5s ease-out;
+        }
+
+        @@keyframes slideInDown {
+            from {
+                transform: translateY(-100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        /* Loading States */
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+    </style>
+
+    <script>
+        // DashboardManager Class - Enhanced Dashboard Management
+        class DashboardManager {
+            constructor(options) {
+                this.statusChart = options.statusChart;
+                this.trendChart = options.trendChart;
+                this.refreshInterval = options.refreshInterval || 300000; // 5 minutes default
+                this.apiEndpoints = options.apiEndpoints || {};
+                this.refreshTimer = null;
+                this.isRefreshing = false;
+
+                // Animation settings
+                this.animationDuration = 1000;
+                this.animationEasing = 'ease-out';
+
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.setupActionModals();
+                this.initializeFilters();
+                this.setupResponsiveAnimations();
+                console.log('DashboardManager initialized');
+            }
+
+            // Event Binding
+            bindEvents() {
+                // Refresh button click
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('[data-action="refresh"]')) {
+                        e.preventDefault();
+                        this.manualRefresh();
+                    }
+                });
+
+                // Action item clicks
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('[data-action="show-actions"]')) {
+                        e.preventDefault();
+                        this.showActionModal();
+                    }
+                });
+
+                // Chart filter clicks
+                document.addEventListener('click', (e) => {
+                    if (e.target.matches('[data-filter]')) {
+                        e.preventDefault();
+                        this.applyFilter(e.target.dataset.filter);
+                    }
+                });
+            }
+
+            // Auto-refresh functionality
+            startAutoRefresh() {
+                this.refreshTimer = setInterval(() => {
+                    if (!document.hidden && !this.isRefreshing) {
+                        this.refreshData();
+                    }
+                }, this.refreshInterval);
+            }
+
+            stopAutoRefresh() {
+                if (this.refreshTimer) {
+                    clearInterval(this.refreshTimer);
+                    this.refreshTimer = null;
+                }
+            }
+
+            // Manual refresh with visual feedback
+            async manualRefresh() {
+                const refreshBtn = document.querySelector('[data-action="refresh"]');
+                if (refreshBtn) {
+                    refreshBtn.innerHTML = '<i class="ri-loader-4-line spin"></i> Refreshing...';
+                    refreshBtn.disabled = true;
+                }
+
+                try {
+                    await this.refreshData();
+                    this.showNotification('Dashboard refreshed successfully', 'success');
+                } catch (error) {
+                    this.showNotification('Failed to refresh dashboard', 'error');
+                } finally {
+                    if (refreshBtn) {
+                        refreshBtn.innerHTML = '<i class="ri-refresh-line"></i> Refresh';
+                        refreshBtn.disabled = false;
+                    }
+                }
+            }
+
+            // Data refresh
+            async refreshData() {
+                if (this.isRefreshing) return;
+                this.isRefreshing = true;
+
+                try {
+                    const [dashboardData, chartData] = await Promise.all([
+                        this.fetchData(this.apiEndpoints.dashboardData),
+                        this.fetchData(this.apiEndpoints.chartData)
+                    ]);
+
+                    if (dashboardData.success) {
+                        this.updateMetrics(dashboardData.data);
+                    }
+
+                    if (chartData.success) {
+                        this.updateCharts(chartData.data);
+                    }
+
+                } catch (error) {
+                    console.error('Dashboard refresh failed:', error);
+                } finally {
+                    this.isRefreshing = false;
+                }
+            }
+
+            // Fetch data helper
+            async fetchData(url) {
+                const response = await fetch(url);
+                return await response.json();
+            }
+
+            // Update metrics with animation
+            updateMetrics(data) {
+                if (data.totalRequisitions !== undefined) {
+                    this.animateCounter('[data-target]', data.totalRequisitions, 'total');
+                }
+                if (data.awaitingAction !== undefined) {
+                    this.animateCounter('[data-target]', data.awaitingAction, 'awaiting');
+                }
+                if (data.thisMonth !== undefined) {
+                    this.animateCounter('[data-target]', data.thisMonth, 'monthly');
+                }
+            }
+
+            // Enhanced counter animation
+            animateCounter(selector, newValue, type) {
+                const elements = document.querySelectorAll(selector);
+                elements.forEach(element => {
+                    const currentValue = parseInt(element.textContent) || 0;
+                    if (currentValue !== newValue) {
+                        this.animateNumberChange(element, currentValue, newValue);
+                    }
+                });
+            }
+
+            animateNumberChange(element, from, to) {
+                const duration = this.animationDuration;
+                const startTime = performance.now();
+
+                const animate = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+
+                    // Easing function
+                    const easedProgress = 1 - Math.pow(1 - progress, 3);
+
+                    const currentValue = Math.floor(from + (to - from) * easedProgress);
+                    element.textContent = currentValue;
+
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        element.textContent = to;
+                        element.classList.add('updated');
+                        setTimeout(() => element.classList.remove('updated'), 1000);
+                    }
+                };
+
+                requestAnimationFrame(animate);
+            }
+
+            // Update charts
+            updateCharts(data) {
+                if (this.statusChart && data.statusDistribution) {
+                    this.statusChart.data.datasets[0].data = Object.values(data.statusDistribution);
+                    this.statusChart.update('active');
+                }
+
+                if (this.trendChart && data.monthlyTrend) {
+                    const monthlyData = data.monthlyTrend;
+                    this.trendChart.data.labels = monthlyData.map(item => item.Month + ' ' + item.Year);
+                    this.trendChart.data.datasets[0].data = monthlyData.map(item => item.Count);
+                    this.trendChart.data.datasets[1].data = monthlyData.map(item => item.Completed);
+                    this.trendChart.data.datasets[2].data = monthlyData.map(item => item.Pending);
+                    this.trendChart.update('active');
+                }
+            }
+
+            // Action Modal Setup
+            setupActionModals() {
+                // Create modal if it doesn't exist
+                if (!document.getElementById('actionModal')) {
+                    const modalHtml = `
+                        <div class="modal fade" id="actionModal" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Action Required Items</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body" id="actionModalBody">
+                                        <div class="text-center">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>`;
+                    document.body.insertAdjacentHTML('beforeend', modalHtml);
+                }
+            }
+
+            // Show action modal
+            async showActionModal() {
+                const modal = new bootstrap.Modal(document.getElementById('actionModal'));
+                const modalBody = document.getElementById('actionModalBody');
+
+                modalBody.innerHTML = '<div class="text-center"><div class="spinner-border text-primary" role="status"></div></div>';
+                modal.show();
+
+                try {
+                    const response = await this.fetchData(this.apiEndpoints.dashboardData);
+                    if (response.success && response.data.actionRequired) {
+                        this.renderActionItems(modalBody, response.data.actionRequired);
+                    }
+                } catch (error) {
+                    modalBody.innerHTML = '<div class="alert alert-danger">Failed to load action items</div>';
+                }
+            }
+
+            renderActionItems(container, actionData) {
+                const html = `
+                    <div class="row g-3">
+                        ${actionData.pendingReceipt > 0 ? `
+                            <div class="col-md-6">
+                                <div class="card border-info">
+                                    <div class="card-body">
+                                        <h6 class="text-info"><i class="ri-file-check-line"></i> Pending Receipt</h6>
+                                        <p class="mb-0">${actionData.pendingReceipt} items awaiting confirmation</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                        ${actionData.overdue > 0 ? `
+                            <div class="col-md-6">
+                                <div class="card border-danger">
+                                    <div class="card-body">
+                                        <h6 class="text-danger"><i class="ri-timer-line"></i> Overdue Items</h6>
+                                        <p class="mb-0">${actionData.overdue} items are overdue</p>
+                                    </div>
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>`;
+                container.innerHTML = html || '<div class="alert alert-success">No action items required!</div>';
+            }
+
+            // Filter functionality
+            initializeFilters() {
+                const filterButtons = document.querySelectorAll('[data-filter]');
+                filterButtons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        filterButtons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                    });
+                });
+            }
+
+            applyFilter(filterType) {
+                // Filter logic can be enhanced based on requirements
+                console.log('Applying filter:', filterType);
+                this.showNotification(`Filter applied: ${filterType}`, 'info');
+            }
+
+            // Responsive animations
+            setupResponsiveAnimations() {
+                // Add fade-in animation to cards
+                const cards = document.querySelectorAll('.card');
+                cards.forEach((card, index) => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    card.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+
+                    setTimeout(() => {
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+
+                // Add hover effects
+                this.addHoverEffects();
+            }
+
+            addHoverEffects() {
+                const metricCards = document.querySelectorAll('.card-animate');
+                metricCards.forEach(card => {
+                    card.addEventListener('mouseenter', () => {
+                        card.style.transform = 'translateY(-5px)';
+                        card.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+                    });
+
+                    card.addEventListener('mouseleave', () => {
+                        card.style.transform = 'translateY(0)';
+                        card.style.boxShadow = '';
+                    });
+                });
+            }
+
+            // Notification system
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `alert alert-${type} notification-toast position-fixed`;
+                notification.style.cssText = 'top: 20px; right: 20px; z-index: 1060; min-width: 300px;';
+                notification.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        <i class="ri-${type === 'success' ? 'check' : type === 'error' ? 'error-warning' : 'information'}-line me-2"></i>
+                        ${message}
+                        <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+                    </div>`;
+
+                document.body.appendChild(notification);
+
+                // Auto remove after 3 seconds
+                setTimeout(() => {
+                    if (notification.parentElement) {
+                        notification.remove();
+                    }
+                }, 3000);
+            }
+
+            // Cleanup
+            destroy() {
+                this.stopAutoRefresh();
+                console.log('DashboardManager destroyed');
+            }
+        }
+    </script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Debug: Log the entire model data
+            console.log('=== DASHBOARD MODEL DEBUG ===');
+            console.log('Model.RequisitionStatusCounts:', @Html.Raw(Json.Serialize(Model.RequisitionStatusCounts ?? new Dictionary<string, int>())));
+            console.log('Model.TrendData:', @Html.Raw(Json.Serialize(Model.TrendData ?? new object())));
+            console.log('Model.RecentRequisitions count:', @(Model.RecentRequisitions?.Count() ?? 0));
+            console.log('Model.QuickStats:', @Html.Raw(Json.Serialize(Model.QuickStats ?? new object())));
+            console.log('Model.ActionRequired:', @Html.Raw(Json.Serialize(Model.ActionRequired ?? new object())));
+            console.log('Basic Metrics:', {
+                TotalRequisitions: @Model.TotalRequisitions,
+                PendingRequisitions: @Model.PendingRequisitions,
+                CompletedRequisitions: @Model.CompletedRequisitions,
+                AwaitingMyAction: @Model.AwaitingMyAction,
+                ThisMonthRequisitions: @Model.ThisMonthRequisitions,
+                OverdueRequisitions: @Model.OverdueRequisitions
+            });
+            console.log('User Info:', @Html.Raw(Json.Serialize(Model.UserInfo ?? new object())));
+            console.log('=== END MODEL DEBUG ===');
+
             // Initialize counter animation
             var counterElements = document.querySelectorAll('.counter-value');
 
@@ -502,19 +987,29 @@
             });
 
             // Status Distribution Pie Chart
+            var statusChart = null;
             var statusChartCtx = document.getElementById('status-chart');
             if (statusChartCtx) {
-                var statusChart = new Chart(statusChartCtx, {
+                try {
+                    // Debug: Log the chart data
+                    var statusLabels = @Html.Raw(Json.Serialize(Model.RequisitionStatusCounts?.Keys?.ToArray() ?? new string[0]));
+                    var statusData = @Html.Raw(Json.Serialize(Model.RequisitionStatusCounts?.Values?.ToArray() ?? new int[0]));
+
+                    console.log('Status Chart Data:', { labels: statusLabels, data: statusData });
+
+                    // Use fallback data if empty
+                    if (statusLabels.length === 0) {
+                        statusLabels = ['No Data'];
+                        statusData = [1];
+                    }
+
+                    statusChart = new Chart(statusChartCtx, {
                     type: 'doughnut',
                     data: {
-                        labels: [
-                            @Html.Raw(Json.Serialize(Model.RequisitionStatusCounts.Keys.ToArray()))
-                        ],
+                        labels: statusLabels,
                         datasets: [{
                             label: 'Requisitions',
-                            data: [
-                                @Html.Raw(Json.Serialize(Model.RequisitionStatusCounts.Values.ToArray()))
-                            ],
+                            data: statusData,
                             backgroundColor: [
                                 '#405189', // Primary
                                 '#0ab39c', // Success
@@ -558,23 +1053,48 @@
                         }
                     }
                 });
+                console.log('Status chart created successfully');
+                } catch (error) {
+                    console.error('Error creating status chart:', error);
+                    statusChartCtx.innerHTML = '<div class="text-center text-muted p-4">Chart data not available</div>';
+                }
             }
 
             // Monthly Trend Line Chart
+            var trendChart = null;
             var trendChartCtx = document.getElementById('trend-chart');
             if (trendChartCtx) {
-                // Get the monthly data from the model
-                @{
-                    var monthlyTrendData = Model.TrendData?.RequisitionsByMonth ?? new List<MRIV.ViewModels.MonthlyRequisitionData>();
+                try {
+                    // Get the monthly data from the model
+                    @{
+                        var monthlyTrendData = Model.TrendData?.RequisitionsByMonth ?? new List<MRIV.ViewModels.MonthlyRequisitionData>();
+                    }
+                    var monthlyData = @Html.Raw(Json.Serialize(monthlyTrendData));
+
+                console.log('Trend Chart Data:', monthlyData);
+
+                // Use fallback data if empty
+                var months, totalCounts, completedCounts, pendingCounts;
+
+                if (monthlyData.length > 0) {
+                    months = monthlyData.map(item => item.Month + ' ' + item.Year);
+                    totalCounts = monthlyData.map(item => item.Count);
+                    completedCounts = monthlyData.map(item => item.Completed);
+                    pendingCounts = monthlyData.map(item => item.Pending);
+                } else {
+                    // Fallback data for empty dataset
+                    var currentDate = new Date();
+                    months = [
+                        'Jan ' + currentDate.getFullYear(),
+                        'Feb ' + currentDate.getFullYear(),
+                        'Mar ' + currentDate.getFullYear()
+                    ];
+                    totalCounts = [0, 0, 0];
+                    completedCounts = [0, 0, 0];
+                    pendingCounts = [0, 0, 0];
                 }
-                var monthlyData = @Html.Raw(Json.Serialize(monthlyTrendData));
 
-                var months = monthlyData.length > 0 ? monthlyData.map(item => item.Month + ' ' + item.Year) : [];
-                var totalCounts = monthlyData.length > 0 ? monthlyData.map(item => item.Count) : [];
-                var completedCounts = monthlyData.length > 0 ? monthlyData.map(item => item.Completed) : [];
-                var pendingCounts = monthlyData.length > 0 ? monthlyData.map(item => item.Pending) : [];
-
-                var trendChart = new Chart(trendChartCtx, {
+                trendChart = new Chart(trendChartCtx, {
                     type: 'line',
                     data: {
                         labels: months,
@@ -666,59 +1186,28 @@
                         }
                     }
                 });
-            }
-
-            // Auto-refresh dashboard data every 5 minutes
-            setInterval(function() {
-                // Only refresh if the page is visible
-                if (!document.hidden) {
-                    fetch('@Url.Action("GetDashboardData", "Dashboard")')
-                        .then(response => response.json())
-                        .then(data => {
-                            // Update counters with new data
-                            if (data.metrics) {
-                                updateCounter('[data-target="' + @Model.TotalRequisitions + '"]', data.metrics.totalRequisitions);
-                                updateCounter('[data-target="' + @Model.AwaitingMyAction + '"]', data.metrics.awaitingMyAction);
-                                updateCounter('[data-target="' + @Model.ThisMonthRequisitions + '"]', data.metrics.thisMonthRequisitions);
-                            }
-                        })
-                        .catch(error => console.log('Dashboard refresh failed:', error));
-                }
-            }, 300000); // 5 minutes
-
-            function updateCounter(selector, newValue) {
-                var element = document.querySelector(selector);
-                if (element) {
-                    var currentValue = parseInt(element.textContent);
-                    if (currentValue !== newValue) {
-                        element.setAttribute('data-target', newValue);
-                        animateCounter(element, currentValue, newValue);
-                    }
+                console.log('Trend chart created successfully');
+                } catch (error) {
+                    console.error('Error creating trend chart:', error);
+                    trendChartCtx.innerHTML = '<div class="text-center text-muted p-4">Chart data not available</div>';
                 }
             }
 
-            function animateCounter(element, from, to) {
-                var duration = 1000;
-                var startTime = null;
-
-                function animate(currentTime) {
-                    if (!startTime) startTime = currentTime;
-                    var progress = (currentTime - startTime) / duration;
-
-                    if (progress > 1) progress = 1;
-
-                    var currentValue = Math.floor(from + (to - from) * progress);
-                    element.textContent = currentValue;
-
-                    if (progress < 1) {
-                        requestAnimationFrame(animate);
-                    } else {
-                        element.textContent = to;
-                    }
+            // Initialize DashboardManager with enhanced features
+            const dashboardManager = new DashboardManager({
+                statusChart: statusChart,
+                trendChart: trendChart,
+                refreshInterval: 300000, // 5 minutes
+                apiEndpoints: {
+                    dashboardData: '@Url.Action("GetDashboardData", "Dashboard")',
+                    chartData: '@Url.Action("GetChartData", "Dashboard")',
+                    recentRequisitions: '@Url.Action("GetRecentRequisitions", "Dashboard")'
                 }
+            });
 
-                requestAnimationFrame(animate);
-            }
+            // Start auto-refresh and show initialization notification
+            dashboardManager.startAutoRefresh();
+            dashboardManager.showNotification('Dashboard initialized successfully', 'success');
         });
     </script>
 }

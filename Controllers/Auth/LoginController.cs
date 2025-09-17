@@ -139,6 +139,8 @@ namespace MRIV.Controllers.Auth
         }
 
         [HttpGet]
+        [Route("Login/ProfileDebug")]
+        [Route("Auth/ProfileDebug")]
         public async Task<IActionResult> ProfileDebug()
         {
             try

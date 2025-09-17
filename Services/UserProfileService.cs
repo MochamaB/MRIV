@@ -121,6 +121,9 @@ namespace MRIV.Services
 
         private BasicInfo BuildBasicInfoFromView(EmployeeDetailsView employeeDetails)
         {
+            _logger.LogInformation("Building BasicInfo from EmployeeDetailsView - PayrollNo: {PayrollNo}, Fullname: '{Fullname}', Role: '{Role}'",
+                employeeDetails.PayrollNo, employeeDetails.Fullname, employeeDetails.Role);
+
             return new BasicInfo
             {
                 PayrollNo = employeeDetails.PayrollNo,
