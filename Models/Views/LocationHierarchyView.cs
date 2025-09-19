@@ -36,18 +36,6 @@ namespace MRIV.Models.Views
         [StringLength(50)]
         public string StationCategoryName { get; set; } // Head Office, Region, Factory, Other
 
-        // Additional StationCategory table fields for workflow decisions
-        public int? StationCategoryId { get; set; }
-
-        [StringLength(20)]
-        public string StationPoint { get; set; }        // issue, delivery, both
-
-        [StringLength(50)]
-        public string DataSource { get; set; }          // Department, Station, Vendor
-
-        [StringLength(500)]
-        public string FilterCriteria { get; set; }      // JSON filter criteria
-
         // Sort order for consistent ordering
         public int SortOrder { get; set; }
     }

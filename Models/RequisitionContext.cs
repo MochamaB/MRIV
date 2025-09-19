@@ -55,6 +55,11 @@ public partial class RequisitionContext : DbContext
     public DbSet<StationDetailsView> StationDetailsViews { get; set; }
     public DbSet<LocationHierarchyView> LocationHierarchyViews { get; set; }
 
+    // Material Dashboard views
+    public DbSet<MaterialDashboardView> MaterialDashboardViews { get; set; }
+    public DbSet<MaterialUtilizationSummaryView> MaterialUtilizationSummaryViews { get; set; }
+    public DbSet<MaterialMovementTrendsView> MaterialMovementTrendsViews { get; set; }
+
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
@@ -255,6 +260,38 @@ public partial class RequisitionContext : DbContext
         {
             entity.HasNoKey(); // Composite key scenario
             entity.ToView("vw_LocationHierarchy");
+        });
+
+        // Configure Material Dashboard views as read-only entities
+        modelBuilder.Entity<MaterialDashboardView>(entity =>
+        {
+            entity.HasKey(e => e.MaterialId);
+            entity.ToView("vw_MaterialDashboard");
+            entity.Property(e => e.MaterialId).IsRequired();
+        });
+
+        modelBuilder.Entity<MaterialUtilizationSummaryView>(entity =>
+        {
+            entity.HasNoKey(); // Aggregated data, no single primary key
+            entity.ToView("vw_MaterialUtilizationSummary");
+
+            // Explicit type mappings to handle database Double -> C# Decimal conversion
+            entity.Property(e => e.TotalValue)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(e => e.UtilizationRate)
+                  .HasColumnType("decimal(5,2)");
+            entity.Property(e => e.TotalPurchaseValue)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(e => e.AveragePurchaseValue)
+                  .HasColumnType("decimal(18,2)");
+            entity.Property(e => e.MaxPurchaseValue)
+                  .HasColumnType("decimal(18,2)");
+        });
+
+        modelBuilder.Entity<MaterialMovementTrendsView>(entity =>
+        {
+            entity.HasNoKey(); // Time series data, no single primary key
+            entity.ToView("vw_MaterialMovementTrends");
         });
     }
 

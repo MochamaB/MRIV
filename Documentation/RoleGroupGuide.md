@@ -28,14 +28,14 @@ The Role Group model includes two key flags that control access across organizat
 
 The access control system evaluates permissions based on:
 1. The user's department and station
-2. The department and station associated with the requisition/approval
+2. The department and station associated with the requisition/approval/Material and any other model
 3. The access flags of the role groups the user belongs to (if any)
 
 ### Access Decision Logic
 
 ```
 IF user is not in any role group
-    GRANT access only to their department at their station
+    GRANT access only to their own information which means the one that has their payrolNo attached.
 ELSE IF both CanAccessAcrossStations = FALSE and CanAccessAcrossDepartments = FALSE
     GRANT access only to their department at their station
 ELSE IF CanAccessAcrossDepartments = TRUE and CanAccessAcrossStations = FALSE
@@ -92,21 +92,21 @@ CanAccessAcrossDepartments: TRUE
 
 ## Example Scenarios
 
-- **Default User:** Not in any group, or in a group with both flags false. Can only see their department at their station.
-- **Department Manager:** Same as above.
+- **Default User:** can only see their own information.
+- **Department Manager:** Can only see their department at their station.
 - **Station Support/Manager:** Can see all departments at their station, but not at other stations.
 - **Group/General Manager:** Can see their department at all stations, but not other departments.
-- **Administrator:** Can see everything.
+- **Administrator/Executive:** Can see everything.
 
 ### Example Table
 
 | User Type                  | Example Description                                 | What They Can See                                 |
 |----------------------------|-----------------------------------------------------|---------------------------------------------------|
-| Default User               | Regular staff, not in any group                     | Own department at own station                     |
-| Department Manager         | HOD, Supervisor                                     | Own department at own station                     |
-| Station Support/Manager    | Factory Manager, ICT HQ Support                     | All departments at their station                  |
-| Group/General Manager      | GM of Finance, Regional Manager                     | Their department at all stations                  |
-| Administrator              | System Admin, Superuser                            | All data everywhere                               |
+| Default User                | Regular staff, not in any group                     | Own data only    |
+| Department Manager          | HOD, Supervisor, Head Of Section                 | Own department at own station     |
+| Station Manager/ICT Support | Factory Unit Manager, ICT HQ Support,FSA,RICT       | All departments at their station     |
+| Group/General Manager       | (G)GM of Department, Regional Manager                     | Their department at all stations     |
+| Administrator/Executive     | System Admin,Executive                   | All data everywhere     |
 
 ## Implementation Guidelines
 

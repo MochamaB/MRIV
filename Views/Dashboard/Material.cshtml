@@ -1,0 +1,61 @@
+@model MRIV.ViewModels.MaterialDashboardViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.DashboardTitle;
+}
+
+<!-- Material Dashboard Header -->
+<div class="row mb-3 pb-1">
+    <div class="col-12">
+        <div class="d-flex align-items-lg-center flex-lg-row flex-column">
+            <div class="flex-grow-1">
+                <h4 class="fs-16 mb-1">@Model.DashboardTitle</h4>
+                <p class="text-muted mb-0">
+                    @if (Model.AccessLevel == "Department")
+                    {
+                        <span>Material assets and inventory for your department</span>
+                    }
+                    else if (Model.AccessLevel == "Station")
+                    {
+                        <span>All material assets at @ViewBag.UserProfile?.BasicInfo.Station station</span>
+                    }
+                    else if (Model.AccessLevel == "Cross-Station")
+                    {
+                        <span>Material assets across all accessible stations</span>
+                    }
+                    else if (Model.AccessLevel == "Organization")
+                    {
+                        <span>Organization-wide material asset management</span>
+                    }
+                    else
+                    {
+                        <span>Material asset insights and utilization metrics</span>
+                    }
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Placeholder Content -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="card-title mb-0">Material Dashboard - Basic Implementation</h4>
+            </div>
+            <div class="card-body">
+                <div class="text-center py-4">
+                    <i class="ri-tools-line fs-24 text-success mb-2"></i>
+                    <h5 class="text-success">Dashboard Loaded Successfully!</h5>
+                    <p class="text-muted mb-0">
+                        Welcome to the Material Dashboard. <br/>
+                        User: @Model.UserProfile?.BasicInfo?.Fullname <br/>
+                        Access Level: @Model.AccessLevel <br/>
+                        Role: @Model.UserProfile?.BasicInfo?.Role
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

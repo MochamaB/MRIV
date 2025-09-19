@@ -10,7 +10,9 @@
         <div class="card">
             <div class="card-header border-bottom-dashed">
                 <div class="d-flex align-items-center">
-                    <h5 class="card-title mb-0 flex-grow-1"> </h5>
+                    <h6 class="card-title mb-0 flex-grow-1">
+                        @roleGroup.Name Members
+                    </h6>
                     
                     <div class="flex-shrink-0">
                         <div class="d-flex gap-2 flex-wrap">
@@ -30,55 +32,7 @@
             </div>
 
             <!-- Group Details -->
-            <div class="card-body">
-                <div class="row mb-4">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <strong>Role Group Name:</strong> @roleGroup.Name
-                        </div>
-                        <div class="mb-3">
-                            <strong>Description:</strong> @roleGroup.Description
-                        </div>
-                        <div class="mb-3">
-                            <strong>Full Department Access:</strong> 
-                            @if (roleGroup.CanAccessAcrossDepartments)
-                            {
-                                <span class="badge badge-success">Yes</span>
-                            }
-                            else
-                            {
-                                <span class="badge badge-danger">No</span>
-                            }
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <strong>Full Station Access:</strong> 
-                            @if (roleGroup.CanAccessAcrossStations)
-                            {
-                                <span class="badge badge-success">Yes</span>
-                            }
-                            else
-                            {
-                                <span class="badge badge-danger">No</span>
-                            }
-                        </div>
-                        <div class="mb-3">
-                            <strong>Status:</strong> 
-                            @if (roleGroup.IsActive)
-                            {
-                                <span class="badge badge-success">Active</span>
-                            }
-                            else
-                            {
-                                <span class="badge badge-danger">Inactive</span>
-                            }
-                        </div>
-                    </div>
-                </div>
-
-                <h6 class="card-title mb-3">Group Members</h6>
-                
+            <div class="card-body"> 
                 <div class="table-responsive">
                     <table class="table table-bordered align-middle mb-0">
                         <thead>

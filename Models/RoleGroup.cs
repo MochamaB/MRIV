@@ -20,12 +20,12 @@ namespace MRIV.Models
         public string? Description { get; set; }
 
         /// <summary>
-        /// Indicates if members can access data across all departments
+        /// used to control access to data across all stations
         /// </summary>
         public bool CanAccessAcrossStations { get; set; } = false;
 
         /// <summary>
-        /// Indicates if members can access data across all stations
+        /// used to control access to data across all departments
         /// </summary>
         public bool CanAccessAcrossDepartments { get; set; } = false;
 

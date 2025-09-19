@@ -48,7 +48,7 @@ namespace MRIV.Services
                 var profile = new UserProfile
                 {
                     BasicInfo = BuildBasicInfoFromView(employeeDetails),
-                    RoleInformation = await BuildRoleInformationAsync(payrollNo),
+                    RoleInformation = await BuildRoleInformationAsync(payrollNo, employeeDetails), // Pass employeeDetails to avoid duplicate query
                     LocationAccess = BuildLocationAccessFromView(employeeDetails),
                     CacheInfo = new CacheInfo
                     {
@@ -62,7 +62,7 @@ namespace MRIV.Services
                 // Calculate visibility scope based on role groups
                 profile.VisibilityScope = BuildVisibilityScope(profile.RoleInformation);
 
-                // Calculate accessible locations based on permissions
+                // Calculate accessible locations based on permissions using optimized view-based approach
                 await CalculateAccessibleLocationsAsync(profile);
 
                 _logger.LogInformation("Successfully built user profile for PayrollNo: {PayrollNo}", payrollNo);
@@ -81,13 +81,28 @@ namespace MRIV.Services
 
         public async Task<UserProfile> GetCachedProfileAsync(string payrollNo)
         {
+            _logger.LogInformation("Attempting to get cached profile for PayrollNo: {PayrollNo}", payrollNo);
+            Console.WriteLine($"Attempting to get cached profile for PayrollNo: {payrollNo}");
+
             var profile = await _cacheService.GetProfileAsync(payrollNo);
-            
-            if (profile != null && profile.CacheInfo.IsExpired)
+
+            if (profile == null)
             {
-                _logger.LogInformation("User profile expired for PayrollNo: {PayrollNo}, refreshing", payrollNo);
+                _logger.LogInformation("No cached profile found for PayrollNo: {PayrollNo}, building new profile", payrollNo);
+                Console.WriteLine($"No cached profile found for PayrollNo: {payrollNo}, building new profile");
                 return await RefreshUserProfileAsync(payrollNo);
             }
+
+            if (profile.CacheInfo.IsExpired)
+            {
+                _logger.LogInformation("User profile expired for PayrollNo: {PayrollNo}, refreshing", payrollNo);
+                Console.WriteLine($"User profile expired for PayrollNo: {payrollNo}, refreshing");
+                return await RefreshUserProfileAsync(payrollNo);
+            }
+
+            _logger.LogInformation("Using cached profile for PayrollNo: {PayrollNo}, IsAdmin: {IsAdmin}",
+                payrollNo, profile.RoleInformation.IsAdmin);
+            Console.WriteLine($"Using cached profile for PayrollNo: {payrollNo}, IsAdmin: {profile.RoleInformation.IsAdmin}");
 
             return profile;
         }
@@ -113,8 +128,13 @@ namespace MRIV.Services
             var payrollNo = _httpContextAccessor.HttpContext?.Session.GetString("EmployeePayrollNo");
             if (string.IsNullOrEmpty(payrollNo))
             {
+                _logger.LogWarning("No PayrollNo found in session for GetCurrentUserProfileAsync");
+                Console.WriteLine("No PayrollNo found in session for GetCurrentUserProfileAsync");
                 return null;
             }
+
+            _logger.LogInformation("Getting current user profile for PayrollNo: {PayrollNo}", payrollNo);
+            Console.WriteLine($"Getting current user profile for PayrollNo: {payrollNo}");
 
             return await GetCachedProfileAsync(payrollNo);
         }
@@ -141,7 +161,7 @@ namespace MRIV.Services
             };
         }
 
-        private async Task<RoleInformation> BuildRoleInformationAsync(string payrollNo)
+        private async Task<RoleInformation> BuildRoleInformationAsync(string payrollNo, EmployeeDetailsView employeeDetails)
         {
             var roleInfo = new RoleInformation
             {
@@ -171,12 +191,12 @@ namespace MRIV.Services
                 }
             }
 
-            // Check if user has admin role
-            var employee = await _ktdaContext.EmployeeBkps
-                .FirstOrDefaultAsync(e => e.PayrollNo == payrollNo);
-            
-            roleInfo.SystemRole = employee?.Role ?? string.Empty;
-            roleInfo.IsAdmin = employee?.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+            // Use passed employeeDetails instead of querying again
+            roleInfo.SystemRole = employeeDetails?.Role ?? string.Empty;
+            roleInfo.IsAdmin = employeeDetails?.Role?.Equals("Admin", StringComparison.OrdinalIgnoreCase) == true;
+
+            _logger.LogInformation("Role check for PayrollNo: {PayrollNo} - Role: '{Role}', IsAdmin: {IsAdmin}",
+                payrollNo, roleInfo.SystemRole, roleInfo.IsAdmin);
 
             return roleInfo;
         }
@@ -308,11 +328,17 @@ namespace MRIV.Services
 
         private async Task CalculateAccessibleLocationsAsync(UserProfile profile)
         {
-            // Admin users see everything
+            // Admin users see everything - use separate optimized queries
             if (profile.RoleInformation.IsAdmin)
             {
+                // Get all departments from ktdaleave context
                 var allDepartments = await _ktdaContext.Departments.ToListAsync();
-                var allStations = await _ktdaContext.Stations.ToListAsync();
+
+                // Get all stations with categories from vw_StationDetails
+                var allStations = await _requisitionContext.StationDetailsViews
+                    .OrderBy(s => s.StationId == 0 ? 1 : s.StationCategoryCode == "region" ? 2 : s.StationCategoryCode == "factory" ? 3 : 4)
+                    .ThenBy(s => s.StationName)
+                    .ToListAsync();
 
                 profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new EnhancedDepartmentInfo
                 {
@@ -328,8 +354,8 @@ namespace MRIV.Services
                     OriginalName = s.StationName ?? string.Empty,
                     Category = new StationCategoryInfo
                     {
-                        Code = DetermineStationCategory(s.StationId, s.StationName),
-                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                        Code = s.StationCategoryCode ?? string.Empty,
+                        Name = s.StationCategoryName ?? string.Empty
                     }
                 }).ToList();
 
@@ -352,9 +378,12 @@ namespace MRIV.Services
             // Users in role groups: calculate based on their permissions
             if (profile.VisibilityScope.CanAccessAcrossStations && profile.VisibilityScope.CanAccessAcrossDepartments)
             {
-                // Full organizational access
+                // Full organizational access - same as Admin but logged differently
                 var allDepartments = await _ktdaContext.Departments.ToListAsync();
-                var allStations = await _ktdaContext.Stations.ToListAsync();
+                var allStations = await _requisitionContext.StationDetailsViews
+                    .OrderBy(s => s.StationId == 0 ? 1 : s.StationCategoryCode == "region" ? 2 : s.StationCategoryCode == "factory" ? 3 : 4)
+                    .ThenBy(s => s.StationName)
+                    .ToListAsync();
 
                 profile.LocationAccess.AccessibleDepartments = allDepartments.Select(d => new EnhancedDepartmentInfo
                 {
@@ -370,8 +399,8 @@ namespace MRIV.Services
                     OriginalName = s.StationName ?? string.Empty,
                     Category = new StationCategoryInfo
                     {
-                        Code = DetermineStationCategory(s.StationId, s.StationName),
-                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                        Code = s.StationCategoryCode ?? string.Empty,
+                        Name = s.StationCategoryName ?? string.Empty
                     }
                 }).ToList();
 
@@ -397,7 +426,11 @@ namespace MRIV.Services
             else if (profile.VisibilityScope.CanAccessAcrossStations)
             {
                 // Can access home department at all stations
-                var allStations = await _ktdaContext.Stations.ToListAsync();
+                var allStations = await _requisitionContext.StationDetailsViews
+                    .OrderBy(s => s.StationId == 0 ? 1 : s.StationCategoryCode == "region" ? 2 : s.StationCategoryCode == "factory" ? 3 : 4)
+                    .ThenBy(s => s.StationName)
+                    .ToListAsync();
+
                 profile.LocationAccess.AccessibleStations = allStations.Select(s => new EnhancedStationInfo
                 {
                     Id = s.StationId,
@@ -405,8 +438,8 @@ namespace MRIV.Services
                     OriginalName = s.StationName ?? string.Empty,
                     Category = new StationCategoryInfo
                     {
-                        Code = DetermineStationCategory(s.StationId, s.StationName),
-                        Name = DetermineStationCategoryName(s.StationId, s.StationName)
+                        Code = s.StationCategoryCode ?? string.Empty,
+                        Name = s.StationCategoryName ?? string.Empty
                     }
                 }).ToList();
                 profile.LocationAccess.AccessibleStationIds = allStations.Select(s => s.StationId).ToList();
@@ -425,44 +458,5 @@ namespace MRIV.Services
             }
         }
 
-        /// <summary>
-        /// Determine station category based on station ID and name (fallback for stations not in view)
-        /// </summary>
-        private string DetermineStationCategory(int stationId, string stationName)
-        {
-            // HQ mapping
-            if (stationId == 0 || stationId == 55 || stationName?.Contains("HQ", StringComparison.OrdinalIgnoreCase) == true ||
-                stationName?.Contains("HEAD OFFICE", StringComparison.OrdinalIgnoreCase) == true)
-                return "headoffice";
-
-            // Region mapping
-            if (stationName?.Contains("REGION", StringComparison.OrdinalIgnoreCase) == true ||
-                stationName?.Contains("ZONAL", StringComparison.OrdinalIgnoreCase) == true)
-                return "region";
-
-            // Other mapping
-            var otherStations = new[] { "EXTERNAL", "KETEPA", "KOBEL", "KTDA_HOLDINGS", "KTDA_POWER", "GREENLAND_FEDHA" };
-            if (otherStations.Any(os => stationName?.Contains(os, StringComparison.OrdinalIgnoreCase) == true))
-                return "other";
-
-            // Default to factory
-            return "factory";
-        }
-
-        /// <summary>
-        /// Get display name for station category
-        /// </summary>
-        private string DetermineStationCategoryName(int stationId, string stationName)
-        {
-            var category = DetermineStationCategory(stationId, stationName);
-            return category switch
-            {
-                "headoffice" => "Head Office",
-                "region" => "Region",
-                "other" => "Other",
-                "factory" => "Factory",
-                _ => "Unknown"
-            };
-        }
     }
 }

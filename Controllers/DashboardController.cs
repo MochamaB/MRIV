@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using MRIV.Attributes;
 using MRIV.Enums;
 using MRIV.Extensions;
@@ -19,17 +20,20 @@ namespace MRIV.Controllers
         private readonly IDashboardService _dashboardService;
         private readonly IDepartmentService _departmentService;
         private readonly IUserProfileService _userProfileService;
+        private readonly ILogger<DashboardController> _logger;
 
         public DashboardController(
             RequisitionContext context,
             IDashboardService dashboardService,
             IDepartmentService departmentService,
-            IUserProfileService userProfileService)
+            IUserProfileService userProfileService,
+            ILogger<DashboardController> logger)
         {
             _context = context;
             _dashboardService = dashboardService;
             _departmentService = departmentService;
             _userProfileService = userProfileService;
+            _logger = logger;
         }
 
         // Enhanced default dashboard with intelligent routing based on user role
@@ -63,15 +67,24 @@ namespace MRIV.Controllers
                     }
                 }
 
-                // Intelligent routing based on user role and permissions
-                if (ShouldShowDepartmentDashboard(userProfile))
+                // Enhanced intelligent routing based on user role and permissions
+                if (userProfile.VisibilityScope.IsDefaultUser)
                 {
-                    // Redirect managers and supervisors to department dashboard
-                    return RedirectToAction("Department");
+                    // Default users only see personal dashboard
+                    return RedirectToAction("MyRequisitions");
                 }
-
-                // Default to personal dashboard for regular users
-                return await MyRequisitions();
+                else if (userProfile.VisibilityScope.CanAccessAcrossDepartments ||
+                         userProfile.VisibilityScope.CanAccessAcrossStations ||
+                         userProfile.RoleInformation.IsAdmin)
+                {
+                    // Users with management capabilities see management dashboard by default
+                    return RedirectToAction("Management");
+                }
+                else
+                {
+                    // Department managers see personal dashboard by default, but can access management
+                    return RedirectToAction("MyRequisitions");
+                }
             }
             catch (Exception ex)
             {
@@ -490,14 +503,6 @@ namespace MRIV.Controllers
 
         #region Private Helper Methods
 
-        // Determine if user should see department dashboard by default
-        private bool ShouldShowDepartmentDashboard(UserProfile userProfile)
-        {
-            return userProfile.VisibilityScope.CanAccessAcrossDepartments &&
-                   userProfile.RoleInformation.RoleGroups.Any(rg =>
-                       rg.Name.Contains("Manager") || rg.Name.Contains("Supervisor"));
-        }
-
         // Check if user has access to department dashboard
         private bool HasDepartmentAccess(UserProfile userProfile)
         {
@@ -640,6 +645,225 @@ Status: {viewModel.PerformanceStatus}
             var bytes = System.Text.Encoding.UTF8.GetBytes(reportContent);
             return File(bytes, "application/pdf", $"Dashboard_Report_{userProfile.BasicInfo.PayrollNo}_{DateTime.UtcNow:yyyyMMdd}.pdf");
         }
+
+        #endregion
+
+        #region Management Dashboard
+
+        /// <summary>
+        /// Management Dashboard - Role-based organizational insights
+        /// Separate from personal "My Dashboard" - shows organizational data based on permissions
+        /// </summary>
+        [HttpGet]
+        [Route("Dashboard/Management")]
+        public async Task<IActionResult> Management()
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                // Default users cannot access Management Dashboard
+                if (userProfile == null || userProfile.VisibilityScope.IsDefaultUser)
+                {
+                    TempData["Warning"] = "You don't have access to Management Dashboard. Showing your personal dashboard instead.";
+                    return RedirectToAction("MyRequisitions");
+                }
+
+                // Get management dashboard data
+                var viewModel = await _dashboardService.GetManagementDashboardAsync(HttpContext);
+
+                // Handle service-level access denial
+                if (viewModel.IsDefaultUser || viewModel.HasError)
+                {
+                    TempData["Error"] = viewModel.ErrorMessage ?? "Unable to access Management Dashboard.";
+                    return RedirectToAction("MyRequisitions");
+                }
+
+                // Set ViewBag data for breadcrumbs and context
+                ViewBag.UserProfile = userProfile;
+                ViewBag.PageTitle = viewModel.DashboardTitle;
+                ViewBag.AccessLevel = viewModel.AccessLevel;
+                ViewBag.CanAccessDepartmentDashboard = userProfile.VisibilityScope.CanAccessAcrossDepartments;
+
+                ViewBag.Breadcrumbs = new[]
+                {
+                    new { Name = "Home", Url = "/" },
+                    new { Name = "Management Dashboard", Url = "/Dashboard/Management" }
+                };
+
+                return View("Management", viewModel);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Management Dashboard for user");
+                TempData["Error"] = "Unable to load management dashboard. Please try again.";
+                return RedirectToAction("MyRequisitions");
+            }
+        }
+
+        /// <summary>
+        /// API endpoint for refreshing management dashboard data
+        /// </summary>
+        [HttpGet]
+        [Route("Dashboard/Management/Refresh")]
+        public async Task<IActionResult> RefreshManagementData()
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                // Validate access
+                if (userProfile == null || userProfile.VisibilityScope.IsDefaultUser)
+                {
+                    return Json(new { success = false, message = "Access denied" });
+                }
+
+                // Get fresh data
+                var viewModel = await _dashboardService.GetManagementDashboardAsync(HttpContext);
+
+                if (viewModel.HasError)
+                {
+                    return Json(new { success = false, message = viewModel.ErrorMessage });
+                }
+
+                // Return key metrics for AJAX refresh
+                return Json(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        primaryMetrics = viewModel.PrimaryMetrics,
+                        statusDistribution = viewModel.StatusDistribution,
+                        hasComparisonData = viewModel.HasComparisonData,
+                        comparisonCount = viewModel.ComparisonData?.Count ?? 0,
+                        actionItemsCount = viewModel.ActionRequired?.Count ?? 0,
+                        recentActivityCount = viewModel.RecentActivity?.Count ?? 0,
+                        lastUpdated = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ss")
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error refreshing management dashboard data");
+                return Json(new { success = false, message = "Unable to refresh data" });
+            }
+        }
+
+        /// <summary>
+        /// API endpoint for getting chart data
+        /// </summary>
+        [HttpGet]
+        [Route("Dashboard/Management/ChartData")]
+        public async Task<IActionResult> GetManagementChartData()
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                // Validate access
+                if (userProfile == null || userProfile.VisibilityScope.IsDefaultUser)
+                {
+                    return Json(new { success = false, message = "Access denied" });
+                }
+
+                var viewModel = await _dashboardService.GetManagementDashboardAsync(HttpContext);
+
+                return Json(new
+                {
+                    success = true,
+                    data = new
+                    {
+                        statusDistribution = viewModel.StatusDistribution,
+                        trendAnalysis = viewModel.TrendAnalysis,
+                        comparisonData = viewModel.ComparisonData?.Take(5) // Limit for chart performance
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting chart data");
+                return Json(new { success = false, message = "Unable to load chart data" });
+            }
+        }
+
+        #endregion
+
+        #region Material Dashboard
+
+        /// <summary>
+        /// Material Dashboard - Role-based material management insights
+        /// Separate from requisition-focused dashboards - shows material asset tracking and analytics
+        /// </summary>
+        [HttpGet]
+        [Route("Dashboard/Material")]
+        public async Task<IActionResult> Material()
+        {
+            try
+            {
+                Console.WriteLine("=== MATERIAL DASHBOARD CONTROLLER ===");
+
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                if (userProfile == null)
+                {
+                    Console.WriteLine("ERROR: User profile is null");
+                    TempData["Error"] = "Unable to load user profile. Please try again.";
+                    return RedirectToAction("MyRequisitions");
+                }
+
+                // DEBUG: Log controller-level checks
+                Console.WriteLine($"CONTROLLER - IsAdmin: {userProfile.RoleInformation.IsAdmin}");
+                Console.WriteLine($"CONTROLLER - IsDefaultUser: {userProfile.VisibilityScope.IsDefaultUser}");
+                Console.WriteLine($"CONTROLLER - User Role: {userProfile.BasicInfo.Role}");
+
+                // Allow admin users OR non-default users
+                if (userProfile.VisibilityScope.IsDefaultUser && !userProfile.RoleInformation.IsAdmin)
+                {
+                    Console.WriteLine($"REDIRECTING: Default user without admin access: {userProfile.BasicInfo.PayrollNo}");
+                    TempData["Error"] = "You don't have permission to access the Material Dashboard.";
+                    return RedirectToAction("MyRequisitions");
+                }
+
+                Console.WriteLine($"PROCEEDING: User has access to Material Dashboard: {userProfile.BasicInfo.PayrollNo}");
+
+                // Get material dashboard data
+                var viewModel = await _dashboardService.GetMaterialDashboardAsync(HttpContext);
+
+                // Handle service-level access denial
+                if (viewModel.IsDefaultUser && !userProfile.RoleInformation.IsAdmin)
+                {
+                    Console.WriteLine($"SERVICE LEVEL REDIRECT: Service returned IsDefaultUser for: {userProfile.BasicInfo.PayrollNo}");
+                    TempData["Error"] = viewModel.ErrorMessage ?? "Unable to access Material Dashboard.";
+                    return RedirectToAction("MyRequisitions");
+                }
+
+                // Set ViewBag data
+                ViewBag.UserProfile = userProfile;
+                ViewBag.PageTitle = viewModel.DashboardTitle;
+                ViewBag.AccessLevel = viewModel.AccessLevel;
+                ViewBag.CanAccessDepartmentDashboard = userProfile.VisibilityScope.CanAccessAcrossDepartments;
+
+                ViewBag.Breadcrumbs = new[]
+                {
+            new { Name = "Home", Url = "/" },
+            new { Name = "Material Dashboard", Url = "/Dashboard/Material" }
+        };
+
+                Console.WriteLine($"SUCCESS: Rendering Material Dashboard for: {userProfile.BasicInfo.PayrollNo}");
+                return View("Material", viewModel);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"EXCEPTION in Material Dashboard: {ex.Message}");
+                Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+                TempData["Error"] = "Unable to load material dashboard. Please try again.";
+                return RedirectToAction("MyRequisitions");
+            }
+        }
+
+        
+
+       
 
         #endregion
     }

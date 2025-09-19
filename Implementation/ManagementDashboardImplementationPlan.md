@@ -438,36 +438,11 @@ public class DashboardController : Controller
 
 ### 5. Security Considerations
 
-- **Default User Protection**: Default users automatically redirected away from Management Dashboard
-- **VisibilityService Integration**: All data queries use `ApplyVisibilityScopeWithProfile()` with fixed logic
-- **Role-based UI**: Management dashboard link only shown to users with role groups
-- **API Security**: Management endpoints validate `!IsDefaultUser` before processing
-- **Data Isolation**: Each access level sees only their permitted scope
-- **Graceful Degradation**: Unauthorized access redirects to personal dashboard with notification
-
-### 6. Key Benefits of Extended Services Approach
-
-#### 6.1 **Reuse & Consistency**
-- Leverages existing `UserProfileService` and `VisibilityService` with our fixes
-- Maintains consistent patterns with `MyRequisitions` dashboard
-- Uses same DI container, logging, error handling
-
-#### 6.2 **Clear Separation of Concerns**
-- **My Dashboard** (`/Dashboard/MyRequisitions`) = Personal data, all users
-- **Management Dashboard** (`/Dashboard/Management`) = Organizational data, role groups only
-- Both use same underlying services but different data filtering logic
-
-#### 6.3 **Performance & Maintenance**
-- Single codebase for dashboard logic
-- Shared ViewModels and utilities
-- Consistent caching strategy
-- Easier testing and debugging
-
-#### 6.4 **User Experience**
-- Intuitive routing based on permissions
-- Consistent UI/UX between dashboards
-- Clear access control messaging
-- Seamless navigation between personal and management views
+- All data queries must go through VisibilityService
+- UI elements should be conditionally rendered based on permissions
+- API endpoints must validate user scope before returning data
+- Comparison features only available when user can see multiple entities
+- Material data filtered by user's location access permissions
 
 ### 6. Testing Strategy
 
@@ -497,42 +472,15 @@ public class DashboardController : Controller
 - Implement pagination for comparison views
 - Use lazy loading for non-critical components
 
-### 8. Routes & Navigation Summary
+### 8. Future Enhancements
 
-#### 8.1 **Dashboard Routes**
-```
-/Dashboard/                    → Smart routing based on user permissions
-/Dashboard/MyRequisitions      → Personal dashboard (all users)
-/Dashboard/Management          → Management dashboard (role groups only)
-/Dashboard/Department          → Legacy department view (may be deprecated)
-```
-
-#### 8.2 **Navigation Logic**
-```csharp
-// In DashboardController.Index()
-if (userProfile.VisibilityScope.IsDefaultUser)
-    return RedirectToAction("MyRequisitions");
-else if (hasManagementCapabilities)
-    return RedirectToAction("Management");
-else
-    return RedirectToAction("MyRequisitions");
-```
-
-#### 8.3 **Access Control Summary**
-| User Type | My Dashboard Access | Management Dashboard Access | Default Route |
-|-----------|:-------------------:|:---------------------------:|:-------------:|
-| Default User | ✅ Always | ❌ Redirect to My Dashboard | `/MyRequisitions` |
-| Department Manager | ✅ Always | ✅ Department View | `/MyRequisitions` |
-| Station Manager | ✅ Always | ✅ Station View | `/Management` |
-| General Manager | ✅ Always | ✅ Cross-Station View | `/Management` |
-| Administrator | ✅ Always | ✅ Organization View | `/Management` |
-
-### 9. Implementation Priority
-
-**Phase 1 (High Priority)**: Backend service extension and basic Management Dashboard
-**Phase 2 (Medium Priority)**: Enhanced UI and comparison features
-**Phase 3 (Low Priority)**: Advanced analytics and reporting features
+- Add machine learning insights based on role
+- Implement predictive analytics
+- Create mobile-responsive design
+- Add collaboration features
+- Integrate with external systems
+- Implement advanced filtering and search
 
 ## Conclusion
 
-The Management Dashboard extends existing services to provide role-aware organizational insights while maintaining clear separation from personal "My Dashboard" functionality. By leveraging the fixed UserProfile and VisibilityService logic, it ensures proper security boundaries while delivering contextually appropriate management data for each user's organizational responsibilities.
+The Management Dashboard provides a unified, role-aware interface that adapts to each user's permission level and organizational responsibilities. By leveraging the existing VisibilityService and UserProfile architecture, it delivers contextually appropriate insights while maintaining security and performance.

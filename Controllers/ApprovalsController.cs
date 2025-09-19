@@ -507,7 +507,7 @@ namespace MRIV.Controllers
                     } : new MRIV.ViewModels.MaterialConditionViewModel {
                         MaterialId = item.MaterialId,
                         RequisitionItemId = item.Id,
-                        ConditionCheckType = MRIV.Models.ConditionCheckType.AtDispatch,
+                        ConditionCheckType = MRIV.Enums.ConditionCheckType.AtDispatch,
                         Stage = "At-Receive",
                         InspectionDate = DateTime.Now,
                         InspectedBy = currentUser

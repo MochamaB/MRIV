@@ -1,0 +1,815 @@
+@using MRIV.Enums
+@model MRIV.ViewModels.ManagementDashboardViewModel
+@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = Model.DashboardTitle;
+}
+
+<!-- Management Dashboard Header -->
+<div class="row mb-3 pb-1">
+    <div class="col-12">
+        <div class="d-flex align-items-lg-center flex-lg-row flex-column">
+            <div class="flex-grow-1">
+                <h4 class="fs-16 mb-1">@Model.DashboardTitle</h4>
+                <p class="text-muted mb-0">
+                    @if (Model.AccessLevel == "Department")
+                    {
+                        <span>Your department overview at @Model.UserInfo.Station</span>
+                    }
+                    else if (Model.AccessLevel == "Station")
+                    {
+                        <span>All departments at @Model.UserInfo.Station station</span>
+                    }
+                    else if (Model.AccessLevel == "Cross-Station")
+                    {
+                        <span>@Model.UserInfo.Department department across all stations</span>
+                    }
+                    else if (Model.AccessLevel == "Organization")
+                    {
+                        <span>Organization-wide insights and performance metrics</span>
+                    }
+                    else
+                    {
+                        <span>Management insights and organizational metrics</span>
+                    }
+                </p>
+            </div>
+            <div class="mt-3 mt-lg-1">
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" data-action="refresh-management">
+                        <i class="ri-refresh-line"></i> Refresh
+                    </button>
+                    @if (Model.ActionRequired?.Any() == true)
+                    {
+                        <button type="button" class="btn btn-warning btn-sm" data-action="show-management-actions">
+                            <i class="ri-notification-line"></i> Actions (@Model.ActionRequired.Count)
+                        </button>
+                    }
+                    <div class="dropdown">
+                        <button class="btn btn-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="ri-filter-line"></i> View
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-filter="overview">Overview</a></li>
+                            @if (Model.HasComparisonData)
+                            {
+                                <li><a class="dropdown-item" href="#" data-filter="comparison">Comparison</a></li>
+                            }
+                            <li><a class="dropdown-item" href="#" data-filter="trends">Trends</a></li>
+                            <li><a class="dropdown-item" href="#" data-filter="materials">Materials</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Action Required Alerts for Management -->
+@if (Model.ActionRequired?.Any() == true)
+{
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-warning alert-dismissible fade show" role="alert">
+                <div class="alert-body">
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    <div class="d-flex">
+                        <div class="flex-shrink-0 me-3">
+                            <i class="ri-alert-line fs-16 align-middle"></i>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h5 class="alert-heading">Management Action Required</h5>
+                            <p class="mb-0">
+                                @Model.ActionRequired.Count management items need your attention.
+                                <a href="#" class="alert-link" data-action="show-management-actions">Review now</a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Primary Metrics Row -->
+<div class="row">
+    <!-- Total Requisitions -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">
+                            @if (Model.AccessLevel == "Department")
+                            {
+                                <span>Department Requisitions</span>
+                            }
+                            else if (Model.AccessLevel == "Station")
+                            {
+                                <span>Station Requisitions</span>
+                            }
+                            else if (Model.AccessLevel == "Cross-Station")
+                            {
+                                <span>Cross-Station Requisitions</span>
+                            }
+                            else
+                            {
+                                <span>Total Requisitions</span>
+                            }
+                        </p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.PrimaryMetrics.TotalRequisitions">@Model.PrimaryMetrics.TotalRequisitions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-info mb-0">
+                                <i class="ri-file-list-line align-middle"></i> This Period
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-primary-subtle rounded-circle fs-2">
+                                <i data-feather="clipboard" class="text-primary material-shadow"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pending Actions -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate @(Model.PrimaryMetrics.PendingActions > 0 ? "border-warning" : "")">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Pending Actions</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.PrimaryMetrics.PendingActions">@Model.PrimaryMetrics.PendingActions</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            @if (Model.PrimaryMetrics.PendingActions > 0)
+                            {
+                                <span class="badge bg-warning text-dark mb-0">
+                                    <i class="ri-time-line align-middle"></i> Requires Attention
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-success text-white mb-0">
+                                    <i class="ri-check-line align-middle"></i> All Clear
+                                </span>
+                            }
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-warning-subtle rounded-circle fs-2">
+                                <i data-feather="alert-triangle" class="text-warning material-shadow"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- This Month Activity -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">This Month</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.PrimaryMetrics.ThisMonthActivity">@Model.PrimaryMetrics.ThisMonthActivity</span>
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            <span class="badge bg-light text-success mb-0">
+                                <i class="ri-calendar-line align-middle"></i> Activity
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-success-subtle rounded-circle fs-2">
+                                <i data-feather="trending-up" class="text-success material-shadow"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Completion Rate -->
+    <div class="col-xl-3 col-md-6">
+        <div class="card card-animate">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <p class="fw-medium text-muted mb-0">Completion Rate</p>
+                        <h2 class="mt-4 ff-secondary fw-semibold">
+                            <span class="counter-value" data-target="@Model.PrimaryMetrics.CompletionRate">@Model.PrimaryMetrics.CompletionRate.ToString("F1")</span>%
+                        </h2>
+                        <p class="mb-0 text-muted">
+                            @{
+                                var rateClass = Model.PrimaryMetrics.CompletionRate >= 80 ? "text-success" :
+                                               Model.PrimaryMetrics.CompletionRate >= 60 ? "text-warning" : "text-danger";
+                                var rateIcon = Model.PrimaryMetrics.CompletionRate >= 80 ? "ri-arrow-up-line" :
+                                              Model.PrimaryMetrics.CompletionRate >= 60 ? "ri-arrow-right-line" : "ri-arrow-down-line";
+                            }
+                            <span class="badge bg-light @rateClass mb-0">
+                                <i class="@rateIcon align-middle"></i> Performance
+                            </span>
+                        </p>
+                    </div>
+                    <div>
+                        <div class="avatar-sm flex-shrink-0">
+                            <span class="avatar-title bg-info-subtle rounded-circle fs-2">
+                                <i data-feather="pie-chart" class="text-info material-shadow"></i>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts and Analytics Row -->
+<div class="row">
+    <!-- Status Distribution Chart -->
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title flex-grow-1 mb-0">Requisition Status Distribution</h5>
+                    <div class="flex-shrink-0">
+                        <button class="btn btn-soft-primary btn-sm" data-action="refresh-status-chart">
+                            <i class="ri-refresh-line align-middle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="text-center">
+                    <canvas id="management-status-chart" width="300" height="300"></canvas>
+                </div>
+                <div class="mt-3" id="management-status-legend">
+                    <!-- Status legend will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Trend Analysis Chart -->
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex align-items-center">
+                    <h5 class="card-title flex-grow-1 mb-0">
+                        @if (Model.AccessLevel == "Department")
+                        {
+                            <span>Department Trend Analysis</span>
+                        }
+                        else if (Model.AccessLevel == "Station")
+                        {
+                            <span>Station Performance Trends</span>
+                        }
+                        else if (Model.AccessLevel == "Cross-Station")
+                        {
+                            <span>Cross-Station Trends</span>
+                        }
+                        else
+                        {
+                            <span>Organization Trends</span>
+                        }
+                    </h5>
+                    <div class="flex-shrink-0">
+                        <button class="btn btn-soft-info btn-sm" data-action="refresh-trend-chart">
+                            <i class="ri-refresh-line align-middle"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <canvas id="management-trend-chart" width="400" height="200"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Comparison Section (Only for applicable access levels) -->
+@if (Model.HasComparisonData)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <h5 class="card-title flex-grow-1 mb-0">
+                            @if (Model.AccessLevel == "Station")
+                            {
+                                <span>Department Comparison</span>
+                            }
+                            else if (Model.AccessLevel == "Cross-Station")
+                            {
+                                <span>Station Comparison</span>
+                            }
+                            else if (Model.AccessLevel == "Organization")
+                            {
+                                <span>Entity Performance Comparison</span>
+                            }
+                            else
+                            {
+                                <span>Performance Comparison</span>
+                            }
+                        </h5>
+                        <div class="flex-shrink-0">
+                            <button class="btn btn-soft-secondary btn-sm" data-action="toggle-comparison-view">
+                                <i class="ri-layout-line align-middle"></i> Toggle View
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-nowrap align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th scope="col">@(Model.AccessLevel == "Station" ? "Department" : "Entity")</th>
+                                    <th scope="col">Total Requests</th>
+                                    <th scope="col">Completion Rate</th>
+                                    <th scope="col">Avg. Processing</th>
+                                    <th scope="col">Pending</th>
+                                    <th scope="col">Performance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.ComparisonData?.Any() == true)
+                                {
+                                    @foreach (var entity in Model.ComparisonData.Take(10))
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="flex-shrink-0 me-2">
+                                                        <div class="avatar-xs">
+                                                            <div class="avatar-title bg-light text-primary rounded-circle fs-13">
+                                                                @entity.Name.Substring(0, 1).ToUpper()
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-0">@entity.Name</h6>
+                                                        <p class="text-muted mb-0 fs-12">@entity.Type</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>@entity.Metrics.TotalRequisitions</td>
+                                            <td>
+                                                <span class="badge bg-@(entity.Metrics.CompletionRate >= 80 ? "success" : entity.Metrics.CompletionRate >= 60 ? "warning" : "danger")">
+                                                    @entity.Metrics.CompletionRate.ToString("F1")%
+                                                </span>
+                                            </td>
+                                            <td>@entity.Metrics.AverageProcessingTime.ToString("F1") days</td>
+                                            <td>@entity.Metrics.PendingActions</td>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    @{
+                                                        var performanceColor = entity.PerformanceIndicator == "High" ? "success" :
+                                                                              entity.PerformanceIndicator == "Medium" ? "warning" : "danger";
+                                                        var performanceIcon = entity.PerformanceIndicator == "High" ? "ri-arrow-up-line" :
+                                                                             entity.PerformanceIndicator == "Medium" ? "ri-arrow-right-line" : "ri-arrow-down-line";
+                                                    }
+                                                    <i class="@performanceIcon text-@performanceColor me-1"></i>
+                                                    <span class="text-@performanceColor">@entity.PerformanceIndicator</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                                else
+                                {
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted">No comparison data available</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Material Overview Section -->
+@if (Model.MaterialData != null)
+{
+    <div class="row">
+        <div class="col-xl-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Material Overview</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-primary">@Model.MaterialData.TotalMaterials</h4>
+                                <p class="text-muted mb-0">Total Materials</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center">
+                                <h4 class="text-success">@Model.MaterialData.TotalValue.ToString("C")</h4>
+                                <p class="text-muted mb-0">Total Value</p>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <canvas id="material-category-chart" width="200" height="100"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Material Alerts</h5>
+                </div>
+                <div class="card-body">
+                    @if (Model.MaterialData.MaterialAlerts?.Any() == true)
+                    {
+                        @foreach (var alert in Model.MaterialData.MaterialAlerts.Take(5))
+                        {
+                            <div class="d-flex align-items-center mb-2">
+                                <div class="flex-shrink-0 me-2">
+                                    <i class="ri-alert-line text-warning"></i>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <p class="mb-0 fs-14">@alert.Message</p>
+                                    <p class="text-muted mb-0 fs-12">@alert.Type</p>
+                                </div>
+                            </div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="text-center text-muted">
+                            <i class="ri-shield-check-line fs-24 text-success"></i>
+                            <p class="mt-2 mb-0">No material alerts</p>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Recent Activity Section -->
+@if (Model.RecentActivity?.Any() == true)
+{
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex align-items-center">
+                        <h5 class="card-title flex-grow-1 mb-0">Recent Organizational Activity</h5>
+                        <div class="flex-shrink-0">
+                            <a href="#" class="btn btn-soft-primary btn-sm">View All</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-container" style="max-height: 400px; overflow-y: auto;">
+                        @foreach (var activity in Model.RecentActivity.Take(10))
+                        {
+                            <div class="timeline-item d-flex mb-3">
+                                <div class="flex-shrink-0 me-3">
+                                    <div class="avatar-xs">
+                                        <div class="avatar-title bg-@activity.StatusColor-subtle text-@activity.StatusColor rounded-circle">
+                                            <i class="@activity.Icon fs-12"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <h6 class="mb-1 fs-14">@activity.Title</h6>
+                                    <p class="text-muted mb-1 fs-13">@activity.Description</p>
+                                    <small class="text-muted">
+                                        @activity.Timestamp.ToString("MMM dd, yyyy 'at' HH:mm")
+                                        @if (!string.IsNullOrEmpty(activity.Department))
+                                        {
+                                            <span> • @activity.Department</span>
+                                        }
+                                        @if (!string.IsNullOrEmpty(activity.Station))
+                                        {
+                                            <span> • @activity.Station</span>
+                                        }
+                                    </small>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Management Action Modal -->
+<div class="modal fade" id="managementActionModal" tabindex="-1" aria-labelledby="managementActionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="managementActionModalLabel">Management Actions Required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div id="management-action-content">
+                    <!-- Content will be loaded by JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/vendors/chart.js/Chart.min.js"></script>
+    <script>
+        // Management Dashboard JavaScript
+        class ManagementDashboard {
+            constructor() {
+                this.statusChart = null;
+                this.trendChart = null;
+                this.materialChart = null;
+                this.init();
+            }
+
+            init() {
+                this.bindEvents();
+                this.initializeCharts();
+                this.startAutoRefresh();
+            }
+
+            bindEvents() {
+                // Refresh button
+                document.querySelector('[data-action="refresh-management"]')?.addEventListener('click', () => {
+                    this.refreshDashboard();
+                });
+
+                // Action button
+                document.querySelector('[data-action="show-management-actions"]')?.addEventListener('click', () => {
+                    this.showActionModal();
+                });
+
+                // Filter buttons
+                document.querySelectorAll('[data-filter]').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.applyFilter(btn.dataset.filter);
+                    });
+                });
+
+                // Chart refresh buttons
+                document.querySelector('[data-action="refresh-status-chart"]')?.addEventListener('click', () => {
+                    this.refreshChart('status');
+                });
+
+                document.querySelector('[data-action="refresh-trend-chart"]')?.addEventListener('click', () => {
+                    this.refreshChart('trend');
+                });
+            }
+
+            async initializeCharts() {
+                try {
+                    // Initialize status distribution chart
+                    const statusCtx = document.getElementById('management-status-chart');
+                    if (statusCtx) {
+                        this.statusChart = new Chart(statusCtx, {
+                            type: 'doughnut',
+                            data: {
+                                labels: @Html.Raw(Json.Serialize(Model.StatusDistribution?.Keys.ToList() ?? new List<string>())),
+                                datasets: [{
+                                    data: @Html.Raw(Json.Serialize(Model.StatusDistribution?.Values.ToList() ?? new List<int>())),
+                                    backgroundColor: [
+                                        '#405189', '#0ab39c', '#f7b84b', '#f06548', '#6c757d'
+                                    ],
+                                    borderWidth: 2,
+                                    borderColor: '#fff'
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        position: 'bottom'
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Initialize trend chart
+                    const trendCtx = document.getElementById('management-trend-chart');
+                    if (trendCtx && @Html.Raw(Json.Serialize(Model.TrendAnalysis?.Any() == true))) {
+                        this.trendChart = new Chart(trendCtx, {
+                            type: 'line',
+                            data: {
+                                labels: @Html.Raw(Json.Serialize(Model.TrendAnalysis?.Select(t => t.Label).ToList() ?? new List<string>())),
+                                datasets: [{
+                                    label: 'Requisitions',
+                                    data: @Html.Raw(Json.Serialize(Model.TrendAnalysis?.Select(t => t.Value).ToList() ?? new List<int>())),
+                                    borderColor: '#405189',
+                                    backgroundColor: 'rgba(64, 81, 137, 0.1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.4
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                    // Initialize material category chart if data exists
+                    const materialCtx = document.getElementById('material-category-chart');
+                    if (materialCtx && @Html.Raw(Json.Serialize(Model.MaterialData?.MaterialByCategory?.Any() == true))) {
+                        this.materialChart = new Chart(materialCtx, {
+                            type: 'bar',
+                            data: {
+                                labels: @Html.Raw(Json.Serialize(Model.MaterialData?.MaterialByCategory?.Keys.ToList() ?? new List<string>())),
+                                datasets: [{
+                                    data: @Html.Raw(Json.Serialize(Model.MaterialData?.MaterialByCategory?.Values.ToList() ?? new List<int>())),
+                                    backgroundColor: '#0ab39c',
+                                    borderColor: '#0ab39c',
+                                    borderWidth: 1
+                                }]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: {
+                                    legend: {
+                                        display: false
+                                    }
+                                },
+                                scales: {
+                                    y: {
+                                        beginAtZero: true
+                                    }
+                                }
+                            }
+                        });
+                    }
+
+                } catch (error) {
+                    console.error('Error initializing management charts:', error);
+                }
+            }
+
+            async refreshDashboard() {
+                try {
+                    const response = await fetch('/Dashboard/Management/Refresh');
+                    const result = await response.json();
+
+                    if (result.success) {
+                        // Update metrics
+                        this.updateMetrics(result.data);
+                        this.showToast('Dashboard refreshed successfully', 'success');
+                    } else {
+                        this.showToast('Failed to refresh dashboard', 'error');
+                    }
+                } catch (error) {
+                    console.error('Error refreshing dashboard:', error);
+                    this.showToast('Network error while refreshing', 'error');
+                }
+            }
+
+            async refreshChart(chartType) {
+                try {
+                    const response = await fetch('/Dashboard/Management/ChartData');
+                    const result = await response.json();
+
+                    if (result.success && result.data) {
+                        if (chartType === 'status' && this.statusChart) {
+                            this.statusChart.data.datasets[0].data = Object.values(result.data.statusDistribution || {});
+                            this.statusChart.data.labels = Object.keys(result.data.statusDistribution || {});
+                            this.statusChart.update();
+                        } else if (chartType === 'trend' && this.trendChart) {
+                            this.trendChart.data.datasets[0].data = result.data.trendAnalysis?.map(t => t.value) || [];
+                            this.trendChart.data.labels = result.data.trendAnalysis?.map(t => t.label) || [];
+                            this.trendChart.update();
+                        }
+                        this.showToast('Chart updated successfully', 'success');
+                    }
+                } catch (error) {
+                    console.error('Error refreshing chart:', error);
+                }
+            }
+
+            updateMetrics(data) {
+                // Update counter values
+                const counters = document.querySelectorAll('.counter-value');
+                counters.forEach(counter => {
+                    const target = counter.dataset.target;
+                    if (data.primaryMetrics && target in data.primaryMetrics) {
+                        counter.textContent = data.primaryMetrics[target];
+                    }
+                });
+
+                // Update last refresh time
+                const refreshTime = document.querySelector('.last-refresh');
+                if (refreshTime) {
+                    refreshTime.textContent = `Last updated: ${data.lastUpdated}`;
+                }
+            }
+
+            applyFilter(filterType) {
+                // Add filter logic based on filterType
+                console.log('Applying filter:', filterType);
+                // Implementation would depend on specific filtering requirements
+            }
+
+            async showActionModal() {
+                try {
+                    // Load action items content
+                    const modal = new bootstrap.Modal(document.getElementById('managementActionModal'));
+                    const content = document.getElementById('management-action-content');
+
+                    content.innerHTML = '<div class="text-center"><div class="spinner-border" role="status"></div></div>';
+                    modal.show();
+
+                    // Load actual content (this would be an API call)
+                    content.innerHTML = `
+                        <div class="list-group">
+                            @if (Model.ActionRequired?.Any() == true)
+                            {
+                                @foreach (var action in Model.ActionRequired)
+                                {
+                                    <div class="list-group-item">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1">@action.Title</h6>
+                                            <small class="text-@action.Priority.ToLower()">@action.Priority</small>
+                                        </div>
+                                        <p class="mb-1">@action.Description</p>
+                                        <small>@action.EntityName • @action.CreatedAt.ToString("MMM dd, yyyy")</small>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    `;
+                } catch (error) {
+                    console.error('Error showing action modal:', error);
+                }
+            }
+
+            startAutoRefresh() {
+                // Auto-refresh every 5 minutes
+                setInterval(() => {
+                    this.refreshDashboard();
+                }, 300000);
+            }
+
+            showToast(message, type = 'info') {
+                // Simple toast notification
+                const toast = document.createElement('div');
+                toast.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+                toast.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+                toast.innerHTML = `
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                `;
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.remove();
+                }, 5000);
+            }
+        }
+
+        // Initialize management dashboard when DOM is ready
+        document.addEventListener('DOMContentLoaded', () => {
+            new ManagementDashboard();
+        });
+    </script>
+}

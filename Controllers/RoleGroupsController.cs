@@ -43,6 +43,9 @@ namespace MRIV.Controllers
         // GET: RoleGroups
         public async Task<IActionResult> Index()
         {
+            // Ensure default role groups exist
+            await EnsureDefaultRoleGroupsExistAsync();
+
             var roleGroups = await _context.RoleGroups
                 .OrderByDescending(rg => rg.CreatedAt)
                 .ToListAsync();
@@ -145,6 +148,14 @@ namespace MRIV.Controllers
             {
                 return NotFound();
             }
+
+            // Prevent editing of system default role groups
+            if (IsSystemDefaultRoleGroup(roleGroup.Name))
+            {
+                TempData["ErrorMessage"] = "System default role groups cannot be edited.";
+                return RedirectToAction(nameof(Index));
+            }
+
             return View("~/Views/Roles/EditRoleGroup.cshtml", roleGroup);
         }
 
@@ -158,11 +169,18 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // Check if this is a system default role group
+            var existingRoleGroup = await _context.RoleGroups.FindAsync(id);
+            if (existingRoleGroup != null && IsSystemDefaultRoleGroup(existingRoleGroup.Name))
+            {
+                TempData["ErrorMessage"] = "System default role groups cannot be edited.";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (ModelState.IsValid)
             {
                 try
                 {
-                    var existingRoleGroup = await _context.RoleGroups.FindAsync(id);
                     if (existingRoleGroup == null)
                     {
                         return NotFound();
@@ -208,6 +226,13 @@ namespace MRIV.Controllers
                 return NotFound();
             }
 
+            // Prevent deletion of system default role groups
+            if (IsSystemDefaultRoleGroup(roleGroup.Name))
+            {
+                TempData["ErrorMessage"] = "System default role groups cannot be deleted.";
+                return RedirectToAction(nameof(Index));
+            }
+
             return View("~/Views/Roles/DeleteRoleGroup.cshtml", roleGroup);
         }
 
@@ -219,6 +244,13 @@ namespace MRIV.Controllers
             var roleGroup = await _context.RoleGroups.FindAsync(id);
             if (roleGroup != null)
             {
+                // Prevent deletion of system default role groups
+                if (IsSystemDefaultRoleGroup(roleGroup.Name))
+                {
+                    TempData["ErrorMessage"] = "System default role groups cannot be deleted.";
+                    return RedirectToAction(nameof(Index));
+                }
+
                 // Soft delete
                 roleGroup.IsActive = false;
                 roleGroup.UpdatedAt = DateTime.Now;
@@ -549,6 +581,53 @@ namespace MRIV.Controllers
             }).ToList();
 
             return Json(new { results });
+        }
+
+        /// <summary>
+        /// Ensures that the default system role groups exist in the database
+        /// </summary>
+        private async Task EnsureDefaultRoleGroupsExistAsync()
+        {
+            var defaultRoleGroups = new[]
+            {
+                new { Name = "DepartmentMgr", Description = "HOD, Supervisor, Head Of Section – Can see their own department at their station", CanAccessAcrossStations = false, CanAccessAcrossDepartments = false },
+                new { Name = "StationMgr", Description = "Factory Unit Manager, ICT HQ Support, FSA, RICT – Can see all departments at their station", CanAccessAcrossStations = false, CanAccessAcrossDepartments = true },
+                new { Name = "GeneralMgr", Description = "General Manager, Group Manager, Regional Manager – Can see their department across all stations", CanAccessAcrossStations = true, CanAccessAcrossDepartments = false },
+                new { Name = "AdminExec", Description = "System Administrator, Executive – Can see all data everywhere", CanAccessAcrossStations = true, CanAccessAcrossDepartments = true }
+            };
+
+            foreach (var defaultGroup in defaultRoleGroups)
+            {
+                var existingGroup = await _context.RoleGroups
+                    .FirstOrDefaultAsync(rg => rg.Name == defaultGroup.Name && rg.IsActive);
+
+                if (existingGroup == null)
+                {
+                    var roleGroup = new RoleGroup
+                    {
+                        Name = defaultGroup.Name,
+                        Description = defaultGroup.Description,
+                        CanAccessAcrossStations = defaultGroup.CanAccessAcrossStations,
+                        CanAccessAcrossDepartments = defaultGroup.CanAccessAcrossDepartments,
+                        IsActive = true,
+                        CreatedAt = DateTime.Now,
+                        UpdatedAt = DateTime.Now
+                    };
+
+                    _context.RoleGroups.Add(roleGroup);
+                }
+            }
+
+            await _context.SaveChangesAsync();
+        }
+
+        /// <summary>
+        /// Checks if a role group is a system-defined default group that cannot be edited or deleted
+        /// </summary>
+        private bool IsSystemDefaultRoleGroup(string name)
+        {
+            var systemDefaultNames = new[] { "DepartmentMgr", "StationMgr", "GeneralMgr", "AdminExec" };
+            return systemDefaultNames.Contains(name, StringComparer.OrdinalIgnoreCase);
         }
 
         private bool RoleGroupExists(int id)

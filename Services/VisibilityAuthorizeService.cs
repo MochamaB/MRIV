@@ -1,4 +1,5 @@
 using MRIV.Models;
+using MRIV.Models.Views;
 using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using System.Linq;
@@ -376,6 +377,18 @@ namespace MRIV.Services
             {
                 return ApplyApprovalVisibility(query.Cast<Approval>(), userProfile).Cast<T>();
             }
+            else if (typeof(T) == typeof(MaterialDashboardView))
+            {
+                return ApplyMaterialDashboardVisibility(query.Cast<MaterialDashboardView>(), userProfile).Cast<T>();
+            }
+            else if (typeof(T) == typeof(MaterialUtilizationSummaryView))
+            {
+                return ApplyMaterialUtilizationVisibility(query.Cast<MaterialUtilizationSummaryView>(), userProfile).Cast<T>();
+            }
+            else if (typeof(T) == typeof(MaterialMovementTrendsView))
+            {
+                return ApplyMaterialMovementTrendsVisibility(query.Cast<MaterialMovementTrendsView>(), userProfile).Cast<T>();
+            }
 
             // For other entity types, return as-is (can be extended)
             return query;
@@ -481,6 +494,51 @@ namespace MRIV.Services
             var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
 
             return query.Where(a => accessibleDeptIds.Contains(a.DepartmentId));
+        }
+
+        // ===================================================================
+        // MATERIAL DASHBOARD VISIBILITY METHODS
+        // ===================================================================
+
+        /// <summary>
+        /// Apply access control to MaterialDashboardView based on user's accessible locations
+        /// Follows same pattern as Requisition and Approval visibility
+        /// </summary>
+        private IQueryable<MaterialDashboardView> ApplyMaterialDashboardVisibility(IQueryable<MaterialDashboardView> query, UserProfile userProfile)
+        {
+            var accessibleStationIds = userProfile.LocationAccess.AccessibleStationIds;
+            var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
+
+            return query.Where(m =>
+                accessibleStationIds.Contains(m.CurrentStationId ?? 0) ||
+                accessibleDeptIds.Contains(m.CurrentDepartmentId ?? 0));
+        }
+
+        /// <summary>
+        /// Apply access control to MaterialUtilizationSummaryView for KPI calculations
+        /// </summary>
+        private IQueryable<MaterialUtilizationSummaryView> ApplyMaterialUtilizationVisibility(IQueryable<MaterialUtilizationSummaryView> query, UserProfile userProfile)
+        {
+            var accessibleStationIds = userProfile.LocationAccess.AccessibleStationIds;
+            var accessibleDeptIds = userProfile.LocationAccess.AccessibleDepartmentIds;
+
+            return query.Where(s =>
+                accessibleStationIds.Contains(s.CurrentStationId ?? 0) ||
+                accessibleDeptIds.Contains(s.CurrentDepartmentId ?? 0));
+        }
+
+        /// <summary>
+        /// Apply access control to MaterialMovementTrendsView for trend analysis
+        /// Uses station names since this view is station-centric
+        /// </summary>
+        private IQueryable<MaterialMovementTrendsView> ApplyMaterialMovementTrendsVisibility(IQueryable<MaterialMovementTrendsView> query, UserProfile userProfile)
+        {
+            // Use station names from UserProfile (already cached)
+            var accessibleStationNames = userProfile.LocationAccess.AccessibleStations
+                .Select(s => s.Name)
+                .ToList();
+
+            return query.Where(mt => accessibleStationNames.Contains(mt.StationName));
         }
     }
 }

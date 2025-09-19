@@ -38,8 +38,8 @@
                                 <th>#</th>
                                 <th>Name</th>
                                 <th>Description</th>
-                                <th>Access Data Across Stations</th>
-                                <th>Access Data Across Departments</th>
+                                <th>Station Access</th>
+                                <th>Department Access</th>
                                 <th>Members</th>
                                 <th>Status</th>
                                 <th>Actions</th>
@@ -53,7 +53,17 @@
                                 {
                                     <tr>
                                         <td>@(rowNumber++)</td>
-                                        <td>@roleGroup.Name</td>
+                                        <td>
+                                            @roleGroup.Name
+                                            @{
+                                                var systemDefaultNames = new[] { "DepartmentMgr", "StationMgr", "GeneralMgr", "AdminExec" };
+                                                bool isSystemDefault = systemDefaultNames.Contains(roleGroup.Name, StringComparer.OrdinalIgnoreCase);
+                                            }
+                                            @if (isSystemDefault)
+                                            {
+                                                <span class="badge badge-info ms-2">System</span>
+                                            }
+                                        </td>
                                         <td>@(string.IsNullOrEmpty(roleGroup.Description) ? "N/A" : roleGroup.Description)</td>
                                          <td>
                                             @if (roleGroup.CanAccessAcrossStations)
@@ -104,19 +114,30 @@
                                                 <ul class="dropdown-menu dropdown-menu-end">
                                                     <li>
                                                         <a class="dropdown-item" href="@Url.Action("Details", "RoleGroups", new { id = roleGroup.Id })">
-                                                            <i class="ri-eye-fill align-bottom me-2 text-muted"></i> View
+                                                            <i class="ri-eye-fill align-bottom me-2 text-primary"></i> View
                                                         </a>
                                                     </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="@Url.Action("Edit", "RoleGroups", new { id = roleGroup.Id })">
-                                                            <i class="ri-pencil-fill align-bottom me-2 text-muted"></i> Edit
-                                                        </a>
-                                                    </li>
-                                                    <li>
-                                                        <a class="dropdown-item" href="@Url.Action("Delete", "RoleGroups", new { id = roleGroup.Id })">
-                                                            <i class="ri-delete-bin-fill align-bottom me-2 text-muted"></i> Delete
-                                                        </a>
-                                                    </li>
+                                                    @if (!isSystemDefault)
+                                                    {
+                                                        <li>
+                                                            <a class="dropdown-item" href="@Url.Action("Edit", "RoleGroups", new { id = roleGroup.Id })">
+                                                                <i class="ri-pencil-fill align-bottom me-2 text-seccondary"></i> Edit
+                                                            </a>
+                                                        </li>
+                                                        <li>
+                                                            <a class="dropdown-item" href="@Url.Action("Delete", "RoleGroups", new { id = roleGroup.Id })">
+                                                                <i class="ri-delete-bin-fill align-bottom me-2 text-danger"></i> Delete
+                                                            </a>
+                                                        </li>
+                                                    }
+                                                    else
+                                                    {
+                                                        <li>
+                                                            <span class="dropdown-item-text text-muted">
+                                                                <i class="ri-lock-fill align-bottom me-2"></i> System Protected
+                                                            </span>
+                                                        </li>
+                                                    }
                                                 </ul>
                                             </div>
                                         </td>

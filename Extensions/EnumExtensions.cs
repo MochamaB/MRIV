@@ -29,6 +29,21 @@ namespace MRIV.Extensions
             return attributes?.Length > 0 ? attributes[0].Description : value.ToString();
         }
 
+        public static MaterialConditionStatus GetMaterialConditionStatus(this Condition condition)
+        {
+            return condition switch
+            {
+                Condition.GoodCondition => MaterialConditionStatus.GoodCondition,
+                Condition.MinorDamage => MaterialConditionStatus.MinorDamage,
+                Condition.MajorDamage => MaterialConditionStatus.MajorDamage,
+                Condition.Faulty => MaterialConditionStatus.Faulty,
+                Condition.UnderMaintenance => MaterialConditionStatus.UnderMaintenance,
+                Condition.LostOrStolen => MaterialConditionStatus.LostOrStolen,
+                Condition.Disposed => MaterialConditionStatus.Disposed,
+                _ => MaterialConditionStatus.GoodCondition
+            };
+        }
+
         public static FunctionalStatus GetFunctionalStatus(this Condition condition)
         {
             return condition switch

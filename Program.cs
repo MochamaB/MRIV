@@ -54,6 +54,7 @@ builder.Services.AddScoped<VendorService>();
 builder.Services.AddScoped<INotificationService, NotificationService>();
 builder.Services.AddScoped<IEmailService, EmailService>();
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+builder.Services.AddScoped<IMaterialBusinessLogicService, MaterialBusinessLogicService>();
 builder.Services.AddScoped<IMediaService, MediaService>();
 builder.Services.AddScoped<ILocationService, LocationService>();
 builder.Services.AddScoped<INotificationManager, NotificationManager>();
