@@ -1118,6 +1118,50 @@ Status: {viewModel.PerformanceStatus}
             }
         }
 
+        [HttpPost]
+        [Route("Dashboard/GetMaterialInsightsData")]
+        public async Task<IActionResult> GetMaterialInsightsData([FromBody] MaterialKPIRequest request)
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+                if (userProfile == null)
+                {
+                    return Json(new { error = "Unable to load user profile", success = false });
+                }
+
+                var result = await _dashboardService.GetMaterialInsightsAsync(HttpContext, request);
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Material Insights Data");
+                return Json(new { success = false, error = "Unable to load Material Insights. Please try again." });
+            }
+        }
+
+        [HttpGet]
+        [Route("Dashboard/GetRecentMaterialActivity")]
+        public async Task<IActionResult> GetRecentMaterialActivity()
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+                if (userProfile == null)
+                {
+                    return Json(new { error = "Unable to load user profile", success = false });
+                }
+
+                var result = await _dashboardService.GetRecentMaterialActivityAsync(HttpContext);
+                return Json(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Recent Material Activity");
+                return Json(new { success = false, error = "Unable to load recent activity. Please try again." });
+            }
+        }
+
         public class MaterialKPIRequest
         {
             public string? Category { get; set; }

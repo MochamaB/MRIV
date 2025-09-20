@@ -24,6 +24,8 @@ namespace MRIV.Services
 
         // NEW: Material Dashboard methods
         Task<MaterialDashboardViewModel> GetMaterialDashboardAsync(HttpContext httpContext);
+        Task<object> GetMaterialInsightsAsync(HttpContext httpContext, object request);
+        Task<object> GetRecentMaterialActivityAsync(HttpContext httpContext);
 
         // Enhanced methods for data components
         Task<TrendAnalysisData> GetTrendDataAsync(string payrollNo);
@@ -1371,6 +1373,317 @@ namespace MRIV.Services
             {
                 _logger.LogError(ex, "Error building Material Dashboard");
                 throw;
+            }
+        }
+
+        public async Task<object> GetMaterialInsightsAsync(HttpContext httpContext, object requestObj)
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                if (userProfile == null)
+                {
+                    return new { error = "Unable to load user profile", success = false };
+                }
+
+                // Cast request to proper type (it will be a MaterialKPIRequest from controller)
+                var request = (dynamic)requestObj;
+
+                _logger.LogInformation("Loading Material Insights for user: {PayrollNo}",
+                    userProfile.BasicInfo.PayrollNo);
+
+                // Use MaterialDashboard view with visibility filtering
+                var visibleQuery = _visibilityService.ApplyVisibilityScopeWithProfile(
+                    _context.MaterialDashboardViews,
+                    userProfile
+                );
+
+                // Apply additional dashboard filters
+                string categoryFilter = request.Category?.ToString();
+                if (!string.IsNullOrEmpty(categoryFilter))
+                {
+                    visibleQuery = visibleQuery.Where(m => m.StationCategoryCode == categoryFilter);
+                }
+
+                string stationFilter = request.Station?.ToString();
+                if (!string.IsNullOrEmpty(stationFilter))
+                {
+                    if (int.TryParse(stationFilter, out int stationId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentStationId == stationId);
+                    }
+                }
+
+                string departmentFilter = request.Department?.ToString();
+                if (!string.IsNullOrEmpty(departmentFilter))
+                {
+                    if (int.TryParse(departmentFilter, out int departmentId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentDepartmentId == departmentId);
+                    }
+                }
+
+                // Apply date filters if provided (MaterialDashboardView uses MaterialCreatedAt instead of CreatedAt)
+                string startDateFilter = request.StartDate?.ToString();
+                if (!string.IsNullOrEmpty(startDateFilter) && DateTime.TryParse(startDateFilter, out DateTime startDate))
+                {
+                    visibleQuery = visibleQuery.Where(m => m.MaterialCreatedAt >= startDate);
+                }
+
+                string endDateFilter = request.EndDate?.ToString();
+                if (!string.IsNullOrEmpty(endDateFilter) && DateTime.TryParse(endDateFilter, out DateTime endDate))
+                {
+                    visibleQuery = visibleQuery.Where(m => m.MaterialCreatedAt <= endDate.AddDays(1));
+                }
+
+                // Get counts for tab badges using correct MaterialStatus enum values
+                var counts = new
+                {
+                    available = await visibleQuery.CountAsync(m => m.MaterialStatus == MaterialStatus.Available),
+                    inProcess = await visibleQuery.CountAsync(m => m.MaterialStatus == MaterialStatus.InProcess),
+                    expiredWarranty = await visibleQuery.CountAsync(m =>
+                        m.WarrantyEndDate.HasValue &&
+                        m.WarrantyEndDate.Value < DateTime.Now &&
+                        m.MaterialStatus != MaterialStatus.Disposed),
+                    lost = await visibleQuery.CountAsync(m => m.MaterialStatus == MaterialStatus.LostOrStolen)
+                };
+
+                // Get detailed data for each tab (take first 5 records for dashboard)
+                var availableMaterials = await visibleQuery
+                    .Where(m => m.MaterialStatus == MaterialStatus.Available)
+                    .OrderByDescending(m => m.MaterialUpdatedAt ?? m.MaterialCreatedAt)
+                    .Take(5)
+                    .Select(m => new {
+                        materialId = m.MaterialId,
+                        materialCode = m.MaterialCode,
+                        materialName = m.MaterialName,
+                        categoryName = m.CategoryName ?? "Unknown",
+                        stationName = m.CurrentStationName,
+                        departmentName = m.CurrentDepartmentName,
+                        daysAvailable = m.DaysInCurrentStatus ?? 0
+                    })
+                    .ToListAsync();
+
+                var inProcessMaterials = await visibleQuery
+                    .Where(m => m.MaterialStatus == MaterialStatus.InProcess)
+                    .OrderByDescending(m => m.MaterialUpdatedAt ?? m.MaterialCreatedAt)
+                    .Take(5)
+                    .Select(m => new {
+                        materialId = m.MaterialId,
+                        materialCode = m.MaterialCode,
+                        materialName = m.MaterialName,
+                        categoryName = m.CategoryName ?? "Unknown",
+                        currentProcess = "In Process",
+                        daysInProcess = m.DaysInCurrentStatus ?? 0
+                    })
+                    .ToListAsync();
+
+                var expiredWarrantyMaterials = await visibleQuery
+                    .Where(m => m.WarrantyEndDate.HasValue &&
+                               m.WarrantyEndDate.Value < DateTime.Now &&
+                               m.MaterialStatus != MaterialStatus.Disposed)
+                    .OrderBy(m => m.WarrantyEndDate)
+                    .Take(5)
+                    .Select(m => new {
+                        materialId = m.MaterialId,
+                        materialCode = m.MaterialCode,
+                        materialName = m.MaterialName,
+                        categoryName = m.CategoryName ?? "Unknown",
+                        warrantyEndDate = m.WarrantyEndDate,
+                        daysExpired = m.WarrantyEndDate.HasValue ?
+                            EF.Functions.DateDiffDay(m.WarrantyEndDate.Value, DateTime.Now) : 0
+                    })
+                    .ToListAsync();
+
+                var lostMaterials = await visibleQuery
+                    .Where(m => m.MaterialStatus == MaterialStatus.LostOrStolen)
+                    .OrderByDescending(m => m.MaterialUpdatedAt ?? m.MaterialCreatedAt)
+                    .Take(5)
+                    .Select(m => new {
+                        materialId = m.MaterialId,
+                        materialCode = m.MaterialCode,
+                        materialName = m.MaterialName,
+                        categoryName = m.CategoryName ?? "Unknown",
+                        lastKnownLocation = m.CurrentStationName ?? m.CurrentDepartmentName ?? "Unknown",
+                        lostSince = m.MaterialUpdatedAt.HasValue ?
+                            m.MaterialUpdatedAt.Value.ToString("MMM dd, yyyy") :
+                            m.MaterialCreatedAt.ToString("MMM dd, yyyy")
+                    })
+                    .ToListAsync();
+
+                var response = new
+                {
+                    counts = counts,
+                    data = new
+                    {
+                        availableMaterials = availableMaterials,
+                        inProcessMaterials = inProcessMaterials,
+                        expiredWarrantyMaterials = expiredWarrantyMaterials,
+                        lostMaterials = lostMaterials
+                    },
+                    success = true,
+                    debug = new
+                    {
+                        totalMaterials = await visibleQuery.CountAsync(),
+                        userAccessLevel = userProfile.VisibilityScope.PermissionLevel.ToString(),
+                        filtersApplied = new {
+                            Category = categoryFilter,
+                            Station = stationFilter,
+                            Department = departmentFilter,
+                            StartDate = startDateFilter,
+                            EndDate = endDateFilter
+                        }
+                    }
+                };
+
+                _logger.LogInformation("Material Insights calculated: Available={Available}, InProcess={InProcess}, Expired={Expired}, Lost={Lost}",
+                    counts.available, counts.inProcess, counts.expiredWarranty, counts.lost);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Material Insights Data");
+                return new { success = false, error = "Unable to load Material Insights. Please try again." };
+            }
+        }
+
+        public async Task<object> GetRecentMaterialActivityAsync(HttpContext httpContext)
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                if (userProfile == null)
+                {
+                    return new { error = "Unable to load user profile", success = false };
+                }
+
+                _logger.LogInformation("Loading Recent Material Activity for user: {PayrollNo}",
+                    userProfile.BasicInfo.PayrollNo);
+
+                var activities = new List<object>();
+
+                // Get latest material assignments (no timeframe restriction)
+                var recentAssignments = await _context.MaterialAssignments
+                    .Include(ma => ma.Material)
+                    .OrderByDescending(ma => ma.AssignmentDate)
+                    .Take(10)
+                    .Select(ma => new
+                    {
+                        ma.MaterialId,
+                        ma.AssignmentDate,
+                        ma.ReturnDate,
+                        ma.PayrollNo,
+                        MaterialName = ma.Material.Name,
+                        EmployeeName = _context.EmployeeDetailsViews
+                            .Where(e => e.PayrollNo == ma.PayrollNo)
+                            .Select(e => e.Fullname)
+                            .FirstOrDefault()
+                    })
+                    .ToListAsync();
+
+                foreach (var assignment in recentAssignments)
+                {
+                    string activityType = "Assignment";
+                    string activityDescription = "";
+                    string activityIcon = "mdi-account-plus";
+                    string activityColor = "success";
+                    DateTime activityDate = assignment.AssignmentDate;
+
+                    if (assignment.ReturnDate.HasValue)
+                    {
+                        activityType = "Return";
+                        activityDescription = $"Returned by {assignment.EmployeeName ?? assignment.PayrollNo}";
+                        activityIcon = "mdi-arrow-left-circle";
+                        activityColor = "info";
+                        activityDate = assignment.ReturnDate.Value;
+                    }
+                    else
+                    {
+                        activityDescription = $"Assigned to {assignment.EmployeeName ?? assignment.PayrollNo}";
+                    }
+
+                    activities.Add(new
+                    {
+                        materialId = assignment.MaterialId,
+                        activityType = activityType,
+                        materialName = assignment.MaterialName ?? "Unknown Material",
+                        employeeName = assignment.EmployeeName ?? assignment.PayrollNo ?? "Unknown",
+                        activityDate = activityDate,
+                        description = activityDescription,
+                        icon = activityIcon,
+                        color = activityColor,
+                        location = ""
+                    });
+                }
+
+                // Get latest requisition items involving materials (no timeframe restriction)
+                var recentRequisitionItems = await _context.RequisitionItems
+                    .Where(ri => ri.MaterialId.HasValue)
+                    .Include(ri => ri.Material)
+                    .Include(ri => ri.Requisition)
+                    .OrderByDescending(ri => ri.CreatedAt)
+                    .Take(5)
+                    .Select(ri => new
+                    {
+                        ri.MaterialId,
+                        ri.RequisitionId,
+                        ri.CreatedAt,
+                        MaterialName = ri.Material.Name ?? ri.Name,
+                        RequisitionPayrollNo = ri.Requisition.PayrollNo,
+                        EmployeeName = _context.EmployeeDetailsViews
+                            .Where(e => e.PayrollNo == ri.Requisition.PayrollNo)
+                            .Select(e => e.Fullname)
+                            .FirstOrDefault()
+                    })
+                    .ToListAsync();
+
+                foreach (var item in recentRequisitionItems)
+                {
+                    activities.Add(new
+                    {
+                        materialId = item.MaterialId,
+                        activityType = "Requisition",
+                        materialName = item.MaterialName,
+                        employeeName = item.EmployeeName ?? item.RequisitionPayrollNo ?? "Unknown",
+                        activityDate = item.CreatedAt,
+                        description = $"Requested by {item.EmployeeName ?? item.RequisitionPayrollNo ?? "Unknown"}",
+                        icon = "mdi-file-document-outline",
+                        color = "primary",
+                        location = ""
+                    });
+                }
+
+                // Sort all activities by date and take top 6
+                var sortedActivities = activities
+                    .OrderByDescending(a => (DateTime)((dynamic)a).activityDate)
+                    .Take(5)
+                    .ToList();
+
+                var response = new
+                {
+                    activities = sortedActivities,
+                    success = true,
+                    debug = new
+                    {
+                        totalActivities = activities.Count,
+                        userAccessLevel = userProfile.VisibilityScope.PermissionLevel.ToString(),
+                        assignmentsFound = recentAssignments.Count,
+                        requisitionsFound = recentRequisitionItems.Count
+                    }
+                };
+
+                _logger.LogInformation("Recent Material Activity loaded: {ActivityCount} activities found",
+                    sortedActivities.Count);
+
+                return response;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Recent Material Activity");
+                return new { success = false, error = "Unable to load recent activity. Please try again." };
             }
         }
     }

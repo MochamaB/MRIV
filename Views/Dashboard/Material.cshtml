@@ -416,7 +416,7 @@
                         </div>
                     </div>
 
-              
+
                 </div>
             </div>
         </div>
@@ -463,6 +463,13 @@
         initializeDateRangePicker();
         loadMaterialKPIs(); // Load initial KPI data
         loadMaterialCharts(); // Load initial chart data
+        loadMaterialInsightsData(); // Load initial insights data
+        loadRecentActivity(); // Load initial recent activity data
+
+        // Set up periodic refresh for recent activity (every 30 seconds)
+        setInterval(function() {
+            loadRecentActivity();
+        }, 30000);
     });
 
     async function loadFilterData() {
@@ -764,6 +771,8 @@
         // Refresh KPI data with new filters
         loadMaterialKPIs();
         loadMaterialCharts();
+        loadMaterialInsightsData();
+        loadRecentActivity();
     }
 
     function resetFilters() {
@@ -989,6 +998,347 @@
         // Optional: Show a simple alert for now (can be replaced with toast notifications)
         if (type === 'error') {
             console.error(message);
+        }
+    }
+
+    // Material Insights Functions
+    async function loadMaterialInsightsData() {
+        try {
+            console.log('Loading Material Insights data...');
+
+            // Get current filters
+            const filters = getActiveFilters();
+
+            const response = await fetch('/Dashboard/GetMaterialInsightsData', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(filters)
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                // Update tab badges
+                updateTabBadges(result.counts);
+
+                // Populate tables with data
+                populateAvailableMaterialsTable(result.data.availableMaterials || []);
+                populateInProcessMaterialsTable(result.data.inProcessMaterials || []);
+                populateExpiredWarrantyTable(result.data.expiredWarrantyMaterials || []);
+                populateLostMaterialsTable(result.data.lostMaterials || []);
+
+                // Log debug information
+                if (result.debug) {
+                    console.log('Material Insights Debug Info:', result.debug);
+                }
+
+                console.log('Material Insights loaded successfully');
+            } else {
+                console.error('Error from server:', result.error);
+                showMaterialInsightsError('Error loading insights: ' + result.error);
+            }
+
+        } catch (error) {
+            console.error('Error loading Material Insights:', error);
+            showMaterialInsightsError('Failed to load insights data. Please try refreshing the page.');
+        }
+    }
+
+    function updateTabBadges(counts) {
+        // Update badge counters for each tab
+        document.getElementById('availableTabBadge').textContent = counts.available || 0;
+        document.getElementById('inprocessTabBadge').textContent = counts.inProcess || 0;
+        document.getElementById('warrantyTabBadge').textContent = counts.expiredWarranty || 0;
+        document.getElementById('lostTabBadge').textContent = counts.lost || 0;
+    }
+
+
+    function populateAvailableMaterialsTable(materials) {
+        const tableBody = document.getElementById('availableMaterialsTable');
+        if (!tableBody) return;
+
+        if (materials.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="ri-inbox-line fs-24 text-muted"></i>
+                        <p class="mb-0 mt-2">No available materials found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = materials.map(material => `
+            <tr>
+                <td><a href="/Materials/Details/${material.materialId}" class="text-primary">${material.materialCode || material.materialId}</a></td>
+                <td>${material.materialName}</td>
+                <td><span class="badge bg-light text-dark">${material.categoryName}</span></td>
+                <td>${material.stationName || material.departmentName || 'N/A'}</td>
+                <td><span class="text-muted">${material.daysAvailable || 0} days</span></td>
+                <td>
+                    <a href="/Materials/Details/${material.materialId}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                        <i class="mdi mdi-eye mdi-24px text-warning"></i>
+                    </a>
+                    <a href="javascript:void(0)" onclick="assignMaterial(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Assign Material">
+                        <i class="mdi mdi-account-plus mdi-24px text-primary ms-2"></i>
+                    </a>
+                    <a href="javascript:void(0)" onclick="transferMaterial(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Transfer Material">
+                        <i class="mdi mdi-swap-horizontal mdi-24px text-info ms-2"></i>
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function populateInProcessMaterialsTable(materials) {
+        const tableBody = document.getElementById('inprocessMaterialsTable');
+        if (!tableBody) return;
+
+        if (materials.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="ri-inbox-line fs-24 text-muted"></i>
+                        <p class="mb-0 mt-2">No materials in process found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = materials.map(material => `
+            <tr>
+                <td><a href="/Materials/Details/${material.materialId}" class="text-primary">${material.materialCode || material.materialId}</a></td>
+                <td>${material.materialName}</td>
+                <td><span class="badge bg-light text-dark">${material.categoryName}</span></td>
+                <td><span class="badge bg-info">${material.currentProcess}</span></td>
+                <td><span class="text-muted">${material.daysInProcess || 0} days</span></td>
+                <td>
+                    <a href="/Materials/Details/${material.materialId}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                        <i class="mdi mdi-eye mdi-24px text-warning"></i>
+                    </a>
+                    <a href="javascript:void(0)" onclick="updateMaterialStatus(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Update Status">
+                        <i class="mdi mdi-refresh mdi-24px text-info ms-2"></i>
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function populateExpiredWarrantyTable(materials) {
+        const tableBody = document.getElementById('warrantyExpiredTable');
+        if (!tableBody) return;
+
+        if (materials.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="ri-inbox-line fs-24 text-muted"></i>
+                        <p class="mb-0 mt-2">No expired warranty materials found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = materials.map(material => {
+            const warrantyEndDate = material.warrantyEndDate ? new Date(material.warrantyEndDate).toLocaleDateString() : 'N/A';
+            return `
+                <tr>
+                    <td><a href="/Materials/Details/${material.materialId}" class="text-primary">${material.materialCode || material.materialId}</a></td>
+                    <td>${material.materialName}</td>
+                    <td><span class="badge bg-light text-dark">${material.categoryName}</span></td>
+                    <td><span class="text-danger">${warrantyEndDate}</span></td>
+                    <td><span class="text-danger">${material.daysExpired || 0} days</span></td>
+                    <td>
+                        <a href="/Materials/Details/${material.materialId}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                            <i class="mdi mdi-eye mdi-24px text-warning"></i>
+                        </a>
+                        <a href="javascript:void(0)" onclick="renewWarranty(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Renew Warranty">
+                            <i class="mdi mdi-shield-refresh mdi-24px text-info ms-2"></i>
+                        </a>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+
+    function populateLostMaterialsTable(materials) {
+        const tableBody = document.getElementById('lostMaterialsTable');
+        if (!tableBody) return;
+
+        if (materials.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="ri-inbox-line fs-24 text-muted"></i>
+                        <p class="mb-0 mt-2">No lost materials found</p>
+                    </td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = materials.map(material => `
+            <tr>
+                <td><a href="/Materials/Details/${material.materialId}" class="text-primary">${material.materialCode || material.materialId}</a></td>
+                <td>${material.materialName}</td>
+                <td><span class="badge bg-light text-dark">${material.categoryName}</span></td>
+                <td>${material.lastKnownLocation || 'Unknown'}</td>
+                <td><span class="text-danger">${material.lostSince || 'Unknown'}</span></td>
+                <td>
+                    <a href="/Materials/Details/${material.materialId}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Details">
+                        <i class="mdi mdi-eye mdi-24px text-warning"></i>
+                    </a>
+                    <a href="javascript:void(0)" onclick="reportFound(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Report Found">
+                        <i class="mdi mdi-magnify-plus mdi-24px text-primary ms-2"></i>
+                    </a>
+                    <a href="javascript:void(0)" onclick="markDisposed(${material.materialId})" data-bs-toggle="tooltip" data-bs-placement="top" title="Mark as Disposed">
+                        <i class="mdi mdi-delete mdi-24px text-info ms-2"></i>
+                    </a>
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    function showMaterialInsightsError(message) {
+        // Show error in all tables
+        const tableIds = ['availableMaterialsTable', 'inprocessMaterialsTable', 'warrantyExpiredTable', 'lostMaterialsTable'];
+
+        tableIds.forEach(tableId => {
+            const tableBody = document.getElementById(tableId);
+            if (tableBody) {
+                tableBody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-danger py-4">
+                            <i class="ri-error-warning-line fs-24"></i>
+                            <p class="mb-0 mt-2">${message}</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        });
+
+        console.error('Material Insights Error:', message);
+    }
+
+    // Recent Activity Functions
+    async function loadRecentActivity() {
+        try {
+            console.log('Loading recent activity...');
+
+            const response = await fetch('/Dashboard/GetRecentMaterialActivity');
+            const result = await response.json();
+
+            if (result.success) {
+                populateRecentActivity(result.activities || []);
+                console.log('Recent activity loaded successfully');
+            } else {
+                console.error('Error from server:', result.error);
+                showRecentActivityError('Error loading activities: ' + result.error);
+            }
+
+        } catch (error) {
+            console.error('Error loading recent activity:', error);
+            showRecentActivityError('Failed to load activity data.');
+        }
+    }
+
+    function populateRecentActivity(activities) {
+        const activityList = document.getElementById('recentActivityList');
+        if (!activityList) return;
+
+        // Clear existing content
+        activityList.innerHTML = '';
+
+        if (!activities || activities.length === 0) {
+            activityList.innerHTML = `
+                <div class="text-center text-muted py-3">
+                    <i class="ri-history-line fs-24"></i>
+                    <p class="mb-0 mt-2">No recent activities</p>
+                </div>
+            `;
+            return;
+        }
+
+        // Create UL list structure
+        const ul = document.createElement('ul');
+        ul.className = 'list-unstyled mb-0';
+
+        activities.forEach(activity => {
+            const activityDate = activity.activityDate ? new Date(activity.activityDate).toLocaleDateString() : 'Unknown';
+            const activityTime = activity.activityDate ? new Date(activity.activityDate).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+            const li = document.createElement('li');
+            li.className = 'py-2 border-bottom';
+
+            li.innerHTML = `
+                <div class="d-flex align-items-start">
+                    <div class="flex-shrink-0 me-2">
+                        <i class="mdi ${activity.icon} text-${activity.color} fs-16"></i>
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex align-items-center mb-1">
+                            <a href="/Materials/Details/${activity.materialId}" class="text-dark fw-medium text-decoration-none me-2">${activity.materialName}</a>
+                            <span class="badge bg-${activity.color}-subtle text-${activity.color} fs-11">${activity.activityType}</span>
+                        </div>
+                        <p class="text-muted mb-1 fs-12">${activity.description}</p>
+                        <small class="text-muted fs-11">${activityDate} ${activityTime}</small>
+                    </div>
+                </div>
+            `;
+
+            ul.appendChild(li);
+        });
+
+        activityList.appendChild(ul);
+    }
+
+    function showRecentActivityError(message) {
+        const activityList = document.getElementById('recentActivityList');
+        if (activityList) {
+            activityList.innerHTML = `
+                <div class="text-center text-danger py-4">
+                    <i class="ri-error-warning-line fs-24"></i>
+                    <p class="mb-0 mt-2">${message}</p>
+                </div>
+            `;
+        }
+    }
+
+    // Material action functions (placeholder implementations)
+    function assignMaterial(materialId) {
+        // TODO: Implement assign material functionality
+        alert(`Assign Material functionality for ID: ${materialId} - Coming Soon`);
+    }
+
+    function transferMaterial(materialId) {
+        // TODO: Implement transfer material functionality
+        alert(`Transfer Material functionality for ID: ${materialId} - Coming Soon`);
+    }
+
+    function updateMaterialStatus(materialId) {
+        // TODO: Implement update material status functionality
+        alert(`Update Material Status functionality for ID: ${materialId} - Coming Soon`);
+    }
+
+    function renewWarranty(materialId) {
+        // TODO: Implement renew warranty functionality
+        alert(`Renew Warranty functionality for ID: ${materialId} - Coming Soon`);
+    }
+
+    function reportFound(materialId) {
+        // TODO: Implement report found functionality
+        alert(`Report Found functionality for ID: ${materialId} - Coming Soon`);
+    }
+
+    function markDisposed(materialId) {
+        // TODO: Implement mark as disposed functionality
+        if (confirm(`Are you sure you want to mark Material ID: ${materialId} as disposed?`)) {
+            alert(`Mark as Disposed functionality for ID: ${materialId} - Coming Soon`);
         }
     }
 

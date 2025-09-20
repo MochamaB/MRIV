@@ -1,118 +1,25 @@
-  Using cached profile for PayrollNo: SAP02055, IsAdmin: True
-fail: MRIV.Services.DashboardService[0]
-      Error getting material distribution data for: location
-      System.InvalidOperationException: The client projection contains a reference to a constant expression of 'MRIV.Services.DashboardService' through the instance method 'GetLocationColor'. This could potentially cause a memory leak; consider making the method static so that it does not capture constant in the instance. See https://go.microsoft.com/fwlink/?linkid=2103067 for more information and examples.
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.ConstantVerifyingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberAssignment(MemberAssignment node)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberBinding(MemberBinding node)
-         at System.Linq.Expressions.ExpressionVisitor.Visit[T](ReadOnlyCollection`1 nodes, Func`2 elementVisitor)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberInit(MemberInitExpression node)
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VerifyNoClientConstant(Expression expression)
-         at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitShapedQuery(ShapedQueryExpression shapedQueryExpression)
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-         at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-         at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
-         at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
-         at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
-         at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1.GetAsyncEnumerator(CancellationToken cancellationToken)
-         at System.Runtime.CompilerServices.ConfiguredCancelableAsyncEnumerable`1.GetAsyncEnumerator()
-         at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync[TSource](IQueryable`1 source, CancellationToken cancellationToken)
-         at MRIV.Services.DashboardService.GetLocationDistributionAsync(IQueryable`1 query) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1637
-         at MRIV.Services.DashboardService.GetMaterialDistributionDataAsync(HttpContext httpContext, String groupBy) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1474
-fail: MRIV.Services.DashboardService[0]
-      Error building Material Dashboard
-      System.InvalidOperationException: The client projection contains a reference to a constant expression of 'MRIV.Services.DashboardService' through the instance method 'GetLocationColor'. This could potentially cause a memory leak; consider making the method static so that it does not capture constant in the instance. See https://go.microsoft.com/fwlink/?linkid=2103067 for more information and examples.
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.ConstantVerifyingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberAssignment(MemberAssignment node)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberBinding(MemberBinding node)
-         at System.Linq.Expressions.ExpressionVisitor.Visit[T](ReadOnlyCollection`1 nodes, Func`2 elementVisitor)
-         at System.Linq.Expressions.ExpressionVisitor.VisitMemberInit(MemberInitExpression node)
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VerifyNoClientConstant(Expression expression)
-         at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitShapedQuery(ShapedQueryExpression shapedQueryExpression)
-         at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-         at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-         at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
-         at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
-         at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
-         at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
-         at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1.GetAsyncEnumerator(CancellationToken cancellationToken)
-         at System.Runtime.CompilerServices.ConfiguredCancelableAsyncEnumerable`1.GetAsyncEnumerator()
-         at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync[TSource](IQueryable`1 source, CancellationToken cancellationToken)
-         at MRIV.Services.DashboardService.GetLocationDistributionAsync(IQueryable`1 query) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1637
-         at MRIV.Services.DashboardService.GetMaterialDistributionDataAsync(HttpContext httpContext, String groupBy) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1474
-         at MRIV.Services.DashboardService.GetMaterialDashboardAsync(HttpContext httpContext) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1345
-EXCEPTION in Material Dashboard: The client projection contains a reference to a constant expression of 'MRIV.Services.DashboardService' through the instance method 'GetLocationColor'. This could potentially cause a memory leak; consider making the method static so that it does not capture constant in the instance. See https://go.microsoft.com/fwlink/?linkid=2103067 for more information and examples.
-Stack Trace:    at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.ConstantVerifyingExpressionVisitor.VisitMethodCall(MethodCallExpression methodCallExpression)
-   at System.Linq.Expressions.ExpressionVisitor.VisitMemberAssignment(MemberAssignment node)
-   at System.Linq.Expressions.ExpressionVisitor.VisitMemberBinding(MemberBinding node)
-   at System.Linq.Expressions.ExpressionVisitor.Visit[T](ReadOnlyCollection`1 nodes, Func`2 elementVisitor)
-   at System.Linq.Expressions.ExpressionVisitor.VisitMemberInit(MemberInitExpression node)
-   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VerifyNoClientConstant(Expression expression)
-   at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitShapedQuery(ShapedQueryExpression shapedQueryExpression)
-   at Microsoft.EntityFrameworkCore.Query.ShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-   at Microsoft.EntityFrameworkCore.Query.RelationalShapedQueryCompilingExpressionVisitor.VisitExtension(Expression extensionExpression)
-   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutorExpression[TResult](Expression query)
-   at Microsoft.EntityFrameworkCore.Query.QueryCompilationContext.CreateQueryExecutor[TResult](Expression query)
-   at Microsoft.EntityFrameworkCore.Storage.Database.CompileQuery[TResult](Expression query, Boolean async)
-   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.CompileQueryCore[TResult](IDatabase database, Expression query, IModel model, Boolean async)
-   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.<>c__DisplayClass11_0`1.<ExecuteCore>b__0()
-   at Microsoft.EntityFrameworkCore.Query.Internal.CompiledQueryCache.GetOrAddQuery[TResult](Object cacheKey, Func`1 compiler)
-   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteCore[TResult](Expression query, Boolean async, CancellationToken cancellationToken)
-   at Microsoft.EntityFrameworkCore.Query.Internal.QueryCompiler.ExecuteAsync[TResult](Expression query, CancellationToken cancellationToken)
-   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryProvider.ExecuteAsync[TResult](Expression expression, CancellationToken cancellationToken)
-   at Microsoft.EntityFrameworkCore.Query.Internal.EntityQueryable`1.GetAsyncEnumerator(CancellationToken cancellationToken)
-   at System.Runtime.CompilerServices.ConfiguredCancelableAsyncEnumerable`1.GetAsyncEnumerator()
-   at Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync[TSource](IQueryable`1 source, CancellationToken cancellationToken)
-   at MRIV.Services.DashboardService.GetLocationDistributionAsync(IQueryable`1 query) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1637
-   at MRIV.Services.DashboardService.GetMaterialDistributionDataAsync(HttpContext httpContext, String groupBy) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1474
-   at MRIV.Services.DashboardService.GetMaterialDashboardAsync(HttpContext httpContext) in C:\Users\KTDA\source\repos\MochamaB\MRIV\Services\IDashboardService.cs:line 1345
-   at MRIV.Controllers.DashboardController.Material() in C:\Users\KTDA\source\repos\MochamaB\MRIV\Controllers\DashboardController.cs:line 830
-info: MRIV.Services.UserProfileService[0]
-      Getting current user profile for PayrollNo: SAP02055
-Getting current user profile for PayrollNo: SAP02055
-Attempting to get cached profile for PayrollNo: SAP02055
-Using cached profile for PayrollNo: SAP02055, IsAdmin: True
-info: MRIV.Services.UserProfileService[0]
-      Attempting to get cached profile for PayrollNo: SAP02055
-info: MRIV.Services.UserProfileService[0]
-      Using cached profile for PayrollNo: SAP02055, IsAdmin: True
-info: MRIV.Services.DashboardService[0]
-      Loading dashboard for user: SAP02055
-info: MRIV.Services.DashboardService[0]
-      UserProfile BasicInfo - PayrollNo: SAP02055, Fullname: 'MOCHAMA BRIAN OBURE', Role: 'Admin'
-info: Microsoft.EntityFrameworkCore.Database.Command[20101]
-      Executed DbCommand (22ms) [Parameters=[], CommandType='Text', CommandTimeout='90']
-      SELECT [r].[Id], [r].[CollectorId], [r].[CollectorName], [r].[CompleteDate], [r].[CreatedAt], [r].[DeliveryDepartmentId], [r].[DeliveryStationCategory], [r].[DeliveryStationId], [r].[DepartmentId], [r].[DispatchPayrollNo], [r].[DispatchType], [r].[DispatchVendor], [r].[IssueDepartmentId], [r].[IssueStationCategory], [r].[IssueStationId], [r].[MaterialAssignmentId], [r].[PayrollNo], [r].[Remarks], [r].[RequisitionType], [r].[Status], [r].[TicketId], [r].[UpdatedAt], [r0].[Id], [r0].[Condition], [r0].[CreatedAt], [r0].[Description], [r0].[MaterialId], [r0].[Name], [r0].[Quantity], [r0].[RequisitionId], [r0].[SaveToInventory], [r0].[Status], [r0].[UpdatedAt]
-      FROM [Requisitions] AS [r]
-      LEFT JOIN [RequisitionItems] AS [r0] ON [r].[Id] = [r0].[RequisitionId]
-      ORDER BY [r].[CreatedAt] DESC, [r].[Id]
-info: Microsoft.EntityFrameworkCore.Database.Command[20101]
-      Executed DbCommand (15ms) [Parameters=[@__ToString_0='?' (Size = 50) (DbType = AnsiString)], CommandType='Text', CommandTimeout='90']
-      SELECT TOP(1) [d].[departmentCode], [d].[DepartmentHD], [d].[DepartmentID], [d].[DepartmentName], [d].[Emailaddress], [d].[OrgCode], [d].[UserName]
-      FROM [Department] AS [d]
-      WHERE [d].[DepartmentID] = @__ToString_0
-info: Microsoft.EntityFrameworkCore.Database.Command[20101]
-      Executed DbCommand (7ms) [Parameters=[@__stationId_0='?' (DbType = Int32)], CommandType='Text', CommandTimeout='90']
-      SELECT TOP(1) [s].[StationID], [s].[Station_Name]
-      FROM [Station] AS [s]
-      WHERE [s].[StationID] = @__stationId_0
-info: Microsoft.EntityFrameworkCore.Database.Command[20101]
-      Executed DbCommand (45ms) [Parameters=[@__payrollNo_0='?' (Size = 8)], CommandType='Text', CommandTimeout='90']
-      SELECT TOP(1) [v].[Fullname], [v].[SurName], [v].[OtherNames]
-      FROM [vw_EmployeeDetails] AS [v]
-      WHERE [v].[PayrollNo] = @__payrollNo_0 AND [v].[IsActive] = 0
-info: Microsoft.EntityFrameworkCore.Database.Command[20101]
-      Executed DbCommand (1ms) [Parameters=[@__ToString_0='?' (Size = 50) (DbType = AnsiString)], CommandType='Text', CommandTimeout='90']
-      SELECT TOP(1) [d].[departmentCode], [d].[DepartmentHD], [d].[DepartmentID], [d].[DepartmentName], [d].[Emailaddress], [d].[OrgCode], [d].[UserName]
-      FROM [Department] AS [d]
+'ILogger<DashboardService>' has no applicable method named 'LogInformation' but appears to have an extension method by that name. Extension methods cannot be dynamically dispatched. Consider casting the dynamic arguments or calling the extension method without the extension method syntax.
+'MaterialDashboardView' does not contain a definition for 'CreatedAt' and no accessible extension method 'CreatedAt' accepting a first argument of type 'MaterialDashboardView' could be found (are you missing a using directive or an assembly reference?)
+'MaterialDashboardView' does not contain a definition for 'CreatedAt' and no accessible extension method 'CreatedAt' accepting a first argument of type 'MaterialDashboardView' could be found (are you missing a using directive or an assembly reference?)
+An expression tree may not contain a dynamic operation
+An expression tree may not contain a dynamic operation
+Cannot infer the type of implicitly-typed out variable 'departmentId'.
+Cannot infer the type of implicitly-typed out variable 'endDate'.
+Cannot infer the type of implicitly-typed out variable 'startDate'.
+Cannot infer the type of implicitly-typed out variable 'stationId'.
+Operator '!=' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '!=' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
+Operator '==' cannot be applied to operands of type 'MaterialStatus?' and 'int'
