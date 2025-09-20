@@ -13,14 +13,12 @@ namespace MRIV.Models.Views
         // Overall Metrics
         public int TotalMaterials { get; set; }
 
-        [Column(TypeName = "decimal(18, 2)")]
-        public decimal TotalValue { get; set; }
+        public double TotalValue { get; set; }
 
         public int AvailableMaterials { get; set; }
         public int AssignedMaterials { get; set; }
 
-        [Column(TypeName = "decimal(5, 2)")]
-        public decimal UtilizationRate { get; set; }
+        public double UtilizationRate { get; set; }
 
         // Raw counts for alert calculation in application layer
         public int WarrantyExpiringSoonCount { get; set; }
@@ -29,14 +27,11 @@ namespace MRIV.Models.Views
         public int MaintenanceDueSoonCount { get; set; }
 
         // Value aggregations (raw values for application layer categorization)
-        [Column(TypeName = "decimal(18, 2)")]
-        public decimal TotalPurchaseValue { get; set; }
+        public double TotalPurchaseValue { get; set; }
 
-        [Column(TypeName = "decimal(18, 2)")]
-        public decimal AveragePurchaseValue { get; set; }
+        public double AveragePurchaseValue { get; set; }
 
-        [Column(TypeName = "decimal(18, 2)")]
-        public decimal MaxPurchaseValue { get; set; }
+        public double MaxPurchaseValue { get; set; }
 
         public int HighValueCount { get; set; }
 

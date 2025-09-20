@@ -20,6 +20,7 @@ namespace MRIV.Controllers
         private readonly IDashboardService _dashboardService;
         private readonly IDepartmentService _departmentService;
         private readonly IUserProfileService _userProfileService;
+        private readonly IVisibilityAuthorizeService _visibilityService;
         private readonly ILogger<DashboardController> _logger;
 
         public DashboardController(
@@ -27,12 +28,14 @@ namespace MRIV.Controllers
             IDashboardService dashboardService,
             IDepartmentService departmentService,
             IUserProfileService userProfileService,
+            IVisibilityAuthorizeService visibilityService,
             ILogger<DashboardController> logger)
         {
             _context = context;
             _dashboardService = dashboardService;
             _departmentService = departmentService;
             _userProfileService = userProfileService;
+            _visibilityService = visibilityService;
             _logger = logger;
         }
 
@@ -861,9 +864,268 @@ Status: {viewModel.PerformanceStatus}
             }
         }
 
-        
+        [HttpGet]
+        [Route("Dashboard/GetFilterData")]
+        public async Task<IActionResult> GetFilterData()
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
 
-       
+                if (userProfile == null)
+                {
+                    return Json(new { error = "Unable to load user profile" });
+                }
+
+                // Get station categories from accessible stations
+                var categories = userProfile.LocationAccess.AccessibleStations
+                    .Select(s => new {
+                        Code = s.Category.Code,
+                        Name = s.Category.Name
+                    })
+                    .Where(c => !string.IsNullOrEmpty(c.Code))
+                    .Distinct()
+                    .OrderBy(c => c.Code == "headoffice" ? 1 :
+                                  c.Code == "region" ? 2 :
+                                  c.Code == "factory" ? 3 : 4)
+                    .ToList();
+
+                // Get accessible stations with categories
+                var stations = userProfile.LocationAccess.AccessibleStations
+                    .Select(s => new {
+                        Id = s.Id,
+                        Name = s.Name,
+                        CategoryCode = s.Category.Code
+                    })
+                    .Where(s => !string.IsNullOrEmpty(s.Name))
+                    .OrderBy(s => s.Name)
+                    .ToList();
+
+                // Get accessible departments
+                var departments = userProfile.LocationAccess.AccessibleDepartments
+                    .Select(d => new {
+                        Id = d.Id,
+                        Name = d.Name
+                    })
+                    .Where(d => !string.IsNullOrEmpty(d.Name))
+                    .OrderBy(d => d.Name)
+                    .ToList();
+
+                _logger.LogInformation("Filter data loaded: {CategoryCount} categories, {StationCount} stations, {DepartmentCount} departments",
+                    categories.Count, stations.Count, departments.Count);
+
+                return Json(new { categories, stations, departments });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading filter data");
+                return Json(new { error = "Error loading filter data" });
+            }
+        }
+
+        [HttpPost]
+        [Route("Dashboard/GetMaterialKPIs")]
+        public async Task<IActionResult> GetMaterialKPIs([FromBody] MaterialKPIRequest request)
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                if (userProfile == null)
+                {
+                    return Json(new { error = "Unable to load user profile", success = false });
+                }
+
+                _logger.LogInformation("Loading Material KPIs for user: {PayrollNo} with filters: {@Filters}",
+                    userProfile.BasicInfo.PayrollNo, request);
+
+                // Use MaterialDashboard view directly to avoid decimal casting issues
+                var visibleQuery = _visibilityService.ApplyVisibilityScopeWithProfile(
+                    _context.MaterialDashboardViews,
+                    userProfile
+                );
+
+                // Apply additional dashboard filters on top of visibility filtering
+                if (!string.IsNullOrEmpty(request.Category))
+                {
+                    visibleQuery = visibleQuery.Where(m => m.StationCategoryCode == request.Category);
+                }
+
+                if (!string.IsNullOrEmpty(request.Station))
+                {
+                    if (int.TryParse(request.Station, out var stationId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentStationId == stationId);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(request.Department))
+                {
+                    if (int.TryParse(request.Department, out var departmentId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentDepartmentId == departmentId);
+                    }
+                }
+
+                // Count materials directly - no problematic decimal aggregations
+                var totalMaterials = await visibleQuery.CountAsync();
+
+                // Calculate total value using SUM on PurchasePrice
+                var totalValue = await visibleQuery
+                    .Where(m => m.PurchasePrice.HasValue)
+                    .SumAsync(m => m.PurchasePrice.Value);
+
+                // Calculate available materials count (using MaterialStatus enum: Available = 4)
+                var availableMaterials = await visibleQuery
+                    .Where(m => m.MaterialStatus == MRIV.Enums.MaterialStatus.Available)
+                    .CountAsync();
+
+                // Calculate warranty expired materials count
+                var warrantyExpired = await visibleQuery
+                    .Where(m => m.WarrantyEndDate.HasValue && m.WarrantyEndDate.Value < DateTime.Now)
+                    .CountAsync();
+
+                // TODO: Calculate trend based on date range comparison
+                var trend = 0.0m;
+
+                var response = new
+                {
+                    totalMaterials = totalMaterials,
+                    totalValue = totalValue,
+                    availableMaterials = availableMaterials,
+                    warrantyExpired = warrantyExpired,
+                    trend = trend,
+                    success = true,
+                    debug = new
+                    {
+                        materialsFound = totalMaterials,
+                        totalValueCalculated = totalValue,
+                        availableMaterialsFound = availableMaterials,
+                        warrantyExpiredFound = warrantyExpired,
+                        userIsAdmin = userProfile.RoleInformation.IsAdmin,
+                        userAccessLevel = userProfile.VisibilityScope.PermissionLevel.ToString(),
+                        appliedFilters = new
+                        {
+                            category = request.Category,
+                            station = request.Station,
+                            department = request.Department
+                        }
+                    }
+                };
+
+                _logger.LogInformation("Material KPIs calculated: Total Materials = {TotalMaterials}, Total Value = {TotalValue}, Available = {AvailableMaterials}, Warranty Expired = {WarrantyExpired}",
+                    totalMaterials, totalValue, availableMaterials, warrantyExpired);
+
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Material KPIs");
+                return Json(new {
+                    error = "Error loading Material KPIs: " + ex.Message,
+                    success = false
+                });
+            }
+        }
+
+        [HttpPost]
+        [Route("Dashboard/GetMaterialChartData")]
+        public async Task<IActionResult> GetMaterialChartData([FromBody] MaterialKPIRequest request)
+        {
+            try
+            {
+                var userProfile = await _userProfileService.GetCurrentUserProfileAsync();
+
+                if (userProfile == null)
+                {
+                    return Json(new { error = "Unable to load user profile", success = false });
+                }
+
+                _logger.LogInformation("Loading Material Chart Data for user: {PayrollNo} with filters: {@Filters}",
+                    userProfile.BasicInfo.PayrollNo, request);
+
+                // Apply visibility filtering using VisibilityService
+                var visibleQuery = _visibilityService.ApplyVisibilityScopeWithProfile(
+                    _context.MaterialDashboardViews,
+                    userProfile
+                );
+
+                // Apply additional dashboard filters
+                if (!string.IsNullOrEmpty(request.Category))
+                {
+                    visibleQuery = visibleQuery.Where(m => m.StationCategoryCode == request.Category);
+                }
+
+                if (!string.IsNullOrEmpty(request.Station))
+                {
+                    if (int.TryParse(request.Station, out var stationId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentStationId == stationId);
+                    }
+                }
+
+                if (!string.IsNullOrEmpty(request.Department))
+                {
+                    if (int.TryParse(request.Department, out var departmentId))
+                    {
+                        visibleQuery = visibleQuery.Where(m => m.CurrentDepartmentId == departmentId);
+                    }
+                }
+
+                // Get materials by category data
+                var categoryData = await visibleQuery
+                    .GroupBy(m => new { m.CategoryId, m.CategoryName })
+                    .Select(g => new {
+                        categoryId = g.Key.CategoryId,
+                        categoryName = g.Key.CategoryName ?? "Unknown",
+                        count = g.Count()
+                    })
+                    .OrderByDescending(x => x.count)
+                    .ToListAsync();
+
+                // Get status breakdown data
+                var statusData = await visibleQuery
+                    .GroupBy(m => m.MaterialStatus)
+                    .Select(g => new {
+                        status = g.Key,
+                        count = g.Count()
+                    })
+                    .ToListAsync();
+
+                var response = new
+                {
+                    categoryBreakdown = categoryData,
+                    statusBreakdown = statusData,
+                    success = true,
+                    debug = new
+                    {
+                        totalMaterials = await visibleQuery.CountAsync(),
+                        categoriesFound = categoryData.Count,
+                        statusTypesFound = statusData.Count,
+                        userAccessLevel = userProfile.VisibilityScope.PermissionLevel.ToString()
+                    }
+                };
+
+                _logger.LogInformation("Material Chart Data calculated: {Categories} categories, {StatusTypes} status types",
+                    categoryData.Count, statusData.Count);
+
+                return Json(response);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error loading Material Chart Data");
+                return Json(new { success = false, error = "Unable to load Material Chart Data. Please try again." });
+            }
+        }
+
+        public class MaterialKPIRequest
+        {
+            public string? Category { get; set; }
+            public string? Station { get; set; }
+            public string? Department { get; set; }
+            public string? StartDate { get; set; }
+            public string? EndDate { get; set; }
+        }
 
         #endregion
     }

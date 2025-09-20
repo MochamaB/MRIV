@@ -274,18 +274,6 @@ public partial class RequisitionContext : DbContext
         {
             entity.HasNoKey(); // Aggregated data, no single primary key
             entity.ToView("vw_MaterialUtilizationSummary");
-
-            // Explicit type mappings to handle database Double -> C# Decimal conversion
-            entity.Property(e => e.TotalValue)
-                  .HasColumnType("decimal(18,2)");
-            entity.Property(e => e.UtilizationRate)
-                  .HasColumnType("decimal(5,2)");
-            entity.Property(e => e.TotalPurchaseValue)
-                  .HasColumnType("decimal(18,2)");
-            entity.Property(e => e.AveragePurchaseValue)
-                  .HasColumnType("decimal(18,2)");
-            entity.Property(e => e.MaxPurchaseValue)
-                  .HasColumnType("decimal(18,2)");
         });
 
         modelBuilder.Entity<MaterialMovementTrendsView>(entity =>

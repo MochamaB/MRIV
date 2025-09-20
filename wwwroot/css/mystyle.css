@@ -115,6 +115,12 @@ input.form-control.form-control-lg.border-left-0:focus {
         background-color: #fcb900 !important;
         border-color: #fcb900 !important;
     }
+    /* === BTN SECONDARY === */
+.btn-outline-secondary{
+    border: 2px solid #fcb900 !important;
+    color: #fcb900 !important;
+
+}
 /* === BTN DANGER === */
 .btn-danger {
     color: #fff;

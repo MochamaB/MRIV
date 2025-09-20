@@ -1,0 +1,10 @@
+{
+  "version": "3.0",
+  "defaultProvider": "cdnjs",
+  "libraries": [
+    {
+      "library": "apexcharts@5.3.5",
+      "destination": "wwwroot/vendors/apexcharts/"
+    }
+  ]
+}

@@ -13,10 +13,10 @@
 ## Primary KPI Cards Row (4 Cards)
 ```
 ┌──────────────────┬──────────────────┬──────────────────┬──────────────────┐
-│   TOTAL VALUE    │  AVAILABLE MATS  │ UTILIZATION RATE │ MAINT. ALERTS    │
+│   TOTAL MATERIALS│  TOTAL VALUE     │ AVAILABLE MATS │ MAINT. ALERTS    │
 │                  │                  │                  │                  │
-│   KSh 2.5M       │      145         │      78.5%       │       12         │
-│   ↗️ +5.2%       │   📦 Ready       │   📈 Good        │   ⚠️ Urgent      │
+│   50       │     │     145          │       12         │
+│   ↗️ +5.2%       │   ↗️ +5.2%      │   📦 Ready       │   ⚠️ Urgent      │
 │                  │                  │                  │                  │
 │ Widget: KPI Card │ Widget: KPI Card │ Widget: KPI Card │ Widget: KPI Card │
 └──────────────────┴──────────────────┴──────────────────┴──────────────────┘
@@ -25,8 +25,7 @@
 ## Charts Row 1 (2 Charts)
 ```
 ┌─────────────────────────────────────┬─────────────────────────────────────┐
-│        MATERIAL DISTRIBUTION        │         STATUS BREAKDOWN            │
-│             BY LOCATION             │                                     │
+│        O            │                                     │
 │                                     │         📊 Doughnut Chart          │
 │    📊 Horizontal Bar Chart          │                                     │
 │                                     │   • Available (45%)                │
@@ -39,40 +38,88 @@
 └─────────────────────────────────────┴─────────────────────────────────────┘
 ```
 
-## Charts Row 2 (Material Movement & Category Analysis)
+## Charts Row 2 (Materials by Category & Status Breakdown) - ✅ IMPLEMENTED
 ```
 ┌─────────────────────────────────────┬─────────────────────────────────────┐
-│       MATERIAL MOVEMENT TRENDS      │      CATEGORY UTILIZATION          │
-│                                     │         HEATMAP                     │
-│    📈 Line Chart (Multi-series)     │                                     │
-│                                     │    📊 Horizontal Bar Chart         │
-│  150┤                               │                                     │
-│  100┤    ●─●─●                     │  IT Equipment  ████████████ 85%    │
-│   50┤  ●─       ●─●                 │  Vehicles      ██████████ 70%      │
-│    0└─────────────────────          │  Furniture     ████████ 60%        │
-│     Jan Feb Mar Apr May             │  Tools         ██████ 45%          │
-│                                     │  Safety Gear   ████ 30%            │
-│  ─ Assignments  ─ Returns           │                                     │
-│  ─ Transfers    ─ New Acquisitions  │                                     │
+│     MATERIALS BY CATEGORY           │       STATUS BREAKDOWN              │
 │                                     │                                     │
-│ Widget: Line Chart                  │ Widget: Bar Chart                  │
+│    📊 Vertical Bar Chart            │    🍩 Donut Chart + Legend         │
+│                                     │                                     │
+│  150┤     ███                       │           45%                       │
+│  100┤ ███ ███     ███               │      ●────────●                     │
+│   50┤ ███ ███ ███ ███ ███           │    ●            ●                   │
+│    0└─────────────────────          │  ●   Available    ●                 │
+│     IT  Veh Furn Tool Safe          │    ●            ●                   │
+│                                     │      ●────────●                     │
+│ ApexCharts: Vertical Bar            │  ApexCharts: Donut                  │
+│ - Project blue color                │  - BadgeHelper colors               │
+│ - Data labels on bars               │  - Horizontal inline legend         │
+│ - Tooltip with percentages          │  - Count & percentage display       │
+│                                     │                                     │
+│                                     │ ● Available: 25 (45%)               │
+│                                     │ ● Assigned: 18 (32%)                │
+│                                     │ ● Under Maintenance: 8 (14%)        │
+│                                     │ ● Disposed: 5 (9%)                  │
+│                                     │                                     │
+│ Widget: ApexCharts Bar              │ Widget: ApexCharts Donut            │
 └─────────────────────────────────────┴─────────────────────────────────────┘
 ```
 
-## Material Health Section (3 Cards)
+**Implementation Status:**
+- ✅ Backend: GetMaterialChartData endpoint with category/status grouping
+- ✅ Frontend: ApexCharts with consistent project colors from BadgeHelper
+- ✅ Filters: Charts update automatically with dashboard filters
+- ✅ Responsive: Both charts have balanced heights and mobile-friendly design
+
+## Row 3: Recent Activity & Material Insights (Proposed)
 ```
-┌─────────────────┬─────────────────┬─────────────────┐
-│  WARRANTY STATUS │ MAINTENANCE DUE │  HIGH VALUE     │
-│                 │                 │   TRACKING      │
-│ 🟢 Active: 156  │ 🔴 Overdue: 8   │                 │
-│ 🟡 Expiring: 23 │ 🟡 Due Soon: 15 │ Total: KSh 1.2M │
-│ 🔴 Expired: 45  │ 🟢 Up to Date:  │ Locations: 4    │
-│                 │    187          │ Avg Value: 85K  │
-│                 │                 │                 │
-│ Widget: Status  │ Widget: Status  │ Widget: Summary │
-│ Breakdown       │ Breakdown       │ Card            │
-└─────────────────┴─────────────────┴─────────────────┘
+┌──────────────────────────────────────────────────────────────┬─────────────────┐
+│                    MATERIAL INSIGHTS (3/4 WIDTH)            │  RECENT ACTIVITY│
+│                                                              │   (1/4 WIDTH)   │
+│  ┌─ Tabs ─────────────────────────────────────────────────┐ │                 │
+│  │[Available][In Process][Expired Warranty][Lost][Overdue]│ │  📋 Last 5      │
+│  └─────────────────────────────────────────────────────────┘ │  Activities     │
+│                                                              │                 │
+│  ┌─ Tab Content: Available Materials (Status = Available) ─┐ │ ┌─────────────┐ │
+│  │Material ID   │ Name        │ Category │ Location │ Days│ │ │18-Sep│Helmet│ │
+│  │MAT-001      │ Dell Laptop │ IT       │ HQ      │ 45  │ │ │17-Sep│Laptop│ │
+│  │MAT-015      │ Projector   │ IT       │ Training│ 120 │ │ │16-Sep│Maint.│ │
+│  │MAT-032      │ Scanner     │ Office   │ Archive │ 90  │ │ │15-Sep│Return│ │
+│  │MAT-048      │ Chair       │ Furniture│ Store   │ 15  │ │ │14-Sep│Assign│ │
+│  │[Link: View Details] [Link: Assign] [Link: Transfer]   │ │ └─────────────┘ │
+│  └────────────────────────────────────────────────────────┘ │                 │
+│                                                              │  Widget:        │
+│  Widget: Tabbed Material Tables                             │  Activity List  │
+│  - Available: MaterialStatus = 4 (Available)                │  - Shows last 5 │
+│  - In Process: MaterialStatus = 6 (InProcess)               │  - Date, Item,  │
+│  - Expired Warranty: WarrantyEndDate < Now                  │    Action type  │
+│  - Lost Items: MaterialStatus = 2 (LostOrStolen)            │  - Links to     │
+│  - Overdue Maintenance: NextMaintenanceDate < Now           │    material     │
+│  - Each table has links to /Material/Details/{id}           │    details      │
+│  - Action buttons for common operations                     │                 │
+└──────────────────────────────────────────────────────────────┴─────────────────┘
 ```
+
+**Implementation Details:**
+- **Left Side (3/4 width)**: Tabbed Material Insights with data tables
+- **Right Side (1/4 width)**: Recent Activity summary (similar to Management dashboard)
+- **Data Source**: MaterialDashboard view filtered by tab criteria
+- **Updates**: Tables refresh when filters change, activities every 30 seconds
+- **Responsive**: Tabs stack vertically on mobile, recent activity moves below
+
+**Material Insights Tab Definitions:**
+1. **📦 Available** - Materials with Status = Available (MaterialStatus = 4)
+2. **⚡ In Process** - Materials with Status = InProcess (MaterialStatus = 6)
+3. **⚠️ Expired Warranty** - Materials where WarrantyEndDate < Current Date
+4. **❌ Lost Items** - Materials with Status = LostOrStolen (MaterialStatus = 2)
+5. **🔧 Overdue Maintenance** - Materials where NextMaintenanceDate < Current Date
+
+**Tab Table Features:**
+- **Sortable columns**: Material ID, Name, Category, Location, Days/Status
+- **Action links**: View Details, Assign, Transfer, Schedule Maintenance
+- **Pagination**: 10 items per page with search functionality
+- **Links**: Each material name links to /Material/Details/{MaterialId}
+- **Responsive**: Tables scroll horizontally on mobile devices
 
 ## Data Tables Section
 ```
